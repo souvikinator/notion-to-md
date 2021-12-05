@@ -151,6 +151,8 @@ console.log(result);
 
 ### `pageToMarkdown(page_id)`
 
+- Takes page_id as input and converts all the blocks in the page to corresponding markdown
+
 ### `blockToMarkdown(block)`
 
 - Takes one notion block and converts to markdown
