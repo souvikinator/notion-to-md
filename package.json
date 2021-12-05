@@ -1,21 +1,28 @@
 {
-  "name": "notion2md",
+  "name": "notion-to-md",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": [
+    "notion",
+    "markdown",
+    "md",
+    "notion",
+    "notion-api",
+    "notion-to-md",
+    "notion2md"
+  ],
   "author": "",
   "license": "ISC",
-  "devDependencies": {},
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/souvikinator/notion2md.git"
+    "url": "git+https://github.com/souvikinator/notion-to-md.git"
   },
   "bugs": {
-    "url": "https://github.com/souvikinator/notion2md/issues"
+    "url": "https://github.com/souvikinator/notion-to-md/issues"
   },
-  "homepage": "https://github.com/souvikinator/notion2md#readme",
-  "description": ""
+  "homepage": "https://github.com/souvikinator/notion-to-md#readme",
+  "description": "convert notion pages, block and list of blocks to markdown (supports nesting)"
 }
