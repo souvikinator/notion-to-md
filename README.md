@@ -2,7 +2,7 @@
 
 # Notion to Markdown
 
-Notion Markdown Exporter using **[notion-sdk-js](https://github.com/makenotion/notion-sdk-js)**
+Convert notion pages, block and list of blocks to markdown (supports nesting) using **[notion-sdk-js](https://github.com/makenotion/notion-sdk-js)**
 
 > **Note:** Before getting started, create [an integration and find the token](https://www.notion.so/my-integrations).
 
