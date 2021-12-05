@@ -1,12 +1,21 @@
 {
   "name": "notion2md",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/souvikinator/notion2md.git"
+  },
+  "bugs": {
+    "url": "https://github.com/souvikinator/notion2md/issues"
+  },
+  "homepage": "https://github.com/souvikinator/notion2md#readme",
+  "description": ""
 }
