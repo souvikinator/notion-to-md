@@ -3,7 +3,7 @@ exports.getBlockChildren = async (notionClient, block_id) => {
     const response = await notionClient.blocks.children.list({
       block_id,
     });
-    return response.result;
+    return response.results;
   } catch (e) {
     console.log(e);
   }
