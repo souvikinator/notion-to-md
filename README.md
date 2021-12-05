@@ -40,7 +40,7 @@ This is how the notion page looks for this example:
 
 ```js
 const { Client } = require("@notionhq/client");
-const notion2md = require("notion2md");
+const notion2md = require("notion-to-md");
 
 const notion = new Client({
   auth: "your integration token",
@@ -108,7 +108,7 @@ same notion page as before
 
 ```js
 const { Client } = require("@notionhq/client");
-const notion2md = require("notion2md");
+const notion2md = require("notion-to-md");
 
 const notion = new Client({
   auth: "your integration token",
