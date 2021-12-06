@@ -23,7 +23,9 @@ exports.link = (text, href) => {
 };
 
 exports.codeBlock = (text) => {
-  return `\`\`\`${text}\`\`\``;
+  return `\`\`\`
+${text}
+\`\`\``;
 };
 
 exports.heading1 = (text) => {
@@ -54,4 +56,8 @@ exports.image = (alt, href) => {
   return `![${alt}](${href})`;
 };
 
-//TODO: embed and fluid tags
+exports.addTabSpace = (text, n = 0) => {
+  const tab = "	";
+  for (i = 0; i < n; i++) text = tab + text;
+  return text;
+};
