@@ -181,9 +181,15 @@ console.log(result);
 
 ## API
 
+### `toString(markdownObjects)`
+
+- takes output of `pageToMarkdown` or `blocksToMarkdown` as argument
+- convert to markdown string.
+
 ### `pageToMarkdown(page_id)`
 
 - Takes page_id as input and converts all the blocks in the page to corresponding markdown
+- Uses `blocksToMarkdown` internally.
 
 ### `blockToMarkdown(block)`
 
