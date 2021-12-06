@@ -10,6 +10,21 @@ class notion2md {
     this.notionClient = options.notionClient;
   }
 
+  toString(mdBlocks = [], nestingLevel = 0) {
+    let mdString = "";
+    mdBlocks.forEach((mdBlocks) => {
+      if (mdBlocks.parent) {
+        mdString += `
+${md.addTabSpace(mdBlocks.parent, nestingLevel)}
+`;
+      }
+      if (mdBlocks.children && mdBlocks.children.length > 0) {
+        mdString += this.toString(mdBlocks.children, nestingLevel + 1);
+      }
+    });
+    return mdString;
+  }
+
   async pageToMarkdown(id) {
     if (!id) throw new Error("pageToMarkdown takes page_id as argument");
     const blocks = await getBlockChildren(this.notionClient, id);
