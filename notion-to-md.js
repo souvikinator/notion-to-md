@@ -10,7 +10,7 @@ class notion2md {
     this.notionClient = options.notionClient;
   }
 
-  toString(mdBlocks = [], nestingLevel = 0) {
+  toMarkdownString(mdBlocks = [], nestingLevel = 0) {
     let mdString = "";
     mdBlocks.forEach((mdBlocks) => {
       if (mdBlocks.parent) {
@@ -19,7 +19,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
 `;
       }
       if (mdBlocks.children && mdBlocks.children.length > 0) {
-        mdString += this.toString(mdBlocks.children, nestingLevel + 1);
+        mdString += this.toMarkdownString(mdBlocks.children, nestingLevel + 1);
       }
     });
     return mdString;

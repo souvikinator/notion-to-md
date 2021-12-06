@@ -51,7 +51,7 @@ const n2m = new notion2md({ notionClient: notion });
 
 (async () => {
   const mdblocks = await n2m.pageToMarkdown("target_page_id");
-  const mdString = n2m.toString(mdblocks);
+  const mdString = n2m.toMarkdownString(mdblocks);
 
   //writing to file
   fs.writeFile("test.md", mdString, (err) => {
@@ -181,7 +181,7 @@ console.log(result);
 
 ## API
 
-### `toString(markdownObjects)`
+### `toMarkdownString(markdownObjects)`
 
 - takes output of `pageToMarkdown` or `blocksToMarkdown` as argument
 - convert to markdown string.
