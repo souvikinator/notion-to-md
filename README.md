@@ -21,7 +21,7 @@ Notion Markdown Exporter using **[notion-sdk-js](https://github.com/makenotion/n
 - [ ] embeds
 - [ ] tables
 - [ ] videos
-- [ ] convert returned markdown object to string
+- [x] convert returned markdown object to string
 - [ ] add tests
 
 ## Install
@@ -32,7 +32,39 @@ $ npm install notion-to-md
 
 ## Usage
 
-### converting page to markdown
+### converting markdown objects to markdown string
+
+This is how the notion page looks for this example:
+
+![Imgur](https://imgur.com/O6bKCmH.png)
+
+```js
+const { Client } = require("@notionhq/client");
+const notion2md = require("notion-to-md");
+
+const notion = new Client({
+  auth: "your integration token",
+});
+
+// passing notion client to the option
+const n2m = new notion2md({ notionClient: notion });
+
+(async () => {
+  const mdblocks = await n2m.pageToMarkdown("target_page_id");
+  const mdString = n2m.toString(mdblocks);
+
+  //writing to file
+  fs.writeFile("test.md", mdString, (err) => {
+    console.log(err);
+  });
+})();
+```
+
+**Output:**
+
+![output](https://imgur.com/XrUYrZ0.png)
+
+### converting page to markdown object
 
 This is how the notion page looks for this example:
 
@@ -100,7 +132,7 @@ const n2m = new notion2md({ notionClient: notion });
 ]
 ```
 
-### converting list of blocks to markdown
+### converting list of blocks to markdown object
 
 > This example blocks from a single page is used. One construct array of blocks from different notion pages and pass in to the `blocksToMarkdown()`
 
@@ -131,7 +163,7 @@ const n2m = new notion2md({ notionClient: notion });
 
 **Output**: same as before
 
-### Converting a single block to markdown
+### Converting a single block to markdown string
 
 - just takes a single notion block and returns corresponding markdown string
 - nesting is ignored
