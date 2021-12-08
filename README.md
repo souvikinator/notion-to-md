@@ -18,10 +18,12 @@ Convert notion pages, block and list of blocks to markdown (supports nesting) us
 - [x] code block
 - [x] strikethrough, underline, bold, italic
 - [x] nested blocks
-- [ ] embeds
+- [ ] pages inside pages/child page
+- [x] embeds, bookmarks, videos, files (converted to links)
 - [ ] tables
-- [ ] videos
-- [x] convert returned markdown object to string
+- [x] divider
+- [x] equation block (converted to code blocks)
+- [x] convert returned markdown object to string (`toMarkdownString()`)
 - [ ] add tests
 
 ## Install
