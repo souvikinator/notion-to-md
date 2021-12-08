@@ -47,7 +47,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
         continue;
       }
       let tmp = this.blockToMarkdown(block);
-      // console.log(">>parsed data=", tmp, block);
+
       mdBlocks.push({ parent: tmp, children: [] });
     }
     return mdBlocks;
@@ -66,6 +66,23 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
       const image_type = blockContent["type"];
 
       return md.image("image", blockContent[image_type].url);
+    } else if (type === "divider") {
+      return md.divider();
+    } else if (type === "equation") {
+      return md.codeBlock(block[type].expression);
+    } else if (type === "video" || type === "file" || type === "pdf") {
+      blockContent = block[type];
+      const urlType = blockContent["type"];
+
+      return md.link(type, blockContent[urlType].url);
+    } else if (
+      type === "bookmark" ||
+      type === "embed" ||
+      type === "link_preview"
+    ) {
+      blockContent = block[type];
+
+      return md.link(type, blockContent.url);
     } else {
       blockContent = block[type]["text"] || [];
       blockContent.map((content) => {
@@ -80,7 +97,6 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
       });
     }
 
-    // TODO:  need to take care of escape sequences
     if (type === "code") parsedData = md.codeBlock(parsedData);
     if (type === "heading_1") parsedData = md.heading1(parsedData);
     if (type === "heading_2") parsedData = md.heading2(parsedData);
