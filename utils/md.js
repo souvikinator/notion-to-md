@@ -61,3 +61,7 @@ exports.addTabSpace = (text, n = 0) => {
   for (i = 0; i < n; i++) text = tab + text;
   return text;
 };
+
+exports.divider = () => {
+  return "---";
+};
