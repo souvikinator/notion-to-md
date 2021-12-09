@@ -22,8 +22,8 @@ exports.link = (text, href) => {
   return `[${text}](${href})`;
 };
 
-exports.codeBlock = (text) => {
-  return `\`\`\`
+exports.codeBlock = (text, language) => {
+  return `\`\`\`${language}
 ${text}
 \`\`\``;
 };

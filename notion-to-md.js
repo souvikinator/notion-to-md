@@ -97,7 +97,8 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
       });
     }
 
-    if (type === "code") parsedData = md.codeBlock(parsedData);
+    if (type === "code")
+      parsedData = md.codeBlock(parsedData, block[type].language);
     if (type === "heading_1") parsedData = md.heading1(parsedData);
     if (type === "heading_2") parsedData = md.heading2(parsedData);
     if (type === "heading_3") parsedData = md.heading3(parsedData);
