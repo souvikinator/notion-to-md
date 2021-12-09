@@ -41,7 +41,8 @@ exports.heading3 = (text) => {
 };
 
 exports.quote = (text) => {
-  return `| ${text}`;
+  // the replace is done to handle multiple lines
+  return `> ${text.replace(/\n/g, "  \n>")}`;
 };
 
 exports.bullet = (text) => {
