@@ -104,8 +104,11 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
     if (type === "heading_3") parsedData = md.heading3(parsedData);
     if (type === "quote") parsedData = md.quote(parsedData);
 
-    if (type === "numbered_list_item" || type === "bulleted_list_item")
+    if (type === "bulleted_list_item")
       parsedData = md.bullet(parsedData);
+
+    if (type === "numbered_list_item")
+      parsedData = md.numbered(parsedData);
 
     if (type === "to_do") parsedData = md.todo(parsedData, block[type].checked);
 

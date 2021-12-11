@@ -49,6 +49,10 @@ exports.bullet = (text) => {
   return `- ${text}`;
 };
 
+exports.numbered = (text) => {
+  return `1. ${text}`;
+};
+
 exports.todo = (text, checked) => {
   return checked ? `- [x] ${text}` : `- [ ] ${text}`;
 };
