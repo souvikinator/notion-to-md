@@ -167,10 +167,16 @@ const n2m = new notion2md({ notionClient: notion });
 
 ### Converting a single block to markdown string
 
-- just takes a single notion block and returns corresponding markdown string
+- only takes a single notion block and returns corresponding markdown string
 - nesting is ignored
+- not dependent on @notionhq/client
 
 ```js
+const notion2md = require("notion-to-md");
+
+// notion client not required
+const n2m = new notion2md();
+
 const result = n2m.blockToMarkdown(block);
 console.log(result);
 ```

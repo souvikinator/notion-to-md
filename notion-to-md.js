@@ -3,11 +3,11 @@ const { getBlockChildren } = require("./utils/notion");
 
 class notion2md {
   constructor(options) {
-    if (!options || !options.notionClient)
-      throw new Error(
-        "notion2md takes notion client as argument, for more details check out https://github.com/souvikinator/notion2md"
-      );
-    this.notionClient = options.notionClient;
+    if (!options) {
+      this.notionClient = undefined;
+    } else {
+      this.notionClient = options.notionClient || undefined;
+    }
   }
 
   toMarkdownString(mdBlocks = [], nestingLevel = 0) {
@@ -37,6 +37,12 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
    * @returns array of md blocks with their children
    */
   async blocksToMarkdown(blocks, mdBlocks = []) {
+    if (!this.notionClient) {
+      throw new Error(
+        "notion client is not provided, for more details check out https://github.com/souvikinator/notion-to-md"
+      );
+    }
+
     for (let i = 0; i < blocks.length; i++) {
       let block = blocks[i];
       if (block.has_children) {
@@ -58,6 +64,8 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
    * @returns markdown form of the passed block
    */
   blockToMarkdown(block) {
+    if (!block) throw new Error("notion block required");
+
     let parsedData = "",
       blockContent;
     const { type } = block;
