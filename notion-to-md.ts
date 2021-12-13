@@ -199,12 +199,25 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
    * @param {object} annotations annotation object of a notion block
    */
   annotatePlainText(text: string, annotations: Annotations) {
-    if (annotations.code) text = md.inlineCode(text);
-    if (annotations.bold) text = md.bold(text);
-    if (annotations.italic) text = md.italic(text);
-    if (annotations.strikethrough) text = md.strikethrough(text);
-    if (annotations.underline) text = md.underline(text);
+    // if text is all spaces, don't annotate
+    if (text.match(/^\s*$/)) return text;
 
-    return text;
+    const leadingSpaceMatch = text.match(/^(\s*)/);
+    const trailingSpaceMatch = text.match(/(\s*)$/);
+
+    const leading_space = leadingSpaceMatch ? leadingSpaceMatch[0] : "";
+    const trailing_space = trailingSpaceMatch ? trailingSpaceMatch[0] : "";
+
+    text = text.trim();
+
+    if (text !== '') {
+      if (annotations.code) text = md.inlineCode(text);
+      if (annotations.bold) text = md.bold(text);
+      if (annotations.italic) text = md.italic(text);
+      if (annotations.strikethrough) text = md.strikethrough(text);
+      if (annotations.underline) text = md.underline(text);
+    }
+
+    return leading_space + text + trailing_space;
   }
 }
