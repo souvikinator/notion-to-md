@@ -1,8 +1,15 @@
 {
   "name": "notion-to-md",
   "version": "1.0.6",
-  "main": "notion-to-md.js",
+  "engines": {
+    "node": ">=12"
+  },
+  "main": "./build/notion-to-md.js",
   "scripts": {
+    "prepare": "npm run build",
+    "build": "tsc",
+    "prebuild": "npm run clean",
+    "clean": "rm -rf ./build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -16,6 +23,9 @@
   ],
   "author": "",
   "license": "ISC",
+  "files": [
+    "build/**"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/souvikinator/notion-to-md.git"
@@ -24,5 +34,9 @@
     "url": "https://github.com/souvikinator/notion-to-md/issues"
   },
   "homepage": "https://github.com/souvikinator/notion-to-md#readme",
-  "description": "convert notion pages, block and list of blocks to markdown (supports nesting)"
+  "description": "convert notion pages, block and list of blocks to markdown (supports nesting)",
+  "devDependencies": {
+    "@notionhq/client": "^0.4.9",
+    "typescript": "^4.5.3"
+  }
 }

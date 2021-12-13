@@ -1,4 +1,6 @@
-exports.getBlockChildren = async (notionClient, block_id) => {
+import { Client } from "@notionhq/client";
+
+export const getBlockChildren = async (notionClient: Client, block_id: string) => {
   try {
     if (!notionClient) {
       throw new Error(
