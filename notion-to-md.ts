@@ -1,5 +1,5 @@
 import { Client } from "@notionhq/client";
-import { Annotations, ListBlockChildrenResponseResult, ListBlockChildrenResponseResults, ParsedMarkdownBlock, Text } from "./types";
+import { Annotations, ListBlockChildrenResponseResult, ListBlockChildrenResponseResults, MdBlock, Text } from "./types";
 import * as md from "./utils/md";
 import { getBlockChildren } from "./utils/notion";
 
@@ -7,14 +7,23 @@ interface NotionToMarkdownOptions {
   notionClient: Client
 }
 
+/**
+ * Converts a Notion page to Markdown.
+ */
 export default class NotionToMarkdown {
-  notionClient: Client;
+  private notionClient: Client;
 
   constructor(options: NotionToMarkdownOptions) {
     this.notionClient = options.notionClient;
   }
 
-  toMarkdownString(mdBlocks: ParsedMarkdownBlock[] = [], nestingLevel = 0) {
+  /**
+   * Converts Markdown Blocks to string
+   * @param mdBlocks array of md blocks
+   * @param nestingLevel defines max depth of nesting
+   * @returns 
+   */
+  toMarkdownString(mdBlocks: MdBlock[] = [], nestingLevel = 0): string {
     let mdString = "";
     mdBlocks.forEach((mdBlocks) => {
       if (mdBlocks.parent) {
@@ -29,18 +38,24 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
     return mdString;
   }
 
-  async pageToMarkdown(id: string) {
-    // if (!id) throw new Error("pageToMarkdown takes page_id as argument");
+  /**
+   * Retrieves Notion Blocks based on ID and converts them to Markdown Blocks
+   * @param id ID of notion block
+   * @returns list of markdown blocks
+   */
+  async pageToMarkdown(id: string): Promise<MdBlock[]> {
     const blocks = await getBlockChildren(this.notionClient, id);
     const parsedData = await this.blocksToMarkdown(blocks);
     return parsedData;
   }
 
   /**
-   * @param {object} blocks - list of notion blocks
+   * Convert list of Notion Blocks to Markdown Blocks
+   * @param blocks list of notion blocks
+   * @param mdBlocks list of md blocks
    * @returns array of md blocks with their children
    */
-  async blocksToMarkdown(blocks: ListBlockChildrenResponseResults | undefined, mdBlocks: ParsedMarkdownBlock[] = []) {
+  async blocksToMarkdown(blocks: ListBlockChildrenResponseResults | undefined, mdBlocks: MdBlock[] = []): Promise<MdBlock[]> {
     if (!this.notionClient) {
       throw new Error(
         "notion client is not provided, for more details check out https://github.com/souvikinator/notion-to-md"
@@ -66,10 +81,11 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
   }
 
   /**
-   * @param {object} block - single notion block
+   * Convert a Notion Block to a Markdown Block
+   * @param block single notion block
    * @returns markdown form of the passed block
    */
-  blockToMarkdown(block: ListBlockChildrenResponseResult) {
+  blockToMarkdown(block: ListBlockChildrenResponseResult): string {
     if (!block) throw new Error("notion block required");
 
     let parsedData = "";
@@ -195,10 +211,12 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
   }
 
   /**
-   * @param {string} text string to be annotated
-   * @param {object} annotations annotation object of a notion block
+   * Annoate text using provided annotations
+   * @param text text to be annotated
+   * @param annotations annotations to be applied
+   * @returns annotated text
    */
-  annotatePlainText(text: string, annotations: Annotations) {
+  annotatePlainText(text: string, annotations: Annotations): string {
     // if text is all spaces, don't annotate
     if (text.match(/^\s*$/)) return text;
 

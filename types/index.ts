@@ -6,9 +6,9 @@ export type ListBlockChildrenResponseResult = ListBlockChildrenResponseResults[0
 
 export type TextRequest = string;
 
-export type ParsedMarkdownBlock = {
+export type MdBlock = {
 	parent: string;
-	children: ParsedMarkdownBlock[];
+	children: MdBlock[];
 }
 
 export type Annotations = {
