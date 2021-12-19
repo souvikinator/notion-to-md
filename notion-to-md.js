@@ -1,6 +1,5 @@
 const md = require("./utils/md");
 const { getBlockChildren } = require("./utils/notion");
-
 class notion2md {
   constructor(options) {
     if (!options) {
