@@ -1,7 +1,7 @@
 {
   "name": "notion-to-md",
   "version": "1.0.7",
-  "main": "notion-to-md.js",
+  "main": "main.js",
   "typings": "main.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
