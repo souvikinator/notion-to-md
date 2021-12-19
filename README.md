@@ -66,6 +66,8 @@ const n2m = new notion2md({ notionClient: notion });
 
 ![output](https://imgur.com/XrUYrZ0.png)
 
+> **Note:** Details on provided methods can be found in [API section](https://github.com/souvikinator/notion-to-md#api)
+
 ### converting page to markdown object
 
 This is how the notion page looks for this example:
@@ -84,10 +86,16 @@ const notion = new Client({
 const n2m = new notion2md({ notionClient: notion });
 
 (async () => {
-  const x = await n2m.pageToMarkdown("target_page_id");
+  // notice second argument, totalPage.
+  const x = await n2m.pageToMarkdown("target_page_id", 2);
   console.log(x);
 })();
 ```
+
+> `totalPage`: Default value is `1` which means only `100` blocks will be converted to markdown and rest will be ignored (due to notion api limitations, ref: [#9](https://github.com/souvikinator/notion-to-md/pull/9)).
+>
+> - if the notion page contains less than or equal `100` blocks then `totalPage` arg is not required.
+> - if the notion page contains `150` blocks then `totalPage` argument should be greater than or equal to `2` leading to `pageSize = 2 * 100` and rendering all `150` blocks.
 
 **Output:**
 
@@ -194,25 +202,32 @@ console.log(result);
 - takes output of `pageToMarkdown` or `blocksToMarkdown` as argument
 - convert to markdown string.
 
-### `pageToMarkdown(page_id)`
+### `pageToMarkdown(page_id,totalPage)`
 
-- Takes page_id as input and converts all the blocks in the page to corresponding markdown
 - Uses `blocksToMarkdown` internally.
+- Takes `page_id` as input and converts all the blocks in the page to corresponding markdown object
+- `totalPage` is the retrieve block children request number i.e `page_size Maximum = totalPage * 100`.
 
-### `blockToMarkdown(block)`
+> `totalPage`: Default value is `1` which means only `100` blocks will be converted to markdown and rest will be ignored (due to notion api limitations, ref: [#9](https://github.com/souvikinator/notion-to-md/pull/9)).
+>
+> - if the notion page contains less than or equal `100` blocks then `totalPage` arg is not required.
+> - if the notion page contains `150` blocks then `totalPage` argument should be greater than or equal to `2` leading to `pageSize = 2 * 100` and rendering all blocks withing limit `200`.
 
-- Takes one notion block and converts to markdown
-- does not deal with nested notion blocks
-- This method doesn't require the `notion-sdk-js`.
-- Refer docs to know more about [notion blocks](https://developers.notion.com/reference/block)
-
-### `blocksToMarkdown(blocks)`
+### `blocksToMarkdown(blocks,totalPage)`
 
 > **Note**: requires <u>**notion-sdk-js**</u> unlike `blockToMarkdown`
 
 - `blocks`: array of notion blocks
+- `totalPage`: the retrieve block children request number i.e `page_size Maximum = totalPage * 100`.
 - deals with <u>**nested blocks**</u>
 - uses `blockToMarkdown` internally.
+
+### `blockToMarkdown(block)`
+
+- Takes single notion block and converts to markdown string
+- does not deal with nested notion blocks
+- This method doesn't require the `notion-sdk-js`.
+- Refer docs to know more about [notion blocks](https://developers.notion.com/reference/block)
 
 ## Contribution
 
