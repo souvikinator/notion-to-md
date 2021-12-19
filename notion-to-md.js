@@ -28,7 +28,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
   /** 
   * @param {number} totalPage - Retrieve block children request number, page_size Maximum = totalPage * 100
   */
-  async pageToMarkdown(id, totalPage) {
+  async pageToMarkdown(id, totalPage=1) {
     if (!id) throw new Error("pageToMarkdown takes page_id as argument");
     const blocks = await getBlockChildren(this.notionClient, id, totalPage);
     const parsedData = await this.blocksToMarkdown(blocks);
@@ -40,7 +40,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
    * @param {number} totalPage - Retrieve block children request number, page_size Maximum = totalPage * 100
    * @returns array of md blocks with their children
    */
-  async blocksToMarkdown(blocks, mdBlocks = [], totalPage) {
+  async blocksToMarkdown(blocks, mdBlocks = [], totalPage=1) {
     if (!this.notionClient) {
       throw new Error(
         "notion client is not provided, for more details check out https://github.com/souvikinator/notion-to-md"
