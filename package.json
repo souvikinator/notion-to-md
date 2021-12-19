@@ -1,6 +1,6 @@
 {
   "name": "notion-to-md",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "main": "main.js",
   "typings": "main.d.ts",
   "scripts": {
@@ -25,5 +25,8 @@
     "url": "https://github.com/souvikinator/notion-to-md/issues"
   },
   "homepage": "https://github.com/souvikinator/notion-to-md#readme",
-  "description": "convert notion pages, block and list of blocks to markdown (supports nesting)"
+  "description": "convert notion pages, block and list of blocks to markdown (supports nesting)",
+  "dependencies": {
+    "@notionhq/client": "^0.4.11"
+  }
 }
