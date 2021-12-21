@@ -2,7 +2,7 @@
   "name": "notion-to-md",
   "version": "2.0.0",
   "main": "notion-to-md.js",
-  "typings": "main.d.ts",
+  "typings": "desc.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -25,9 +25,5 @@
     "url": "https://github.com/souvikinator/notion-to-md/issues"
   },
   "homepage": "https://github.com/souvikinator/notion-to-md#readme",
-  "description": "convert notion pages, block and list of blocks to markdown (supports nesting)",
-  "dependencies": {
-    "@notionhq/client": "^0.4.11",
-    "notion-to-md": "^2.0.0"
-  }
+  "description": "convert notion pages, block and list of blocks to markdown (supports nesting)"
 }
