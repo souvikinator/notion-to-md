@@ -36,10 +36,10 @@
   "homepage": "https://github.com/souvikinator/notion-to-md#readme",
   "description": "convert notion pages, block and list of blocks to markdown (supports nesting)",
   "dependencies": {
-    "@notionhq/client": "^0.4.11"
+    "@notionhq/client": "^0.4.11",
+    "notion-to-md": "^2.0.0"
   },
   "devDependencies": {
-    "notion-to-md": "^2.0.0",
     "typescript": "^4.5.4"
   }
 }
