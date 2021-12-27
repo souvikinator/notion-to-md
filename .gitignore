@@ -7,7 +7,7 @@ yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
 
-
+build
 tester
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
@@ -127,3 +127,9 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Build Output
+/build
+
+# Package Lock
+package-lock.json

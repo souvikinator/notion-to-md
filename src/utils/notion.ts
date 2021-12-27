@@ -1,20 +1,22 @@
-exports.getBlockChildren = async (notionClient, block_id, totalPage) => {
+import { Client } from "@notionhq/client";
+import { ListBlockChildrenResponse } from "@notionhq/client/build/src/api-endpoints";
+
+export const getBlockChildren = async (
+  notionClient: Client,
+  block_id: string,
+  totalPage: number
+) => {
   try {
-    if (!notionClient) {
-      throw new Error(
-        "notion client is not provided, for more details check out https://github.com/souvikinator/notion-to-md"
-      );
-    }
     let result = [];
     let start_cursor;
     let pageSize = 100;
-    for (i = 0; i < totalPage; i++) {
+    for (let i = 0; i < totalPage; i++) {
       // contain start_cursor
-      const response = await notionClient.blocks.children.list({
+      const response = (await notionClient.blocks.children.list({
         start_cursor: start_cursor,
         page_size: pageSize,
         block_id: block_id,
-      });
+      })) as ListBlockChildrenResponse;
       let current = response.results;
       // delete start_cursor
       if (start_cursor) {
