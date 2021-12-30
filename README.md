@@ -47,7 +47,7 @@ This is how the notion page looks for this example:
 const { Client } = require("@notionhq/client");
 const { NotionToMarkdown } = require("notion-to-md");
 // or
-// import NotionToMarkdown from "notion-to-md";
+// import {NotionToMarkdown} from "notion-to-md";
 
 const notion = new Client({
   auth: "your integration token",
