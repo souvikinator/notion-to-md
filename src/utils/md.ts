@@ -66,3 +66,20 @@ export const addTabSpace = (text: string, n = 0) => {
 export const divider = () => {
   return "---";
 };
+
+export const tableRowHeader = (row: string[]) => {
+  let header = row.join("|");
+  let divider = row.map((_) => "---").join("|");
+  return `${header}\n${divider}`;
+};
+
+export const tableRowBody = (row: string[]) => {
+  return row.join("|");
+};
+
+export const table = (cells: string[][]) => {
+  const tableRows = cells.map((row, i) =>
+    !i ? tableRowHeader(row) : tableRowBody(row)
+  );
+  return tableRows.join("\n");
+};
