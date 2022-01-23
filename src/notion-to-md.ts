@@ -118,11 +118,12 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
     switch (type) {
       case "image": {
         let blockContent = block.image;
+        const image_caption_plain = blockContent.caption.map(item => item.plain_text).join('')
         const image_type = blockContent.type;
         if (image_type === "external")
-          return md.image("image", blockContent.external.url);
+          return md.image(image_caption_plain, blockContent.external.url);
         if (image_type === "file")
-          return md.image("image", blockContent.file.url);
+          return md.image(image_caption_plain, blockContent.file.url);
         break;
       }
       case "divider": {
