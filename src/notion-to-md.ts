@@ -14,10 +14,10 @@ import { getBlockChildren } from "./utils/notion";
  * Converts a Notion page to Markdown.
  */
 export class NotionToMarkdown {
-  private notionClient?: Client;
+  private notionClient: Client;
 
-  constructor(options?: NotionToMarkdownOptions) {
-    this.notionClient = options ? options.notionClient : undefined;
+  constructor(options: NotionToMarkdownOptions) {
+    this.notionClient = options.notionClient;
   }
 
   /**
@@ -87,7 +87,10 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
           block.id,
           totalPage
         );
-        mdBlocks.push({ parent: this.blockToMarkdown(block), children: [] });
+        mdBlocks.push({
+          parent: await this.blockToMarkdown(block),
+          children: [],
+        });
 
         let l = mdBlocks.length;
         await this.blocksToMarkdown(
@@ -97,7 +100,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
         );
         continue;
       }
-      let tmp = this.blockToMarkdown(block);
+      let tmp = await this.blockToMarkdown(block);
 
       mdBlocks.push({ parent: tmp, children: [] });
     }
@@ -109,7 +112,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
    * @param {ListBlockChildrenResponseResult} block - single notion block
    * @returns {string} corresponding markdown string of the passed block
    */
-  blockToMarkdown(block: ListBlockChildrenResponseResult): string {
+  async blockToMarkdown(block: ListBlockChildrenResponseResult) {
     if (!("type" in block)) return "";
 
     let parsedData = "";
@@ -230,6 +233,28 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
         parsedData = md.todo(parsedData, block.to_do.checked);
         break;
       }
+      case "table":
+        {
+          const { id, has_children } = block;
+          let tableArr: string[][] = [];
+          if (has_children) {
+            const tableRows = await getBlockChildren(
+              this.notionClient,
+              id,
+              100
+            );
+            tableRows?.map((row) => {
+              const { type } = row as any;
+              const cells = (row as any)["type"][type];
+              let cellStringArr = cells.map(
+                async (cell: any) => await this.blockToMarkdown(cell)
+              );
+              tableArr.push(cellStringArr);
+            });
+          }
+          parsedData = md.table(tableArr);
+        }
+        break;
     }
 
     return parsedData;
