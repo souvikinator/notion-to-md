@@ -20,7 +20,7 @@ Convert notion pages, block and list of blocks to markdown (supports nesting) us
 - [x] nested blocks
 - [ ] pages inside pages/child page
 - [x] embeds, bookmarks, videos, files (converted to links)
-- [ ] tables
+- [x] Simple tables
 - [x] divider
 - [x] equation block (converted to code blocks)
 - [x] convert returned markdown object to string (`toMarkdownString()`)
