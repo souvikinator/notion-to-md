@@ -46,6 +46,8 @@ This is how the notion page looks for this example:
 ```js
 const { Client } = require("@notionhq/client");
 const { NotionToMarkdown } = require("notion-to-md");
+// or
+// import {NotionToMarkdown} from "notion-to-md";
 
 const notion = new Client({
   auth: "your integration token",
@@ -144,14 +146,14 @@ same notion page as before
 
 ```js
 const { Client } = require("@notionhq/client");
-const notion2md = require("notion-to-md");
+const { NotionToMarkdown } = require("notion-to-md");
 
 const notion = new Client({
   auth: "your integration token",
 });
 
 // passing notion client to the option
-const n2m = new notion2md({ notionClient: notion });
+const n2m = new NotionToMarkdown({ notionClient: notion });
 
 (async () => {
   // get all blocks in the page
@@ -174,10 +176,10 @@ const n2m = new notion2md({ notionClient: notion });
 - independent of @notionhq/client
 
 ```js
-const notion2md = require("notion-to-md");
+const { NotionToMarkdown } = require("notion-to-md");
 
 // notion client not required
-const n2m = new notion2md();
+const n2m = new NotionToMarkdown();
 
 const result = n2m.blockToMarkdown(block);
 console.log(result);
