@@ -133,3 +133,7 @@ dist
 
 # Package Lock
 package-lock.json
+
+# misc
+test.ts
+test.md
