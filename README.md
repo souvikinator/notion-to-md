@@ -173,13 +173,13 @@ const n2m = new NotionToMarkdown({ notionClient: notion });
 
 - only takes a single notion block and returns corresponding markdown string
 - nesting is ignored
-- independent of @notionhq/client
+- depends on @notionhq/client
 
 ```js
 const { NotionToMarkdown } = require("notion-to-md");
 
-// notion client not required
-const n2m = new NotionToMarkdown();
+// passing notion client to the option
+const n2m = new NotionToMarkdown({ notionClient: notion });
 
 const result = n2m.blockToMarkdown(block);
 console.log(result);
@@ -215,7 +215,7 @@ console.log(result);
 
 > ### `blocksToMarkdown(blocks,totalPage)`
 >
-> **Note**: requires <u>**notion-sdk-js**</u> unlike `blockToMarkdown`
+> **Note**: requires <u>**notion-sdk-js**</u>
 >
 > - `blocks`: array of notion blocks
 > - `totalPage`: the retrieve block children request number i.e `page_size Maximum = totalPage * 100`.
@@ -226,7 +226,7 @@ console.log(result);
 >
 > - Takes single notion block and converts to markdown string
 > - does not deal with nested notion blocks
-> - This method doesn't require the `notion-sdk-js`.
+> - depends on `notion-sdk-js`.
 > - Refer docs to know more about [notion blocks](https://developers.notion.com/reference/block)
 
 ## Contribution
