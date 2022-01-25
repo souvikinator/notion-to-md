@@ -55,6 +55,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
     }
     if (!id) throw new Error("pageToMarkdown takes page_id as argument");
     const blocks = await getBlockChildren(this.notionClient, id, totalPage);
+
     const parsedData = await this.blocksToMarkdown(blocks);
     return parsedData;
   }
@@ -79,8 +80,25 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
 
     if (!blocks) return mdBlocks;
 
+    /**
+     * notion's table response is weird. It two objects for same table
+     * first object with table width -> 2
+     * second object with the actual table width
+     * to keep track of table blocks and ignore the first one,
+     * tableBlockCount is used.
+     */
+    let tableBlockCount = 0;
+
     for (let i = 0; i < blocks.length; i++) {
       let block = blocks[i];
+
+      if ((block as any).type === "table" && tableBlockCount <= 0) {
+        tableBlockCount++;
+        continue;
+      }
+
+      tableBlockCount++;
+
       if ("has_children" in block && block.has_children) {
         let child_blocks = await getBlockChildren(
           this.notionClient,
@@ -117,48 +135,90 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
 
     let parsedData = "";
     const { type } = block;
+    // console.log({ block });
 
     switch (type) {
-      case "image": {
-        let blockContent = block.image;
-        const image_type = blockContent.type;
-        if (image_type === "external")
-          return md.image("image", blockContent.external.url);
-        if (image_type === "file")
-          return md.image("image", blockContent.file.url);
+      case "image":
+        {
+          let blockContent = block.image;
+          const image_type = blockContent.type;
+          if (image_type === "external")
+            return md.image("image", blockContent.external.url);
+          if (image_type === "file")
+            return md.image("image", blockContent.file.url);
+        }
         break;
-      }
+
       case "divider": {
         return md.divider();
       }
+
       case "equation": {
         return md.codeBlock(block.equation.expression);
       }
+
       case "video":
       case "file":
-      case "pdf": {
-        let blockContent;
-        if (type === "video") blockContent = block.video;
-        if (type === "file") blockContent = block.file;
-        if (type === "pdf") blockContent = block.pdf;
-        if (blockContent) {
-          const file_type = blockContent.type;
-          if (file_type === "external")
-            return md.link("image", blockContent.external.url);
-          if (file_type === "file")
-            return md.link("image", blockContent.file.url);
+      case "pdf":
+        {
+          let blockContent;
+          if (type === "video") blockContent = block.video;
+          if (type === "file") blockContent = block.file;
+          if (type === "pdf") blockContent = block.pdf;
+          if (blockContent) {
+            const file_type = blockContent.type;
+            if (file_type === "external")
+              return md.link("image", blockContent.external.url);
+            if (file_type === "file")
+              return md.link("image", blockContent.file.url);
+          }
         }
         break;
-      }
+
       case "bookmark":
       case "embed":
-      case "link_preview": {
-        let blockContent;
-        if (type === "bookmark") blockContent = block.bookmark;
-        if (type === "embed") blockContent = block.embed;
-        if (type === "link_preview") blockContent = block.link_preview;
-        if (blockContent) return md.link(type, blockContent.url);
+      case "link_preview":
+        {
+          let blockContent;
+          if (type === "bookmark") blockContent = block.bookmark;
+          if (type === "embed") blockContent = block.embed;
+          if (type === "link_preview") blockContent = block.link_preview;
+          if (blockContent) return md.link(type, blockContent.url);
+        }
         break;
+
+      case "table": {
+        const { id, has_children } = block;
+        let tableArr: string[][] = [];
+        if (has_children) {
+          const tableRows = await getBlockChildren(this.notionClient, id, 100);
+          // console.log(">>", tableRows);
+          let rowsPromise = tableRows?.map(async (row) => {
+            const { type } = row as any;
+            const cells = (row as any)[type]["cells"];
+
+            /**
+             * this is more like a hack since matching the type text was
+             * difficult. So converting each cell to paragraph type to
+             * reuse the blockToMarkdown function
+             */
+            let cellStringPromise = cells.map(
+              async (cell: any) =>
+                await this.blockToMarkdown({
+                  type: "paragraph",
+                  paragraph: { text: cell },
+                } as ListBlockChildrenResponseResult)
+            );
+
+            const cellStringArr = await Promise.all(cellStringPromise);
+            // console.log("~~", cellStringArr);
+            tableArr.push(cellStringArr);
+            // console.log(tableArr);
+          });
+          await Promise.all(rowsPromise || []);
+        }
+        parsedData = md.table(tableArr);
+        return parsedData;
       }
 
       // Rest of the types
@@ -184,6 +244,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
       // "link_to_page"
       // "audio"
       // "unsupported"
+
       default: {
         // In this case typescript is not able to index the types properly, hence ignoring the error
 
@@ -204,55 +265,46 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
     }
 
     switch (type) {
-      case "code": {
-        parsedData = md.codeBlock(parsedData, block[type].language);
-        break;
-      }
-      case "heading_1": {
-        parsedData = md.heading1(parsedData);
-        break;
-      }
-      case "heading_2": {
-        parsedData = md.heading2(parsedData);
-        break;
-      }
-      case "heading_3": {
-        parsedData = md.heading3(parsedData);
-        break;
-      }
-      case "quote": {
-        parsedData = md.quote(parsedData);
-        break;
-      }
-      case "bulleted_list_item":
-      case "numbered_list_item": {
-        parsedData = md.bullet(parsedData);
-        break;
-      }
-      case "to_do": {
-        parsedData = md.todo(parsedData, block.to_do.checked);
-        break;
-      }
-      case "table":
+      case "code":
         {
-          const { id, has_children } = block;
-          let tableArr: string[][] = [];
-          if (has_children) {
-            const tableRows = await getBlockChildren(
-              this.notionClient,
-              id,
-              100
-            );
-            tableRows?.map((row) => {
-              const { type } = row as any;
-              const cells = (row as any)["type"][type];
-              let cellStringArr = cells.map(
-                async (cell: any) => await this.blockToMarkdown(cell)
-              );
-              tableArr.push(cellStringArr);
-            });
-          }
-          parsedData = md.table(tableArr);
+          parsedData = md.codeBlock(parsedData, block[type].language);
+        }
+        break;
+
+      case "heading_1":
+        {
+          parsedData = md.heading1(parsedData);
+        }
+        break;
+
+      case "heading_2":
+        {
+          parsedData = md.heading2(parsedData);
+        }
+        break;
+
+      case "heading_3":
+        {
+          parsedData = md.heading3(parsedData);
+        }
+        break;
+
+      case "quote":
+        {
+          parsedData = md.quote(parsedData);
+        }
+        break;
+
+      case "bulleted_list_item":
+      case "numbered_list_item":
+        {
+          parsedData = md.bullet(parsedData);
+        }
+        break;
+
+      case "to_do":
+        {
+          parsedData = md.todo(parsedData, block.to_do.checked);
         }
         break;
     }
