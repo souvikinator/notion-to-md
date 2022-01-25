@@ -80,24 +80,8 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
 
     if (!blocks) return mdBlocks;
 
-    /**
-     * notion's table response is weird. It two objects for same table
-     * first object with table width -> 2
-     * second object with the actual table width
-     * to keep track of table blocks and ignore the first one,
-     * tableBlockCount is used.
-     */
-    let tableBlockCount = 0;
-
     for (let i = 0; i < blocks.length; i++) {
       let block = blocks[i];
-
-      if ((block as any).type === "table" && tableBlockCount <= 0) {
-        tableBlockCount++;
-        continue;
-      }
-
-      tableBlockCount++;
 
       if ("has_children" in block && block.has_children) {
         let child_blocks = await getBlockChildren(
