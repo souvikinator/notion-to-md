@@ -8,27 +8,21 @@ export const getBlockChildren = async (
 ) => {
   try {
     let result = [];
-    let start_cursor;
-    let pageSize = 100;
-    for (let i = 0; i < totalPage; i++) {
-      // contain start_cursor
+    let has_more = true;
+    let pageCount = 0;
+    let start_cursor = undefined;
+    
+    do {
       const response = (await notionClient.blocks.children.list({
         start_cursor: start_cursor,
         page_size: pageSize,
         block_id: block_id,
       })) as ListBlockChildrenResponse;
-      let current = response.results;
-      // delete start_cursor
-      if (start_cursor) {
-        current.shift();
-      }
-      result.push(...current);
-      if (current.length < 100) {
-        break;
-      }
-      pageSize = 101;
-      start_cursor = current[current.length - 1].id;
-    }
+      result.push(...response.results);
+      
+      start_cursor = response?.next_cursor;
+      pageCount += 1;
+    } while(start_cursor != null && (totalPage == null || pageCount < totalPage))
     return result;
   } catch (e) {
     console.log(e);
