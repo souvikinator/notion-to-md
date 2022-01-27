@@ -8,7 +8,6 @@ export const getBlockChildren = async (
 ) => {
   try {
     let result = [];
-    let has_more = true;
     let pageCount = 0;
     let start_cursor = undefined;
     
