@@ -14,7 +14,6 @@ export const getBlockChildren = async (
     do {
       const response = (await notionClient.blocks.children.list({
         start_cursor: start_cursor,
-        page_size: pageSize,
         block_id: block_id,
       })) as ListBlockChildrenResponse;
       result.push(...response.results);
