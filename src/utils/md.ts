@@ -1,3 +1,5 @@
+import { CalloutIcon } from '../types';
+
 export const inlineCode = (text: string) => {
   return `\`${text}\``;
 };
@@ -43,6 +45,16 @@ export const heading3 = (text: string) => {
 export const quote = (text: string) => {
   // the replace is done to handle multiple lines
   return `> ${text.replace(/\n/g, "  \n>")}`;
+};
+
+export const callout = (text: string, icon?: CalloutIcon) => {
+  let emoji: string | undefined;
+  if (icon?.type === 'emoji') {
+    emoji = icon.emoji;
+  }
+
+  // the replace is done to handle multiple lines
+  return `> ${emoji ? emoji + ' ' : ''}${text.replace(/\n/g, "  \n>")}`;
 };
 
 export const bullet = (text: string) => {
