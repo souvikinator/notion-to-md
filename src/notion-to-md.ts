@@ -282,6 +282,12 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
         }
         break;
 
+      case "callout":
+        {
+          parsedData = md.callout(parsedData, block[type].icon);
+        }
+        break;
+
       case "bulleted_list_item":
       case "numbered_list_item":
         {

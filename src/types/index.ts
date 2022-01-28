@@ -58,3 +58,5 @@ export type Text = {
   plain_text: string;
   href: string | null;
 };
+
+export type CalloutIcon = { type: "emoji"; emoji?: string; } | { type: "external"; external?: {  url: string }; } | { type: "file"; file: { url: string; expiry_time: string; }; } | null;
