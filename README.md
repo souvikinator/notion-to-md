@@ -1,5 +1,7 @@
 <img src="https://imgur.com/WgXdz9r.png" />
 
+> 💡 For better readability and detailed instructions headover to the [wiki](https://github.com/souvikinator/notion-to-md/wiki)
+
 # Notion to Markdown
 
 Convert notion pages, block and list of blocks to markdown (supports nesting) using **[notion-sdk-js](https://github.com/makenotion/notion-sdk-js)**
@@ -190,44 +192,6 @@ console.log(result);
 ```
 ![image](https://media.giphy.com/media/Ju7l5y9osyymQ/giphy.gif)
 ```
-
-## API
-
-> ### `toMarkdownString(mdBlock[])`
->
-> - takes output of `pageToMarkdown` or `blocksToMarkdown` as argument
-> - converts to markdown string.
-
-> ### `pageToMarkdown(id,totalPage)`
->
-> - Uses `blocksToMarkdown` internally.
-> - `id`(pageid) as input and converts all the blocks in the page to corresponding markdown object
-> - `totalPage` is the retrieve block children request number i.e `page_size Maximum = totalPage * 100`.
-
-> ### totalPage
->
-> Default value is `1` which means only `100` blocks will be converted to markdown and rest will be ignored (due to notion api limitations, ref: [#9](https://github.com/souvikinator/notion-to-md/pull/9)).
->
-> ### How to use `totalPage` arg ?
->
-> - if the notion page contains less than or equal `100` blocks then `totalPage` arg is not required.
-> - if the notion page contains `150` blocks then `totalPage` argument should be greater than or equal to `2` leading to `pageSize = 2 * 100` and rendering all `150` blocks.
-
-> ### `blocksToMarkdown(blocks,totalPage)`
->
-> **Note**: requires <u>**notion-sdk-js**</u>
->
-> - `blocks`: array of notion blocks
-> - `totalPage`: the retrieve block children request number i.e `page_size Maximum = totalPage * 100`.
-> - deals with <u>**nested blocks**</u>
-> - uses `blockToMarkdown` internally.
-
-> ### `blockToMarkdown(block)`
->
-> - Takes single notion block and converts to markdown string
-> - does not deal with nested notion blocks
-> - depends on `notion-sdk-js`.
-> - Refer docs to know more about [notion blocks](https://developers.notion.com/reference/block)
 
 ## Contribution
 
