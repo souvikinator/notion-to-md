@@ -22,7 +22,7 @@
     "notion-to-md",
     "notion2md"
   ],
-  "author": "",
+  "author": "Souvik Kar Mahapatra <souvikat001+chitchat@gmail.com>",
   "license": "ISC",
   "files": [
     "build/**"
