@@ -15,6 +15,8 @@ import { getBlockChildren } from "./utils/notion";
  */
 export class NotionToMarkdown {
   private notionClient: Client;
+  // TODO: better way to handle this?
+  private olCounter = 0;
 
   constructor(options: NotionToMarkdownOptions) {
     this.notionClient = options.notionClient;
@@ -292,9 +294,14 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
         break;
 
       case "bulleted_list_item":
-      case "numbered_list_item":
         {
           parsedData = md.bullet(parsedData);
+        }
+        break;
+
+        case "numbered_list_item":
+        {
+          parsedData = md.bullet(parsedData, ++this.olCounter);
         }
         break;
 
