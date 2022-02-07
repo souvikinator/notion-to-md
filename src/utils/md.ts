@@ -1,4 +1,4 @@
-import { CalloutIcon } from '../types';
+import { CalloutIcon } from "../types";
 
 export const inlineCode = (text: string) => {
   return `\`${text}\``;
@@ -49,12 +49,12 @@ export const quote = (text: string) => {
 
 export const callout = (text: string, icon?: CalloutIcon) => {
   let emoji: string | undefined;
-  if (icon?.type === 'emoji') {
+  if (icon?.type === "emoji") {
     emoji = icon.emoji;
   }
 
   // the replace is done to handle multiple lines
-  return `> ${emoji ? emoji + ' ' : ''}${text.replace(/\n/g, "  \n>")}`;
+  return `> ${emoji ? emoji + " " : ""}${text.replace(/\n/g, "  \n>")}`;
 };
 
 export const bullet = (text: string) => {
@@ -71,7 +71,12 @@ export const image = (alt: string, href: string) => {
 
 export const addTabSpace = (text: string, n = 0) => {
   const tab = "	";
-  for (let i = 0; i < n; i++) text = tab + text;
+  for (let i = 0; i < n; i++) {
+    if (text.includes("\n")) {
+      const multiLineText = text.split(/(?<=\n)/).join(tab);
+      text = tab + multiLineText;
+    } else text = tab + text;
+  }
   return text;
 };
 
