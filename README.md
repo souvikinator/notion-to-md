@@ -8,6 +8,8 @@ Convert notion pages, block and list of blocks to markdown (supports nesting) us
 
 > **Note:** Before getting started, create [an integration and find the token](https://www.notion.so/my-integrations).
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O5O1AFCJR)
+
 ## Todo
 
 - [x] heading
