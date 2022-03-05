@@ -239,7 +239,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
         // In this case typescript is not able to index the types properly, hence ignoring the error
 
         // @ts-ignore
-        let blockContent = block[type].text || [];
+        let blockContent = block[type].text || block[type].rich_text || [];
         blockContent.map((content: Text) => {
           const annotations = content.annotations;
           let plain_text = content.plain_text;
