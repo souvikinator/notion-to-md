@@ -196,7 +196,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
               async (cell: any) =>
                 await this.blockToMarkdown({
                   type: "paragraph",
-                  paragraph: { text: cell },
+                  paragraph: { rich_text: cell },
                 } as ListBlockChildrenResponseResult)
             );
 
