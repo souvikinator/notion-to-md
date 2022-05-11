@@ -22,7 +22,6 @@ Convert notion pages, block and list of blocks to markdown (supports nesting) us
 - [x] code block
 - [x] strikethrough, underline, bold, italic
 - [x] nested blocks
-- [ ] pages inside pages/child page
 - [x] embeds, bookmarks, videos, files (converted to links)
 - [x] Simple tables
 - [x] divider
