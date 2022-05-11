@@ -27,5 +27,6 @@ export const getBlockChildren = async (
     return result;
   } catch (e) {
     console.log(e);
+    return [];
   }
 };

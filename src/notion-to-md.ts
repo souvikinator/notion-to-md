@@ -85,8 +85,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
 
     for (let i = 0; i < blocks.length; i++) {
       let block = blocks[i];
-
-      if ("has_children" in block && block.has_children) {
+      if ("has_children" in block && block.has_children && block.type !== "column_list") {
         let child_blocks = await getBlockChildren(
           this.notionClient,
           block.id,
@@ -209,6 +208,37 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
         }
         parsedData = md.table(tableArr);
         return parsedData;
+      }
+
+      case "column_list": {
+        const { id, has_children } = block;
+
+        if (!has_children) return "";
+
+        const column_list_children = await getBlockChildren(this.notionClient, id, 100);
+
+        let column_list_promise = column_list_children.map(async (column) =>
+          await this.blockToMarkdown(column)
+        );
+
+        let column_list: string[] = await Promise.all(column_list_promise);
+        // console.log(column_list);
+
+        return column_list.join("\n\n");
+      }
+
+      case "column": {
+        const { id, has_children } = block;
+        if (!has_children) return "";
+
+        const column_children = await getBlockChildren(this.notionClient, id, 100);
+
+        const column_children_promise = column_children.map(async (column_child) =>
+          await this.blockToMarkdown(column_child)
+        );
+
+        let column: string[] = await Promise.all(column_children_promise);
+        return column.join("\n\n");
       }
 
       // Rest of the types
