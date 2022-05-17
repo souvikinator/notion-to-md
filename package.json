@@ -43,5 +43,8 @@
     "jest": "^27.4.7",
     "ts-jest": "^27.1.3",
     "typescript": "^4.5.4"
+  },
+  "dependencies": {
+    "asciitable.js": "^2.0.0"
   }
 }
