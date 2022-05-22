@@ -45,6 +45,6 @@
     "typescript": "^4.5.4"
   },
   "dependencies": {
-    "asciitable.js": "^2.0.0"
+    "asciitable.js": "^2.0.1"
   }
 }
