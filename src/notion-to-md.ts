@@ -167,11 +167,14 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
       case "bookmark":
       case "embed":
       case "link_preview":
+      case "link_to_page":
         {
           let blockContent;
           if (type === "bookmark") blockContent = block.bookmark;
           if (type === "embed") blockContent = block.embed;
           if (type === "link_preview") blockContent = block.link_preview;
+          if (type === "link_to_page" && block.link_to_page.type === "page_id")
+            blockContent = { url: block.link_to_page.page_id };
           if (blockContent) return md.link(type, blockContent.url);
         }
         break;
