@@ -1,4 +1,5 @@
-import { CalloutIcon } from '../types';
+import { CalloutIcon } from "../types";
+import { markdownTable } from "markdown-table";
 
 export const inlineCode = (text: string) => {
   return `\`${text}\``;
@@ -49,12 +50,12 @@ export const quote = (text: string) => {
 
 export const callout = (text: string, icon?: CalloutIcon) => {
   let emoji: string | undefined;
-  if (icon?.type === 'emoji') {
+  if (icon?.type === "emoji") {
     emoji = icon.emoji;
   }
 
   // the replace is done to handle multiple lines
-  return `> ${emoji ? emoji + ' ' : ''}${text.replace(/\n/g, "  \n>")}`;
+  return `> ${emoji ? emoji + " " : ""}${text.replace(/\n/g, "  \n>")}`;
 };
 
 export const bullet = (text: string) => {
@@ -95,8 +96,5 @@ export const tableRowBody = (row: string[]) => {
 };
 
 export const table = (cells: string[][]) => {
-  const tableRows = cells.map((row, i) =>
-    !i ? tableRowHeader(row) : tableRowBody(row)
-  );
-  return tableRows.join("\n");
+  return markdownTable(cells);
 };
