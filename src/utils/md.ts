@@ -85,16 +85,6 @@ export const divider = () => {
   return "---";
 };
 
-export const tableRowHeader = (row: string[]) => {
-  let header = row.join("|");
-  let divider = row.map((_) => "---").join("|");
-  return `${header}\n${divider}`;
-};
-
-export const tableRowBody = (row: string[]) => {
-  return row.join("|");
-};
-
 export const table = (cells: string[][]) => {
   return markdownTable(cells);
 };
