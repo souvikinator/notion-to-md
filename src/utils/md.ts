@@ -1,5 +1,5 @@
 import { CalloutIcon } from "../types";
-import { markdownTable } from "markdown-table";
+import markdownTable from "markdown-table";
 
 export const inlineCode = (text: string) => {
   return `\`${text}\``;
