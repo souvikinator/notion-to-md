@@ -58,8 +58,8 @@ export const callout = (text: string, icon?: CalloutIcon) => {
   return `> ${emoji ? emoji + " " : ""}${text.replace(/\n/g, "  \n>")}`;
 };
 
-export const bullet = (text: string) => {
-  return `- ${text}`;
+export const bullet = (text: string, count?: number) => {
+  return count ? `${count}. ${text}` : `- ${text}`;
 };
 
 export const todo = (text: string, checked: boolean) => {
