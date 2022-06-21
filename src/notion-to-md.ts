@@ -122,7 +122,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
 
     let parsedData = "";
     const { type } = block;
-    console.log(inspect(block, { colors: true, depth: null }));
+    // console.log(inspect(block, { colors: true, depth: null }));
 
     switch (type) {
       case "image":
