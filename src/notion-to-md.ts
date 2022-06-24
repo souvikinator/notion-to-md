@@ -1,4 +1,3 @@
-import { inspect } from "util";
 import { Client } from "@notionhq/client";
 import {
   Annotations,
@@ -127,7 +126,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
 
     let parsedData = "";
     const { type } = block;
-    console.log(inspect(block, { colors: true, depth: null }));
+    // console.log({ block });
 
     switch (type) {
       case "image":
@@ -381,14 +380,13 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
         break;
 
       case "bulleted_list_item":
-        {
-          parsedData = md.bullet(parsedData);
-        }
-        break;
-
       case "numbered_list_item":
         {
+<<<<<<< HEAD
           parsedData = md.bullet(parsedData, block.numbered_list_item.number);
+=======
+          parsedData = md.bullet(parsedData);
+>>>>>>> parent of d95b9ab (Added support for numbered lists)
         }
         break;
 

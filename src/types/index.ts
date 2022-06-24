@@ -1,18 +1,11 @@
 import { ListBlockChildrenResponse } from "@notionhq/client/build/src/api-endpoints";
 import { Client } from "@notionhq/client";
 
-/* Notion's API types are ridiculously stupid */
-export type BlockAttributes = {
-  numbered_list_item?: {
-    number?: number;
-  };
-};
-
 export type ListBlockChildrenResponseResults =
-  ListBlockChildrenResponse["results"] & BlockAttributes[];
+  ListBlockChildrenResponse["results"];
 
 export type ListBlockChildrenResponseResult =
-  | ListBlockChildrenResponseResults[0] & BlockAttributes;
+  ListBlockChildrenResponseResults[0];
 
 export type TextRequest = string;
 
@@ -66,8 +59,4 @@ export type Text = {
   href: string | null;
 };
 
-export type CalloutIcon =
-  | { type: "emoji"; emoji?: string }
-  | { type: "external"; external?: { url: string } }
-  | { type: "file"; file: { url: string; expiry_time: string } }
-  | null;
+export type CalloutIcon = { type: "emoji"; emoji?: string; } | { type: "external"; external?: {  url: string }; } | { type: "file"; file: { url: string; expiry_time: string; }; } | null;
