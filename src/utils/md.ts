@@ -85,6 +85,15 @@ export const divider = () => {
   return "---";
 };
 
+export const toggle = (summary: string, children?: string) => {
+  return `<details>
+  <summary>${summary}</summary>
+
+  ${children || ""}
+
+  </details>`;
+};
+
 export const table = (cells: string[][]) => {
   return markdownTable(cells);
 };

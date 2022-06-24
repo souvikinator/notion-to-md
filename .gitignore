@@ -140,5 +140,5 @@ dist
 package-lock.json
 
 # misc
-test.ts
+demo.ts
 test.md
