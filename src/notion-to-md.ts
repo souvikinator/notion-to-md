@@ -382,11 +382,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
       case "bulleted_list_item":
       case "numbered_list_item":
         {
-<<<<<<< HEAD
-          parsedData = md.bullet(parsedData, block.numbered_list_item.number);
-=======
           parsedData = md.bullet(parsedData);
->>>>>>> parent of d95b9ab (Added support for numbered lists)
         }
         break;
 
