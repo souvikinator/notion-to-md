@@ -86,7 +86,11 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
 
     for (let i = 0; i < blocks.length; i++) {
       let block = blocks[i];
-      if ("has_children" in block && block.has_children && block.type !== "column_list") {
+      if (
+        "has_children" in block &&
+        block.has_children &&
+        block.type !== "column_list"
+      ) {
         let child_blocks = await getBlockChildren(
           this.notionClient,
           block.id,
@@ -219,14 +223,17 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
 
         if (!has_children) return "";
 
-        const column_list_children = await getBlockChildren(this.notionClient, id, 100);
+        const column_list_children = await getBlockChildren(
+          this.notionClient,
+          id,
+          100
+        );
 
-        let column_list_promise = column_list_children.map(async (column) =>
-          await this.blockToMarkdown(column)
+        let column_list_promise = column_list_children.map(
+          async (column) => await this.blockToMarkdown(column)
         );
 
         let column_list: string[] = await Promise.all(column_list_promise);
-        // console.log(column_list);
 
         return column_list.join("\n\n");
       }
@@ -235,14 +242,46 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
         const { id, has_children } = block;
         if (!has_children) return "";
 
-        const column_children = await getBlockChildren(this.notionClient, id, 100);
+        const column_children = await getBlockChildren(
+          this.notionClient,
+          id,
+          100
+        );
 
-        const column_children_promise = column_children.map(async (column_child) =>
-          await this.blockToMarkdown(column_child)
+        const column_children_promise = column_children.map(
+          async (column_child) => await this.blockToMarkdown(column_child)
         );
 
         let column: string[] = await Promise.all(column_children_promise);
         return column.join("\n\n");
+      }
+
+      case "toggle": {
+        const { id, has_children } = block;
+
+        const toggle_summary = block.toggle.rich_text[0].plain_text;
+
+        // empty toggle
+        if (!has_children) {
+          return md.toggle(toggle_summary);
+        }
+
+        const toggle_children_object = await getBlockChildren(
+          this.notionClient,
+          id,
+          100
+        );
+
+        // parse children blocks to md object
+        const toggle_children = await this.blocksToMarkdown(
+          toggle_children_object
+        );
+
+        // convert children md object to md string
+        const toggle_children_md_string =
+          this.toMarkdownString(toggle_children);
+
+        return md.toggle(toggle_summary, toggle_children_md_string);
       }
 
       // Rest of the types
@@ -333,7 +372,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
 
       case "numbered_list_item":
         {
-          parsedData = md.bullet(parsedData, block.numbered_list_item.number)
+          parsedData = md.bullet(parsedData, block.numbered_list_item.number);
         }
         break;
 
