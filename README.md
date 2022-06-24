@@ -24,11 +24,12 @@ Convert notion pages, block and list of blocks to markdown (supports nesting) us
 - [x] nested blocks
 - [x] embeds, bookmarks, videos, files (converted to links)
 - [x] Simple tables
+- [x] toggle 
 - [x] divider
 - [x] equation block (converted to code blocks)
 - [x] convert returned markdown object to string (`toMarkdownString()`)
 - [x] typescript support
-- [ ] add tests
+- [x] add tests
 
 ## Install
 
