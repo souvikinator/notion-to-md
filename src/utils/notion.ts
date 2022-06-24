@@ -25,6 +25,8 @@ export const getBlockChildren = async (
       start_cursor != null &&
       (totalPage == null || pageCount < totalPage)
     );
+
+    processBlockChildren(result);
     return result;
   } catch (e) {
     console.log(e);
