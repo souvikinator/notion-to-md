@@ -89,7 +89,8 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
       if (
         "has_children" in block &&
         block.has_children &&
-        block.type !== "column_list"
+        block.type !== "column_list" &&
+        block.type !== "toggle"
       ) {
         let child_blocks = await getBlockChildren(
           this.notionClient,
@@ -173,14 +174,32 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
       case "embed":
       case "link_preview":
       case "link_to_page":
+      case "child_page":
+      case "child_database":
         {
           let blockContent;
+          let title: string = type;
           if (type === "bookmark") blockContent = block.bookmark;
           if (type === "embed") blockContent = block.embed;
           if (type === "link_preview") blockContent = block.link_preview;
-          if (type === "link_to_page" && block.link_to_page.type === "page_id")
+          if (
+            type === "link_to_page" &&
+            block.link_to_page.type === "page_id"
+          ) {
             blockContent = { url: block.link_to_page.page_id };
-          if (blockContent) return md.link(type, blockContent.url);
+          }
+
+          if (type === "child_page") {
+            blockContent = { url: block.id };
+            title = block.child_page.title;
+          }
+
+          if (type === "child_database") {
+            blockContent = { url: block.id };
+            title = block.child_database.title || "child_database";
+          }
+
+          if (blockContent) return md.link(title, blockContent.url);
         }
         break;
 
@@ -214,8 +233,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
           });
           await Promise.all(rowsPromise || []);
         }
-        parsedData = md.table(tableArr);
-        return parsedData;
+        return md.table(tableArr);
       }
 
       case "column_list": {
@@ -283,7 +301,6 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
 
         return md.toggle(toggle_summary, toggle_children_md_string);
       }
-
       // Rest of the types
       // "paragraph"
       // "heading_1"
@@ -293,7 +310,6 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
       // "numbered_list_item"
       // "quote"
       // "to_do"
-      // "toggle"
       // "template"
       // "synced_block"
       // "child_page"
