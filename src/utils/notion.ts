@@ -1,5 +1,6 @@
 import { Client } from "@notionhq/client";
 import { ListBlockChildrenResponse } from "@notionhq/client/build/src/api-endpoints";
+import { ListBlockChildrenResponseResults } from "../types";
 
 export const getBlockChildren = async (
   notionClient: Client,
@@ -7,7 +8,7 @@ export const getBlockChildren = async (
   totalPage: number | null
 ) => {
   try {
-    let result = [];
+    let result: ListBlockChildrenResponseResults = [];
     let pageCount = 0;
     let start_cursor = undefined;
 
@@ -25,10 +26,24 @@ export const getBlockChildren = async (
       (totalPage == null || pageCount < totalPage)
     );
 
-    processBlockChildren(result);
+    modifyNumberedListObject(result);
     return result;
   } catch (e) {
     console.log(e);
     return [];
+  }
+};
+
+export const modifyNumberedListObject = (
+  blocks: ListBlockChildrenResponseResults
+) => {
+  let numberedListIndex = 0;
+
+  for (const block of blocks) {
+    if ("type" in block && block.type === "numbered_list_item") {
+      // add numbers
+      // @ts-ignore
+      block.numbered_list_item.number = ++numberedListIndex;
+    }
   }
 };
