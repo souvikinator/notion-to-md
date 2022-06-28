@@ -200,6 +200,13 @@ console.log(result);
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 Please make sure to update tests as appropriate.
 
+## Contributers
+
+<a href="https://github.com/souvikinator/notion-to-md/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=souvikinator/notion-to-md" />
+</a>
+
+
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
