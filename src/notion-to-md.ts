@@ -380,9 +380,14 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
         break;
 
       case "bulleted_list_item":
-      case "numbered_list_item":
         {
           parsedData = md.bullet(parsedData);
+        }
+        break;
+
+      case "numbered_list_item":
+        {
+          parsedData = md.bullet(parsedData, block.numbered_list_item.number);
         }
         break;
 
