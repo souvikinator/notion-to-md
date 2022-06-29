@@ -6,6 +6,7 @@ import {
   MdBlock,
   Text,
   NotionToMarkdownOptions,
+  CustomTransformer
 } from "./types";
 import * as md from "./utils/md";
 import { getBlockChildren } from "./utils/notion";
@@ -15,11 +16,16 @@ import { getBlockChildren } from "./utils/notion";
  */
 export class NotionToMarkdown {
   private notionClient: Client;
-
+  private customTransformers: Record<string, CustomTransformer>
   constructor(options: NotionToMarkdownOptions) {
     this.notionClient = options.notionClient;
+    this.customTransformers = {}
   }
+  setCustomTransformer(type: string, transformer: CustomTransformer): NotionToMarkdown {
+    this.customTransformers[type] = transformer;
 
+    return this;
+  }
   /**
    * Converts Markdown Blocks to string
    * @param {MdBlock[]} mdBlocks - Array of markdown blocks
@@ -122,12 +128,13 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
    * @returns {string} corresponding markdown string of the passed block
    */
   async blockToMarkdown(block: ListBlockChildrenResponseResult) {
-    if (!("type" in block)) return "";
+    if (typeof block !== "object" || !("type" in block)) return "";
 
     let parsedData = "";
     const { type } = block;
-    // console.log({ block });
-
+    if(type in this.customTransformers && !!this.customTransformers[type]) 
+      return await this.customTransformers[type](block);
+    
     switch (type) {
       case "image":
         {
@@ -325,7 +332,6 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
 
       default: {
         // In this case typescript is not able to index the types properly, hence ignoring the error
-
         // @ts-ignore
         let blockContent = block[type].text || block[type].rich_text || [];
         blockContent.map((content: Text) => {
