@@ -14,6 +14,7 @@ import {
   quote,
   bullet,
   todo,
+  toggle,
   image,
 } from "./md";
 
@@ -113,3 +114,22 @@ describe("Image", () => {
     );
   });
 });
+
+describe("Toggle", () => {
+  const noSpaces = (text: string) => text.replace(/\s+/g, '')
+  test("displays content if toggle title is empty", () => {
+    expect(noSpaces(toggle(undefined, "content"))).toBe(
+      "content"
+    );
+  })
+  test("return empty string if title and content are empty", () => {
+    expect(noSpaces(toggle(undefined, undefined))).toBe(
+      ""
+    );
+  })
+  test("Displays toggle with <details> and <summary>", () => {
+    expect(noSpaces(toggle("title", "content"))).toBe(
+      "<details><summary>title</summary>content</details>"
+    );
+  })
+})
