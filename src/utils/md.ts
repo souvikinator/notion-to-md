@@ -85,7 +85,8 @@ export const divider = () => {
   return "---";
 };
 
-export const toggle = (summary: string, children?: string) => {
+export const toggle = (summary?: string, children?: string) => {
+  if(!summary) return children || ""
   return `<details>
   <summary>${summary}</summary>
 

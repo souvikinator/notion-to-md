@@ -276,7 +276,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
       case "toggle": {
         const { id, has_children } = block;
 
-        const toggle_summary = block.toggle.rich_text[0].plain_text;
+        const toggle_summary = block.toggle.rich_text[0]?.plain_text;
 
         // empty toggle
         if (!has_children) {
