@@ -8,6 +8,8 @@ Convert notion pages, block and list of blocks to markdown (supports nesting) us
 
 > **Note:** Before getting started, create [an integration and find the token](https://www.notion.so/my-integrations).
 
+<a href="https://www.producthunt.com/posts/notion-to-md?utm_source=badge-featured&utm_medium=badge&utm_souce=badge-notion&#0045;to&#0045;md" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=351669&theme=light" alt="notion&#0045;to&#0045;md - Programmatically&#0032;convert&#0032;notion&#0032;pages&#0032;to&#0032;markdown | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O5O1AFCJR)
 
 ## Todo
