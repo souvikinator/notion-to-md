@@ -59,7 +59,8 @@ export const callout = (text: string, icon?: CalloutIcon) => {
 };
 
 export const bullet = (text: string, count?: number) => {
-  return count ? `${count}. ${text}` : `- ${text}`;
+  let renderText = text.trim();
+  return count ? `${count}. ${renderText}` : `- ${renderText}`;
 };
 
 export const todo = (text: string, checked: boolean) => {
@@ -86,11 +87,11 @@ export const divider = () => {
 };
 
 export const toggle = (summary?: string, children?: string) => {
-  if(!summary) return children || ""
+  if (!summary) return children || "";
   return `<details>
   <summary>${summary}</summary>
 
-  ${children || ""}
+${children || ""}
 
   </details>`;
 };
