@@ -6,7 +6,7 @@ import {
   MdBlock,
   Text,
   NotionToMarkdownOptions,
-  CustomTransformer
+  CustomTransformer,
 } from "./types";
 import * as md from "./utils/md";
 import { getBlockChildren } from "./utils/notion";
@@ -16,12 +16,15 @@ import { getBlockChildren } from "./utils/notion";
  */
 export class NotionToMarkdown {
   private notionClient: Client;
-  private customTransformers: Record<string, CustomTransformer>
+  private customTransformers: Record<string, CustomTransformer>;
   constructor(options: NotionToMarkdownOptions) {
     this.notionClient = options.notionClient;
-    this.customTransformers = {}
+    this.customTransformers = {};
   }
-  setCustomTransformer(type: string, transformer: CustomTransformer): NotionToMarkdown {
+  setCustomTransformer(
+    type: string,
+    transformer: CustomTransformer
+  ): NotionToMarkdown {
     this.customTransformers[type] = transformer;
 
     return this;
@@ -35,11 +38,21 @@ export class NotionToMarkdown {
   toMarkdownString(mdBlocks: MdBlock[] = [], nestingLevel: number = 0): string {
     let mdString = "";
     mdBlocks.forEach((mdBlocks) => {
+      // process parent blocks
       if (mdBlocks.parent) {
-        mdString += `
-${md.addTabSpace(mdBlocks.parent, nestingLevel)}
-`;
+        if (
+          mdBlocks.type !== "to_do" &&
+          mdBlocks.type !== "bulleted_list_item" &&
+          mdBlocks.type !== "numbered_list_item"
+        ) {
+          // add extra line breaks non list blocks
+          mdString += `\n${md.addTabSpace(mdBlocks.parent, nestingLevel)}\n\n`;
+        } else {
+          mdString += `${md.addTabSpace(mdBlocks.parent, nestingLevel)}\n`;
+        }
       }
+
+      // process child blocks
       if (mdBlocks.children && mdBlocks.children.length > 0) {
         mdString += this.toMarkdownString(mdBlocks.children, nestingLevel + 1);
       }
@@ -103,6 +116,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
           totalPage
         );
         mdBlocks.push({
+          type: block.type,
           parent: await this.blockToMarkdown(block),
           children: [],
         });
@@ -116,8 +130,9 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
         continue;
       }
       let tmp = await this.blockToMarkdown(block);
-
-      mdBlocks.push({ parent: tmp, children: [] });
+      // console.log(block);
+      // @ts-ignore
+      mdBlocks.push({ type: block.type, parent: tmp, children: [] });
     }
     return mdBlocks;
   }
@@ -132,9 +147,9 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
 
     let parsedData = "";
     const { type } = block;
-    if(type in this.customTransformers && !!this.customTransformers[type]) 
+    if (type in this.customTransformers && !!this.customTransformers[type])
       return await this.customTransformers[type](block);
-    
+
     switch (type) {
       case "image":
         {
