@@ -45,5 +45,8 @@ export const modifyNumberedListObject = (
       // @ts-ignore
       block.numbered_list_item.number = ++numberedListIndex;
     }
+    else {
+      numberedListIndex = 0;
+    }
   }
 };
