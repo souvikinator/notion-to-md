@@ -54,7 +54,11 @@ export class NotionToMarkdown {
 
       // process child blocks
       if (mdBlocks.children && mdBlocks.children.length > 0) {
-        mdString += this.toMarkdownString(mdBlocks.children, nestingLevel + 1);
+        if(mdBlocks.type === "synced_block"){
+          mdString += this.toMarkdownString(mdBlocks.children, nestingLevel);
+        } else {
+          mdString += this.toMarkdownString(mdBlocks.children, nestingLevel + 1);
+        }
       }
     });
     return mdString;
