@@ -70,6 +70,7 @@ export type CalloutIcon =
   | { type: "external"; external?: { url: string } }
   | { type: "file"; file: { url: string; expiry_time: string } }
   | null;
+
 export type CustomTransformer = (
   block: ListBlockChildrenResponseResult
 ) => Promise<string>;
