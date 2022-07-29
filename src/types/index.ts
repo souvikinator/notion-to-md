@@ -73,4 +73,4 @@ export type CalloutIcon =
 
 export type CustomTransformer = (
   block: ListBlockChildrenResponseResult
-) => Promise<string>;
+) => string | Promise<string>;
