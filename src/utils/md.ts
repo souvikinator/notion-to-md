@@ -26,6 +26,8 @@ export const link = (text: string, href: string) => {
 };
 
 export const codeBlock = (text: string, language?: string) => {
+  if (language === "plain text") language = "text";
+
   return `\`\`\`${language}
 ${text}
 \`\`\``;
