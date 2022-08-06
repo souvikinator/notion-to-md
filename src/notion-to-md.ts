@@ -54,10 +54,13 @@ export class NotionToMarkdown {
 
       // process child blocks
       if (mdBlocks.children && mdBlocks.children.length > 0) {
-        if(mdBlocks.type === "synced_block"){
+        if (mdBlocks.type === "synced_block") {
           mdString += this.toMarkdownString(mdBlocks.children, nestingLevel);
         } else {
-          mdString += this.toMarkdownString(mdBlocks.children, nestingLevel + 1);
+          mdString += this.toMarkdownString(
+            mdBlocks.children,
+            nestingLevel + 1
+          );
         }
       }
     });
@@ -112,7 +115,8 @@ export class NotionToMarkdown {
         "has_children" in block &&
         block.has_children &&
         block.type !== "column_list" &&
-        block.type !== "toggle"
+        block.type !== "toggle" &&
+        block.type !== "callout"
       ) {
         let child_blocks = await getBlockChildren(
           this.notionClient,
@@ -400,7 +404,30 @@ export class NotionToMarkdown {
 
       case "callout":
         {
-          parsedData = md.callout(parsedData, block[type].icon);
+          const { id, has_children } = block;
+          let callout_string = "";
+
+          if (!has_children) {
+            return md.callout(parsedData, block[type].icon);
+          }
+
+          const callout_children_object = await getBlockChildren(
+            this.notionClient,
+            id,
+            100
+          );
+
+          // // parse children blocks to md object
+          const callout_children = await this.blocksToMarkdown(
+            callout_children_object
+          );
+
+          callout_string += `${parsedData}\n`;
+          callout_children.map((child) => {
+            callout_string += `${child.parent}\n\n`;
+          });
+
+          parsedData = md.callout(callout_string.trim(), block[type].icon);
         }
         break;
 
