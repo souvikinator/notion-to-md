@@ -47,7 +47,7 @@ export const heading3 = (text: string) => {
 
 export const quote = (text: string) => {
   // the replace is done to handle multiple lines
-  return `> ${text.replace(/\n/g, "  \n>")}`;
+  return `> ${text.replace(/\n/g, "  \n> ")}`;
 };
 
 export const callout = (text: string, icon?: CalloutIcon) => {
@@ -57,7 +57,7 @@ export const callout = (text: string, icon?: CalloutIcon) => {
   }
 
   // the replace is done to handle multiple lines
-  return `> ${emoji ? emoji + " " : ""}${text.replace(/\n/g, "  \n>")}`;
+  return `> ${emoji ? emoji + " " : ""}${text.replace(/\n/g, "  \n> ")}`;
 };
 
 export const bullet = (text: string, count?: number) => {
