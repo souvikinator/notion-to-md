@@ -52,6 +52,7 @@ This is how the notion page looks for this example:
 ```js
 const { Client } = require("@notionhq/client");
 const { NotionToMarkdown } = require("notion-to-md");
+const fs = require('fs');
 // or
 // import {NotionToMarkdown} from "notion-to-md";
 
