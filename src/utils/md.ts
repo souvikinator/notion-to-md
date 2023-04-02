@@ -26,6 +26,8 @@ export const link = (text: string, href: string) => {
 };
 
 export const codeBlock = (text: string, language?: string) => {
+  if (language === "plain text") language = "text";
+
   return `\`\`\`${language}
 ${text}
 \`\`\``;
@@ -45,7 +47,7 @@ export const heading3 = (text: string) => {
 
 export const quote = (text: string) => {
   // the replace is done to handle multiple lines
-  return `> ${text.replace(/\n/g, "  \n>")}`;
+  return `> ${text.replace(/\n/g, "  \n> ")}`;
 };
 
 export const callout = (text: string, icon?: CalloutIcon) => {
@@ -55,11 +57,12 @@ export const callout = (text: string, icon?: CalloutIcon) => {
   }
 
   // the replace is done to handle multiple lines
-  return `> ${emoji ? emoji + " " : ""}${text.replace(/\n/g, "  \n>")}`;
+  return `> ${emoji ? emoji + " " : ""}${text.replace(/\n/g, "  \n> ")}`;
 };
 
-export const bullet = (text: string) => {
-  return `- ${text}`;
+export const bullet = (text: string, count?: number) => {
+  let renderText = text.trim();
+  return count ? `${count}. ${renderText}` : `- ${renderText}`;
 };
 
 export const todo = (text: string, checked: boolean) => {
@@ -85,11 +88,12 @@ export const divider = () => {
   return "---";
 };
 
-export const toggle = (summary: string, children?: string) => {
+export const toggle = (summary?: string, children?: string) => {
+  if (!summary) return children || "";
   return `<details>
   <summary>${summary}</summary>
 
-  ${children || ""}
+${children || ""}
 
   </details>`;
 };

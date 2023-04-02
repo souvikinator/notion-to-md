@@ -1,0 +1,31 @@
+# This is a basic workflow to help you get started with Actions
+
+name: tweet-on-release
+
+# Controls when the workflow will run
+on:
+  release:
+    types: [published]
+
+jobs:
+  send-release-tweet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Release tweet
+        uses: Eomm/why-don-t-you-tweet@v1
+#         if: ${{ !github.event.repository.private }}
+        with:
+          tweet-message: |
+              🥳Release ${{ github.event.repository.name }} ${{ github.event.release.tag_name }}
+
+              Changelog:-
+              ${{ github.event.release.html_url }}
+
+              drop a ⭐if you liked the project :)
+              #DEVCommunity #OpenSource #100DaysOfCode #javascript
+        env:
+          # Get your tokens from https://developer.twitter.com/apps
+          TWITTER_CONSUMER_API_KEY: ${{ secrets.TWITTER_CONSUMER_API_KEY }}
+          TWITTER_CONSUMER_API_SECRET: ${{ secrets.TWITTER_CONSUMER_API_SECRET_KEY }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}

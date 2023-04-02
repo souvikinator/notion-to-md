@@ -6,6 +6,7 @@ import {
   MdBlock,
   Text,
   NotionToMarkdownOptions,
+  CustomTransformer,
 } from "./types";
 import * as md from "./utils/md";
 import { getBlockChildren } from "./utils/notion";
@@ -15,11 +16,19 @@ import { getBlockChildren } from "./utils/notion";
  */
 export class NotionToMarkdown {
   private notionClient: Client;
-
+  private customTransformers: Record<string, CustomTransformer>;
   constructor(options: NotionToMarkdownOptions) {
     this.notionClient = options.notionClient;
+    this.customTransformers = {};
   }
+  setCustomTransformer(
+    type: string,
+    transformer: CustomTransformer
+  ): NotionToMarkdown {
+    this.customTransformers[type] = transformer;
 
+    return this;
+  }
   /**
    * Converts Markdown Blocks to string
    * @param {MdBlock[]} mdBlocks - Array of markdown blocks
@@ -29,13 +38,30 @@ export class NotionToMarkdown {
   toMarkdownString(mdBlocks: MdBlock[] = [], nestingLevel: number = 0): string {
     let mdString = "";
     mdBlocks.forEach((mdBlocks) => {
+      // process parent blocks
       if (mdBlocks.parent) {
-        mdString += `
-${md.addTabSpace(mdBlocks.parent, nestingLevel)}
-`;
+        if (
+          mdBlocks.type !== "to_do" &&
+          mdBlocks.type !== "bulleted_list_item" &&
+          mdBlocks.type !== "numbered_list_item"
+        ) {
+          // add extra line breaks non list blocks
+          mdString += `\n${md.addTabSpace(mdBlocks.parent, nestingLevel)}\n\n`;
+        } else {
+          mdString += `${md.addTabSpace(mdBlocks.parent, nestingLevel)}\n`;
+        }
       }
+
+      // process child blocks
       if (mdBlocks.children && mdBlocks.children.length > 0) {
-        mdString += this.toMarkdownString(mdBlocks.children, nestingLevel + 1);
+        if (mdBlocks.type === "synced_block") {
+          mdString += this.toMarkdownString(mdBlocks.children, nestingLevel);
+        } else {
+          mdString += this.toMarkdownString(
+            mdBlocks.children,
+            nestingLevel + 1
+          );
+        }
       }
     });
     return mdString;
@@ -89,7 +115,8 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
         "has_children" in block &&
         block.has_children &&
         block.type !== "column_list" &&
-        block.type !== "toggle"
+        block.type !== "toggle" &&
+        block.type !== "callout"
       ) {
         let child_blocks = await getBlockChildren(
           this.notionClient,
@@ -97,6 +124,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
           totalPage
         );
         mdBlocks.push({
+          type: block.type,
           parent: await this.blockToMarkdown(block),
           children: [],
         });
@@ -110,8 +138,9 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
         continue;
       }
       let tmp = await this.blockToMarkdown(block);
-
-      mdBlocks.push({ parent: tmp, children: [] });
+      // console.log(block);
+      // @ts-ignore
+      mdBlocks.push({ type: block.type, parent: tmp, children: [] });
     }
     return mdBlocks;
   }
@@ -122,11 +151,12 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
    * @returns {string} corresponding markdown string of the passed block
    */
   async blockToMarkdown(block: ListBlockChildrenResponseResult) {
-    if (!("type" in block)) return "";
+    if (typeof block !== "object" || !("type" in block)) return "";
 
     let parsedData = "";
     const { type } = block;
-    // console.log({ block });
+    if (type in this.customTransformers && !!this.customTransformers[type])
+      return await this.customTransformers[type](block);
 
     switch (type) {
       case "image":
@@ -276,7 +306,7 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
       case "toggle": {
         const { id, has_children } = block;
 
-        const toggle_summary = block.toggle.rich_text[0].plain_text;
+        const toggle_summary = block.toggle.rich_text[0]?.plain_text;
 
         // empty toggle
         if (!has_children) {
@@ -325,7 +355,6 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
 
       default: {
         // In this case typescript is not able to index the types properly, hence ignoring the error
-
         // @ts-ignore
         let blockContent = block[type].text || block[type].rich_text || [];
         blockContent.map((content: Text) => {
@@ -375,14 +404,42 @@ ${md.addTabSpace(mdBlocks.parent, nestingLevel)}
 
       case "callout":
         {
-          parsedData = md.callout(parsedData, block[type].icon);
+          const { id, has_children } = block;
+          let callout_string = "";
+
+          if (!has_children) {
+            return md.callout(parsedData, block[type].icon);
+          }
+
+          const callout_children_object = await getBlockChildren(
+            this.notionClient,
+            id,
+            100
+          );
+
+          // // parse children blocks to md object
+          const callout_children = await this.blocksToMarkdown(
+            callout_children_object
+          );
+
+          callout_string += `${parsedData}\n`;
+          callout_children.map((child) => {
+            callout_string += `${child.parent}\n\n`;
+          });
+
+          parsedData = md.callout(callout_string.trim(), block[type].icon);
         }
         break;
 
       case "bulleted_list_item":
-      case "numbered_list_item":
         {
           parsedData = md.bullet(parsedData);
+        }
+        break;
+
+      case "numbered_list_item":
+        {
+          parsedData = md.bullet(parsedData, block.numbered_list_item.number);
         }
         break;
 
