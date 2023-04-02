@@ -9,6 +9,11 @@ const notion = new Client({
 // passing notion client to the option
 const n2m = new NotionToMarkdown({ notionClient: notion });
 
+n2m.setCustomTransformer("synced_block", async (block) => {
+  console.log(block);
+  return "synked_block encountered";
+});
+
 (async () => {
   // b4f23bb4d29d44408837c3f67df8fd64
   const mdblocks = await n2m.pageToMarkdown("b4f23bb4d29d44408837c3f67df8fd64");
