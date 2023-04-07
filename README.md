@@ -26,7 +26,7 @@ Convert notion pages, block and list of blocks to markdown (supports nesting) us
 - [x] nested blocks
 - [x] embeds, bookmarks, videos, files (converted to links)
 - [x] Simple tables
-- [x] toggle 
+- [x] toggle
 - [x] divider
 - [x] equation block (converted to code blocks)
 - [x] convert returned markdown object to string (`toMarkdownString()`)
@@ -198,24 +198,41 @@ console.log(result);
 ```
 
 ## Custom Transformers
+
 You can define your own custom transformer for a notion type, to parse and return your own string.
 `setCustomTransformer(type, func)` will overload the parsing for the giving type.
 
-```js
+```ts
 const { NotionToMarkdown } = require("notion-to-md");
 const n2m = new NotionToMarkdown({ notionClient: notion });
-n2m.setCustomTransformer('embed', async (block) => {
-  const {embed} = block as any;
-  if (!embed?.url) return '';
+n2m.setCustomTransformer("embed", async (block) => {
+  const { embed } = block as any;
+  if (!embed?.url) return "";
   return `<figure>
   <iframe src="${embed?.url}"></iframe>
   <figcaption>${await n2m.blockToMarkdown(embed?.caption)}</figcaption>
 </figure>`;
 });
 const result = n2m.blockToMarkdown(block);
-// Result will now parse the `embed` type with your custom function. 
+// Result will now parse the `embed` type with your custom function.
 ```
+
 **Note** Be aware that `setCustomTransformer` will take only the last function for the given type. You can't set two different transforms for the same type.
+
+You can also use the default parsing by returning `false` in your custom transformer.
+
+```ts
+// ...
+n2m.setCustomTransformer("embed", async (block) => {
+  const { embed } = block as any;
+  if (embed?.url?.includes("myspecialurl.com")) {
+    return `...`; // some special rendering
+  }
+  return false; // use default behavior
+});
+const result = n2m.blockToMarkdown(block);
+// Result will now only use custom parser if the embed url matches a specific url
+```
 
 ## Contribution
 
@@ -227,7 +244,6 @@ Please make sure to update tests as appropriate.
 <a href="https://github.com/souvikinator/notion-to-md/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=souvikinator/notion-to-md" />
 </a>
-
 
 ## License
 
