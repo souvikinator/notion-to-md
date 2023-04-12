@@ -166,8 +166,11 @@ export class NotionToMarkdown {
 
     let parsedData = "";
     const { type } = block;
-    if (type in this.customTransformers && !!this.customTransformers[type])
-      return await this.customTransformers[type](block);
+    if (type in this.customTransformers && !!this.customTransformers[type]) {
+      const customTransformerValue = await this.customTransformers[type](block);
+      if (!!customTransformerValue || customTransformerValue === "")
+        return customTransformerValue;
+    }
 
     switch (type) {
       case "image":
