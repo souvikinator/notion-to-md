@@ -1,5 +1,7 @@
-import { ListBlockChildrenResponse } from "@notionhq/client/build/src/api-endpoints";
-import { Client } from "@notionhq/client";
+import { Client } from '@notionhq/client';
+import {
+  ListBlockChildrenResponse,
+} from '@notionhq/client/build/src/api-endpoints';
 
 export type BlockAttributes = {
   numbered_list_item?: {
@@ -20,6 +22,7 @@ export interface NotionToMarkdownOptions {
 
 export type MdBlock = {
   type?: string;
+  blockId: string;
   parent: string;
   children: MdBlock[];
 };
@@ -31,25 +34,25 @@ export type Annotations = {
   underline: boolean;
   code: boolean;
   color:
-    | "default"
-    | "gray"
-    | "brown"
-    | "orange"
-    | "yellow"
-    | "green"
-    | "blue"
-    | "purple"
-    | "pink"
-    | "red"
-    | "gray_background"
-    | "brown_background"
-    | "orange_background"
-    | "yellow_background"
-    | "green_background"
-    | "blue_background"
-    | "purple_background"
-    | "pink_background"
-    | "red_background";
+  | "default"
+  | "gray"
+  | "brown"
+  | "orange"
+  | "yellow"
+  | "green"
+  | "blue"
+  | "purple"
+  | "pink"
+  | "red"
+  | "gray_background"
+  | "brown_background"
+  | "orange_background"
+  | "yellow_background"
+  | "green_background"
+  | "blue_background"
+  | "purple_background"
+  | "pink_background"
+  | "red_background";
 };
 
 export type Text = {
