@@ -54,13 +54,20 @@ export class NotionToMarkdown {
 
       // process child blocks
       if (mdBlocks.children && mdBlocks.children.length > 0) {
-        if (mdBlocks.type === "synced_block") {
-          mdString += this.toMarkdownString(mdBlocks.children, nestingLevel);
+        if (
+          mdBlocks.type === "synced_block" ||
+          mdBlocks.type === "child_page"
+        ) {
+          let mdstr = this.toMarkdownString(mdBlocks.children);
+          // console.log(mdstr);
+          mdString += mdstr;
         } else {
-          mdString += this.toMarkdownString(
+          let mdstr = this.toMarkdownString(
             mdBlocks.children,
             nestingLevel + 1
           );
+          mdString += mdstr;
+          // console.log(mdstr);
         }
       }
     });
@@ -86,6 +93,9 @@ export class NotionToMarkdown {
     const blocks = await getBlockChildren(this.notionClient, id, totalPage);
 
     const parsedData = await this.blocksToMarkdown(blocks);
+
+    // console.log(JSON.stringify(parsedData, null, 4));
+
     return parsedData;
   }
 
@@ -276,6 +286,9 @@ export class NotionToMarkdown {
           100
         );
 
+        // TODO: nested page handler
+        console.log("Column list children>>>\n", column_list_children);
+
         let column_list_promise = column_list_children.map(
           async (column) => await this.blockToMarkdown(column)
         );
@@ -294,6 +307,8 @@ export class NotionToMarkdown {
           id,
           100
         );
+
+        console.log("Column children>>>\n", column_children);
 
         const column_children_promise = column_children.map(
           async (column_child) => await this.blockToMarkdown(column_child)
