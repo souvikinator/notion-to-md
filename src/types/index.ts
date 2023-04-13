@@ -68,6 +68,23 @@ export type Text = {
   href: string | null;
 };
 
+export type Equation = {
+  type: "equation";
+  equation: { 
+    expression: string;
+  },
+  annotations: {
+    bold: false;
+    italic: false;
+    strikethrough: false;
+    underline: false;
+    code: false;
+    color: "default";
+  },
+  plain_text: string;
+  href: null;
+};
+
 export type CalloutIcon =
   | { type: "emoji"; emoji?: string }
   | { type: "external"; external?: { url: string } }

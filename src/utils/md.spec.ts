@@ -16,6 +16,8 @@ import {
   todo,
   toggle,
   image,
+  inlineEquation,
+  equation,
 } from "./md";
 
 describe("Callout", () => {
@@ -67,6 +69,16 @@ simple text
 \`\`\``.trim()
     );
   });
+  test("Inline Equation", () => {
+    expect(inlineEquation("E = mc^2")).toBe("$E = mc^2$");
+  });
+  test("Equation Block", () => {
+    expect(equation("E = mc^2")).toBe(
+      `$$
+E = mc^2
+$$`.trim()
+    );
+  });  
   test("Bold", () => {
     expect(bold("simple text")).toBe("**simple text**");
   });
