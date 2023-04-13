@@ -1,16 +1,18 @@
-import { Client } from "@notionhq/client";
+import { Client } from '@notionhq/client';
+
 import {
   Annotations,
+  CustomTransformer,
   ListBlockChildrenResponseResult,
   ListBlockChildrenResponseResults,
   MdBlock,
-  Text,
   NotionToMarkdownOptions,
   CustomTransformer,
   Equation,
-} from "./types";
-import * as md from "./utils/md";
-import { getBlockChildren } from "./utils/notion";
+  Text,
+} from './types';
+import * as md from './utils/md';
+import { getBlockChildren } from './utils/notion';
 
 /**
  * Converts a Notion page to Markdown.
@@ -119,17 +121,22 @@ export class NotionToMarkdown {
         block.type !== "toggle" &&
         block.type !== "callout"
       ) {
+        // Get children of this block.
         let child_blocks = await getBlockChildren(
           this.notionClient,
           block.id,
           totalPage
         );
+
+        // Push this block to mdBlocks.
         mdBlocks.push({
           type: block.type,
+          blockId: block.id,
           parent: await this.blockToMarkdown(block),
           children: [],
         });
 
+        // Recursively call blocksToMarkdown to get children of this block.
         let l = mdBlocks.length;
         await this.blocksToMarkdown(
           child_blocks,
@@ -140,8 +147,13 @@ export class NotionToMarkdown {
       }
       let tmp = await this.blockToMarkdown(block);
       // console.log(block);
-      // @ts-ignore
-      mdBlocks.push({ type: block.type, parent: tmp, children: [] });
+      mdBlocks.push({
+        // @ts-ignore
+        type: block.type,
+        blockId: block.id,
+        parent: tmp,
+        children: []
+      });
     }
     return mdBlocks;
   }
@@ -156,8 +168,11 @@ export class NotionToMarkdown {
 
     let parsedData = "";
     const { type } = block;
-    if (type in this.customTransformers && !!this.customTransformers[type])
-      return await this.customTransformers[type](block);
+    if (type in this.customTransformers && !!this.customTransformers[type]) {
+      const customTransformerValue = await this.customTransformers[type](block);
+      if (!!customTransformerValue || customTransformerValue === "")
+        return customTransformerValue;
+    }
 
     switch (type) {
       case "image":
