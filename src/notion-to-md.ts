@@ -7,7 +7,6 @@ import {
   ListBlockChildrenResponseResults,
   MdBlock,
   NotionToMarkdownOptions,
-  CustomTransformer,
   Equation,
   Text,
 } from './types';
