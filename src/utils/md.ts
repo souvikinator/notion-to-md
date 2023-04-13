@@ -5,6 +5,10 @@ export const inlineCode = (text: string) => {
   return `\`${text}\``;
 };
 
+export const inlineEquation = (text: string) => {
+  return `$${text}$`;
+};
+
 export const bold = (text: string) => {
   return `**${text}**`;
 };
@@ -31,6 +35,12 @@ export const codeBlock = (text: string, language?: string) => {
   return `\`\`\`${language}
 ${text}
 \`\`\``;
+};
+
+export const equation = (text: string) => {
+  return `$$
+${text}
+$$`;
 };
 
 export const heading1 = (text: string) => {
