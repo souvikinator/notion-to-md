@@ -1,6 +1,6 @@
 <img src="https://imgur.com/WgXdz9r.png" />
 
-> 💡 For better readability and detailed instructions headover to the [wiki](https://github.com/souvikinator/notion-to-md/wiki)
+> 💡 For better readability and detailed instructions head over to the [wiki](https://github.com/souvikinator/notion-to-md/wiki).
 
 # Notion to Markdown
 
@@ -25,7 +25,7 @@ Convert notion pages, block and list of blocks to markdown (supports nesting) us
 - [x] strikethrough, underline, bold, italic
 - [x] nested blocks
 - [x] embeds, bookmarks, videos, files (converted to links)
-- [x] Simple tables
+- [x] simple tables
 - [x] toggle
 - [x] divider
 - [x] equation block (converted to code blocks)
@@ -36,7 +36,7 @@ Convert notion pages, block and list of blocks to markdown (supports nesting) us
 ## Install
 
 ```Bash
-$ npm install notion-to-md
+npm install notion-to-md
 ```
 
 ## Usage
