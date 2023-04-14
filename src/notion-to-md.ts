@@ -275,6 +275,7 @@ export class NotionToMarkdown {
         return md.table(tableArr);
       }
 
+      // NOTE: column_list is parent of columns
       case "column_list": {
         const { id, has_children } = block;
 
@@ -285,9 +286,6 @@ export class NotionToMarkdown {
           id,
           100
         );
-
-        // TODO: nested page handler
-        console.log("Column list children>>>\n", column_list_children);
 
         let column_list_promise = column_list_children.map(
           async (column) => await this.blockToMarkdown(column)
@@ -308,14 +306,13 @@ export class NotionToMarkdown {
           100
         );
 
-        console.log("Column children>>>\n", column_children);
-
-        const column_children_promise = column_children.map(
-          async (column_child) => await this.blockToMarkdown(column_child)
+        let column_children_mdBlocks = await this.blocksToMarkdown(
+          column_children
         );
 
-        let column: string[] = await Promise.all(column_children_promise);
-        return column.join("\n\n");
+        let column_string = this.toMarkdownString(column_children_mdBlocks);
+
+        return column_string;
       }
 
       case "toggle": {
