@@ -1,7 +1,5 @@
-import { Client } from '@notionhq/client';
-import {
-  ListBlockChildrenResponse,
-} from '@notionhq/client/build/src/api-endpoints';
+import { Client } from "@notionhq/client";
+import { ListBlockChildrenResponse } from "@notionhq/client/build/src/api-endpoints";
 
 export type BlockAttributes = {
   numbered_list_item?: {
@@ -34,25 +32,25 @@ export type Annotations = {
   underline: boolean;
   code: boolean;
   color:
-  | "default"
-  | "gray"
-  | "brown"
-  | "orange"
-  | "yellow"
-  | "green"
-  | "blue"
-  | "purple"
-  | "pink"
-  | "red"
-  | "gray_background"
-  | "brown_background"
-  | "orange_background"
-  | "yellow_background"
-  | "green_background"
-  | "blue_background"
-  | "purple_background"
-  | "pink_background"
-  | "red_background";
+    | "default"
+    | "gray"
+    | "brown"
+    | "orange"
+    | "yellow"
+    | "green"
+    | "blue"
+    | "purple"
+    | "pink"
+    | "red"
+    | "gray_background"
+    | "brown_background"
+    | "orange_background"
+    | "yellow_background"
+    | "green_background"
+    | "blue_background"
+    | "purple_background"
+    | "pink_background"
+    | "red_background";
 };
 
 export type Text = {
@@ -70,9 +68,9 @@ export type Text = {
 
 export type Equation = {
   type: "equation";
-  equation: { 
+  equation: {
     expression: string;
-  },
+  };
   annotations: {
     bold: false;
     italic: false;
@@ -80,7 +78,7 @@ export type Equation = {
     underline: false;
     code: false;
     color: "default";
-  },
+  };
   plain_text: string;
   href: null;
 };

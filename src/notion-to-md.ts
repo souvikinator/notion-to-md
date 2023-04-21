@@ -1,4 +1,5 @@
-import { Client } from '@notionhq/client';
+import { Client } from "@notionhq/client";
+import fs from "fs";
 
 import {
   Annotations,
@@ -9,9 +10,9 @@ import {
   NotionToMarkdownOptions,
   Equation,
   Text,
-} from './types';
-import * as md from './utils/md';
-import { getBlockChildren } from './utils/notion';
+} from "./types";
+import * as md from "./utils/md";
+import { getBlockChildren } from "./utils/notion";
 
 /**
  * Converts a Notion page to Markdown.
@@ -19,10 +20,12 @@ import { getBlockChildren } from './utils/notion';
 export class NotionToMarkdown {
   private notionClient: Client;
   private customTransformers: Record<string, CustomTransformer>;
+
   constructor(options: NotionToMarkdownOptions) {
     this.notionClient = options.notionClient;
     this.customTransformers = {};
   }
+
   setCustomTransformer(
     type: string,
     transformer: CustomTransformer
@@ -31,6 +34,7 @@ export class NotionToMarkdown {
 
     return this;
   }
+
   /**
    * Converts Markdown Blocks to string
    * @param {MdBlock[]} mdBlocks - Array of markdown blocks
@@ -58,7 +62,9 @@ export class NotionToMarkdown {
       if (mdBlocks.children && mdBlocks.children.length > 0) {
         if (
           mdBlocks.type === "synced_block" ||
-          mdBlocks.type === "child_page"
+          mdBlocks.type === "child_page" ||
+          mdBlocks.type === "column_list" ||
+          mdBlocks.type === "column"
         ) {
           let mdstr = this.toMarkdownString(mdBlocks.children);
           // console.log(mdstr);
@@ -119,23 +125,33 @@ export class NotionToMarkdown {
       );
     }
 
+    const excludedTypesList = ["toggle"];
+
     if (!blocks) return mdBlocks;
 
     for (let i = 0; i < blocks.length; i++) {
       let block = blocks[i];
+      // TODO: handle column here
       if (
         "has_children" in block &&
         block.has_children &&
-        block.type !== "column_list" &&
-        block.type !== "toggle" &&
-        block.type !== "callout"
+        !excludedTypesList.includes(block.type)
       ) {
+        console.log(">>", block.type);
         // Get children of this block.
         let child_blocks = await getBlockChildren(
           this.notionClient,
           block.id,
           totalPage
         );
+
+        // console.log(">", block);
+
+        // TODO: remove
+        // let k = JSON.stringify(child_blocks, null, 4);
+        // fs.appendFile("test.json", k, (err: any) => {
+        //   console.log(err);
+        // });
 
         // Push this block to mdBlocks.
         mdBlocks.push({
@@ -154,14 +170,14 @@ export class NotionToMarkdown {
         );
         continue;
       }
+
       let tmp = await this.blockToMarkdown(block);
-      // console.log(block);
       mdBlocks.push({
         // @ts-ignore
         type: block.type,
         blockId: block.id,
         parent: tmp,
-        children: []
+        children: [],
       });
     }
     return mdBlocks;
@@ -202,7 +218,7 @@ export class NotionToMarkdown {
         return md.divider();
       }
 
-      case 'equation': {
+      case "equation": {
         return md.equation(block.equation.expression);
       }
 
@@ -290,46 +306,6 @@ export class NotionToMarkdown {
         return md.table(tableArr);
       }
 
-      // NOTE: column_list is parent of columns
-      case "column_list": {
-        const { id, has_children } = block;
-
-        if (!has_children) return "";
-
-        const column_list_children = await getBlockChildren(
-          this.notionClient,
-          id,
-          100
-        );
-
-        let column_list_promise = column_list_children.map(
-          async (column) => await this.blockToMarkdown(column)
-        );
-
-        let column_list: string[] = await Promise.all(column_list_promise);
-
-        return column_list.join("\n\n");
-      }
-
-      case "column": {
-        const { id, has_children } = block;
-        if (!has_children) return "";
-
-        const column_children = await getBlockChildren(
-          this.notionClient,
-          id,
-          100
-        );
-
-        let column_children_mdBlocks = await this.blocksToMarkdown(
-          column_children
-        );
-
-        let column_string = this.toMarkdownString(column_children_mdBlocks);
-
-        return column_string;
-      }
-
       case "toggle": {
         const { id, has_children } = block;
 
@@ -374,8 +350,6 @@ export class NotionToMarkdown {
       // "callout"
       // "breadcrumb"
       // "table_of_contents"
-      // "column_list"
-      // "column"
       // "link_to_page"
       // "audio"
       // "unsupported"
@@ -385,11 +359,11 @@ export class NotionToMarkdown {
         // @ts-ignore
         let blockContent = block[type].text || block[type].rich_text || [];
         blockContent.map((content: Text | Equation) => {
-          if (content.type === 'equation') {
+          if (content.type === "equation") {
             parsedData += md.inlineEquation(content.equation.expression);
             return;
           }
-          
+
           const annotations = content.annotations;
           let plain_text = content.plain_text;
 
