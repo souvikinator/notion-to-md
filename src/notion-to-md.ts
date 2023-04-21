@@ -44,8 +44,12 @@ export class NotionToMarkdown {
   toMarkdownString(mdBlocks: MdBlock[] = [], nestingLevel: number = 0): string {
     let mdString = "";
     mdBlocks.forEach((mdBlocks) => {
+      // NOTE: toggle in handles in the child blocks logic
+      // adding a toggle check prevents duplicate
+      // rendering of toggle title
+
       // process parent blocks
-      if (mdBlocks.parent) {
+      if (mdBlocks.parent && mdBlocks.type !== "toggle") {
         if (
           mdBlocks.type !== "to_do" &&
           mdBlocks.type !== "bulleted_list_item" &&
@@ -67,8 +71,14 @@ export class NotionToMarkdown {
           mdBlocks.type === "column"
         ) {
           let mdstr = this.toMarkdownString(mdBlocks.children);
-          // console.log(mdstr);
           mdString += mdstr;
+        } else if (mdBlocks.type === "toggle") {
+          // convert children md object to md string
+          const toggle_children_md_string = this.toMarkdownString(
+            mdBlocks.children
+          );
+
+          mdString += md.toggle(mdBlocks.parent, toggle_children_md_string);
         } else {
           let mdstr = this.toMarkdownString(
             mdBlocks.children,
@@ -125,7 +135,7 @@ export class NotionToMarkdown {
       );
     }
 
-    const excludedTypesList = ["toggle"];
+    const excludedTypesList: string[] = [];
 
     if (!blocks) return mdBlocks;
 
@@ -244,8 +254,6 @@ export class NotionToMarkdown {
       case "embed":
       case "link_preview":
       case "link_to_page":
-      case "child_page":
-      case "child_database":
         {
           let blockContent;
           let title: string = type;
@@ -259,17 +267,23 @@ export class NotionToMarkdown {
             blockContent = { url: block.link_to_page.page_id };
           }
 
+          if (blockContent) return md.link(title, blockContent.url);
+        }
+        break;
+
+      case "child_page":
+      case "child_database":
+        {
+          let title: string = type;
           if (type === "child_page") {
-            blockContent = { url: block.id };
             title = block.child_page.title;
           }
 
           if (type === "child_database") {
-            blockContent = { url: block.id };
             title = block.child_database.title || "child_database";
           }
 
-          if (blockContent) return md.link(title, blockContent.url);
+          return title;
         }
         break;
 
@@ -278,7 +292,6 @@ export class NotionToMarkdown {
         let tableArr: string[][] = [];
         if (has_children) {
           const tableRows = await getBlockChildren(this.notionClient, id, 100);
-          // console.log(">>", tableRows);
           let rowsPromise = tableRows?.map(async (row) => {
             const { type } = row as any;
             const cells = (row as any)[type]["cells"];
@@ -297,41 +310,11 @@ export class NotionToMarkdown {
             );
 
             const cellStringArr = await Promise.all(cellStringPromise);
-            // console.log("~~", cellStringArr);
             tableArr.push(cellStringArr);
-            // console.log(tableArr);
           });
           await Promise.all(rowsPromise || []);
         }
         return md.table(tableArr);
-      }
-
-      case "toggle": {
-        const { id, has_children } = block;
-
-        const toggle_summary = block.toggle.rich_text[0]?.plain_text;
-
-        // empty toggle
-        if (!has_children) {
-          return md.toggle(toggle_summary);
-        }
-
-        const toggle_children_object = await getBlockChildren(
-          this.notionClient,
-          id,
-          100
-        );
-
-        // parse children blocks to md object
-        const toggle_children = await this.blocksToMarkdown(
-          toggle_children_object
-        );
-
-        // convert children md object to md string
-        const toggle_children_md_string =
-          this.toMarkdownString(toggle_children);
-
-        return md.toggle(toggle_summary, toggle_children_md_string);
       }
       // Rest of the types
       // "paragraph"
