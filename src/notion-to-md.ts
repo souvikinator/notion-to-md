@@ -44,7 +44,7 @@ export class NotionToMarkdown {
   toMarkdownString(mdBlocks: MdBlock[] = [], nestingLevel: number = 0): string {
     let mdString = "";
     mdBlocks.forEach((mdBlocks) => {
-      // NOTE: toggle in handles in the child blocks logic
+      // NOTE: toggle in the child blocks logic
       // adding a toggle check prevents duplicate
       // rendering of toggle title
 
@@ -85,7 +85,6 @@ export class NotionToMarkdown {
             nestingLevel + 1
           );
           mdString += mdstr;
-          // console.log(mdstr);
         }
       }
     });
@@ -112,8 +111,6 @@ export class NotionToMarkdown {
 
     const parsedData = await this.blocksToMarkdown(blocks);
 
-    // console.log(JSON.stringify(parsedData, null, 4));
-
     return parsedData;
   }
 
@@ -135,33 +132,18 @@ export class NotionToMarkdown {
       );
     }
 
-    const excludedTypesList: string[] = [];
-
     if (!blocks) return mdBlocks;
 
     for (let i = 0; i < blocks.length; i++) {
       let block = blocks[i];
-      // TODO: handle column here
-      if (
-        "has_children" in block &&
-        block.has_children &&
-        !excludedTypesList.includes(block.type)
-      ) {
-        console.log(">>", block.type);
+
+      if ("has_children" in block && block.has_children) {
         // Get children of this block.
         let child_blocks = await getBlockChildren(
           this.notionClient,
           block.id,
           totalPage
         );
-
-        // console.log(">", block);
-
-        // TODO: remove
-        // let k = JSON.stringify(child_blocks, null, 4);
-        // fs.appendFile("test.json", k, (err: any) => {
-        //   console.log(err);
-        // });
 
         // Push this block to mdBlocks.
         mdBlocks.push({
@@ -213,12 +195,16 @@ export class NotionToMarkdown {
       case "image":
         {
           let blockContent = block.image;
+
           const image_caption_plain = blockContent.caption
-            .map((item) => item.plain_text)
+            .map((item: any) => item.plain_text)
             .join("");
+
           const image_type = blockContent.type;
+
           if (image_type === "external")
             return md.image(image_caption_plain, blockContent.external.url);
+
           if (image_type === "file")
             return md.image(image_caption_plain, blockContent.file.url);
         }
