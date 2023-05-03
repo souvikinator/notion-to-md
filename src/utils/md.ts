@@ -87,7 +87,7 @@ export const addTabSpace = (text: string, n = 0) => {
   const tab = "	";
   for (let i = 0; i < n; i++) {
     if (text.includes("\n")) {
-      const multiLineText = text.split(/(?<=\n)/).join(tab);
+      const multiLineText = text.split(/(?:^|\n)/).join(`\n${tab}`);
       text = tab + multiLineText;
     } else text = tab + text;
   }
