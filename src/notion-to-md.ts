@@ -1,5 +1,4 @@
 import { Client } from "@notionhq/client";
-import fs from "fs";
 
 import {
   Annotations,
@@ -20,9 +19,11 @@ import { getBlockChildren } from "./utils/notion";
 export class NotionToMarkdown {
   private notionClient: Client;
   private customTransformers: Record<string, CustomTransformer>;
+  private convertImagesToBase64: boolean;
 
   constructor(options: NotionToMarkdownOptions) {
     this.notionClient = options.notionClient;
+    this.convertImagesToBase64 = options.convertImagesToBase64;
     this.customTransformers = {};
   }
 
@@ -203,10 +204,18 @@ export class NotionToMarkdown {
           const image_type = blockContent.type;
 
           if (image_type === "external")
-            return md.image(image_caption_plain, blockContent.external.url);
+            return md.image(
+              image_caption_plain,
+              blockContent.external.url,
+              this.convertImagesToBase64
+            );
 
           if (image_type === "file")
-            return md.image(image_caption_plain, blockContent.file.url);
+            return md.image(
+              image_caption_plain,
+              blockContent.file.url,
+              this.convertImagesToBase64
+            );
         }
         break;
 

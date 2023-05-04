@@ -1,6 +1,8 @@
 import { CalloutIcon } from "../types";
 import markdownTable from "markdown-table";
 
+import https from "https";
+
 export const inlineCode = (text: string) => {
   return `\`${text}\``;
 };
@@ -79,7 +81,39 @@ export const todo = (text: string, checked: boolean) => {
   return checked ? `- [x] ${text}` : `- [ ] ${text}`;
 };
 
-export const image = (alt: string, href: string) => {
+export const image = (alt: string, href: string, convertToBase64: boolean) => {
+  // In case the user does not want to convert the images to Base64
+  if (!convertToBase64) {
+    return `![${alt}(${href})]`;
+  }
+
+  // return base64 images as is
+  if (href.startsWith("data:")) {
+    return `![${alt}(${href})]`;
+  }
+
+  // Otherwise, download the image and convert it to base64
+  https
+    .get(href, (res) => {
+      const chunks: any = [];
+
+      res.on("data", (chunk) => {
+        chunks.push(chunk);
+      });
+
+      res.on("end", () => {
+        const buffer = Buffer.concat(chunks);
+        const base64String = buffer.toString("base64url");
+
+        // TODO: Base64 string does not include the `data:image/png` prefix
+        return `![${alt}](${base64String})`;
+      });
+    })
+    .on("error", (e) => {
+      console.error(e);
+      return;
+    });
+
   return `![${alt}](${href})`;
 };
 

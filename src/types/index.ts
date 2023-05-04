@@ -16,6 +16,7 @@ export type TextRequest = string;
 
 export interface NotionToMarkdownOptions {
   notionClient: Client;
+  convertImagesToBase64: boolean;
 }
 
 export type MdBlock = {
