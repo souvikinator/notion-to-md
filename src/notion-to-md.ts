@@ -290,17 +290,8 @@ export class NotionToMarkdown {
         break;
 
       case "child_page":
-      case "child_database":
         {
-          let pageTitle: string = "";
-          if (type === "child_page") {
-            pageTitle = block.child_page.title;
-          }
-
-          if (type === "child_database") {
-            pageTitle =
-              block.child_database.title || `child_database-${block.id}`;
-          }
+          let pageTitle: string = block.child_page.title;
 
           if (this.config.saveChildPage) {
             const fileName = pageTitle.split(" ").join("-");
@@ -309,6 +300,12 @@ export class NotionToMarkdown {
           }
 
           return md.heading2(pageTitle);
+        }
+        break;
+      case "child_database":
+        {
+          let pageTitle = block.child_database.title || `child_database`;
+          return pageTitle;
         }
         break;
 
