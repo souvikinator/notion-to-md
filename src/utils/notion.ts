@@ -44,8 +44,7 @@ export const modifyNumberedListObject = (
       // add numbers
       // @ts-ignore
       block.numbered_list_item.number = ++numberedListIndex;
-    }
-    else {
+    } else {
       numberedListIndex = 0;
     }
   }
