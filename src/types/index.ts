@@ -15,13 +15,14 @@ export type ListBlockChildrenResponseResult =
 export type TextRequest = string;
 
 export type ConfigurationOptions = {
-  saveToDir?: string;
-  saveChildPage?: boolean;
+  separateChildPage?: boolean;
 };
 export interface NotionToMarkdownOptions {
   notionClient: Client;
   config?: ConfigurationOptions;
 }
+
+export type MdStringObject = Record<string, string>;
 
 export type MdBlock = {
   type?: string;

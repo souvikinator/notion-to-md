@@ -1,6 +1,4 @@
 import { Client } from "@notionhq/client";
-import { ensureFile, writeFile } from "fs-extra";
-import * as path from "path";
 
 import {
   Annotations,
@@ -12,10 +10,10 @@ import {
   Equation,
   Text,
   ConfigurationOptions,
+  MdStringObject,
 } from "./types";
 import * as md from "./utils/md";
 import { getBlockChildren } from "./utils/notion";
-import { extractTitleFromMdLink } from "./utils/misc";
 
 /**
  * Converts a Notion page to Markdown.
@@ -29,8 +27,7 @@ export class NotionToMarkdown {
   constructor(options: NotionToMarkdownOptions) {
     this.notionClient = options.notionClient;
     const defaultConfig: ConfigurationOptions = {
-      saveChildPage: false,
-      saveToDir: ".",
+      separateChildPage: false,
     };
     this.targetPage = "";
     this.config = { ...defaultConfig, ...options.config };
@@ -50,30 +47,47 @@ export class NotionToMarkdown {
    * Converts Markdown Blocks to string
    * @param {MdBlock[]} mdBlocks - Array of markdown blocks
    * @param {number} nestingLevel - Defines max depth of nesting
-   * @returns {string} - Returns markdown string
+   * @returns {MdStringObject} - Returns markdown string with child pages separated
    */
   toMarkdownString(
     mdBlocks: MdBlock[] = [],
-    pageName?: string,
+    pageIdentifier: string = "parent",
     nestingLevel: number = 0
-  ): string {
-    let mdString = "";
+  ): MdStringObject {
+    let mdOutput: MdStringObject = {};
+
     mdBlocks.forEach((mdBlocks) => {
       // NOTE: toggle in the child blocks logic
       // adding a toggle check prevents duplicate
       // rendering of toggle title
 
       // process parent blocks
-      if (mdBlocks.parent && mdBlocks.type !== "toggle") {
+      if (
+        mdBlocks.parent &&
+        mdBlocks.type !== "toggle" &&
+        mdBlocks.type !== "child_page"
+      ) {
         if (
           mdBlocks.type !== "to_do" &&
           mdBlocks.type !== "bulleted_list_item" &&
           mdBlocks.type !== "numbered_list_item"
         ) {
+          // initialize if key doesn't exist
+          mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
+
           // add extra line breaks non list blocks
-          mdString += `\n${md.addTabSpace(mdBlocks.parent, nestingLevel)}\n\n`;
+          mdOutput[pageIdentifier] += `\n${md.addTabSpace(
+            mdBlocks.parent,
+            nestingLevel
+          )}\n\n`;
         } else {
-          mdString += `${md.addTabSpace(mdBlocks.parent, nestingLevel)}\n`;
+          // initialize if key doesn't exist
+          mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
+
+          mdOutput[pageIdentifier] += `${md.addTabSpace(
+            mdBlocks.parent,
+            nestingLevel
+          )}\n`;
         }
       }
 
@@ -84,23 +98,16 @@ export class NotionToMarkdown {
           mdBlocks.type === "column_list" ||
           mdBlocks.type === "column"
         ) {
-          let mdstr = this.toMarkdownString(mdBlocks.children);
-          mdString += mdstr;
+          let mdstr = this.toMarkdownString(mdBlocks.children, pageIdentifier);
+          mdOutput[pageIdentifier] += mdstr[pageIdentifier];
         } else if (mdBlocks.type === "child_page") {
-          let mdstr = this.toMarkdownString(mdBlocks.children);
+          const childPageTitle = mdBlocks.parent;
+          let mdstr = this.toMarkdownString(mdBlocks.children, childPageTitle);
 
-          if (this.config.saveChildPage && this.config.saveToDir) {
-            const childPageTitle = extractTitleFromMdLink(mdBlocks.parent);
-
-            const fileName = childPageTitle.split(" ").join("-");
-            const filePath = path.join(this.config.saveToDir, `${fileName}.md`);
-
-            // save to file
-            ensureFile(filePath).then(() => {
-              writeFile(filePath, mdstr);
-            });
+          if (this.config.separateChildPage) {
+            mdOutput = { ...mdOutput, ...mdstr };
           } else {
-            mdString += mdstr;
+            mdOutput[pageIdentifier] += mdstr[childPageTitle];
           }
         } else if (mdBlocks.type === "toggle") {
           // convert children md object to md string
@@ -108,19 +115,23 @@ export class NotionToMarkdown {
             mdBlocks.children
           );
 
-          mdString += md.toggle(mdBlocks.parent, toggle_children_md_string);
+          mdOutput[pageIdentifier] += md.toggle(
+            mdBlocks.parent,
+            toggle_children_md_string["parent"]
+          );
         } else {
           let mdstr = this.toMarkdownString(
             mdBlocks.children,
-            pageName,
+            pageIdentifier,
             nestingLevel + 1
           );
-          mdString += mdstr;
+
+          mdOutput[pageIdentifier] += mdstr["parent"];
         }
       }
     });
 
-    return mdString;
+    return mdOutput;
   }
 
   /**
@@ -293,10 +304,8 @@ export class NotionToMarkdown {
         {
           let pageTitle: string = block.child_page.title;
 
-          if (this.config.saveChildPage) {
-            const fileName = pageTitle.split(" ").join("-");
-            const filePath = `${fileName}.md`;
-            return md.link(pageTitle, filePath);
+          if (this.config.separateChildPage) {
+            return pageTitle;
           }
 
           return md.heading2(pageTitle);
