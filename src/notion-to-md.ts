@@ -99,13 +99,27 @@ export class NotionToMarkdown {
           mdBlocks.type === "column"
         ) {
           let mdstr = this.toMarkdownString(mdBlocks.children, pageIdentifier);
+          // mdOutput[pageIdentifier] += mdstr[pageIdentifier];
+          mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
+
+          Object.keys(mdstr).forEach((key) => {
+            if (mdOutput[key]) {
+              mdOutput[key] + mdstr[key];
+            } else {
+              mdOutput[key] = mdstr[key];
+            }
+          });
           mdOutput[pageIdentifier] += mdstr[pageIdentifier];
+
+          // mdOutput = { ...mdOutput, ...mdstr };
         } else if (mdBlocks.type === "child_page") {
           const childPageTitle = mdBlocks.parent;
           let mdstr = this.toMarkdownString(mdBlocks.children, childPageTitle);
 
           if (this.config.separateChildPage) {
+            // console.log("<<", mdOutput, mdstr);
             mdOutput = { ...mdOutput, ...mdstr };
+            // console.log(">>", mdOutput, "\n\n");
           } else {
             mdOutput[pageIdentifier] += mdstr[childPageTitle];
           }
