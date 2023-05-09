@@ -23,7 +23,7 @@ export class NotionToMarkdown {
 
   constructor(options: NotionToMarkdownOptions) {
     this.notionClient = options.notionClient;
-    this.convertImagesToBase64 = options.convertImagesToBase64;
+    this.convertImagesToBase64 = options.convertImagesToBase64 ?? false;
     this.customTransformers = {};
   }
 
