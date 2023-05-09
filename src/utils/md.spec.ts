@@ -78,7 +78,7 @@ simple text
 E = mc^2
 $$`.trim()
     );
-  });  
+  });
   test("Bold", () => {
     expect(bold("simple text")).toBe("**simple text**");
   });
@@ -121,27 +121,23 @@ describe("List Elements", () => {
 
 describe("Image", () => {
   test("Image with alt text", () => {
-    expect(image("simple text", "https://example.com/image")).toBe(
+    expect(image("simple text", "https://example.com/image", false)).toBe(
       `![simple text](https://example.com/image)`
     );
   });
 });
 
 describe("Toggle", () => {
-  const noSpaces = (text: string) => text.replace(/\s+/g, '')
+  const noSpaces = (text: string) => text.replace(/\s+/g, "");
   test("displays content if toggle title is empty", () => {
-    expect(noSpaces(toggle(undefined, "content"))).toBe(
-      "content"
-    );
-  })
+    expect(noSpaces(toggle(undefined, "content"))).toBe("content");
+  });
   test("return empty string if title and content are empty", () => {
-    expect(noSpaces(toggle(undefined, undefined))).toBe(
-      ""
-    );
-  })
+    expect(noSpaces(toggle(undefined, undefined))).toBe("");
+  });
   test("Displays toggle with <details> and <summary>", () => {
     expect(noSpaces(toggle("title", "content"))).toBe(
       "<details><summary>title</summary>content</details>"
     );
-  })
-})
+  });
+});
