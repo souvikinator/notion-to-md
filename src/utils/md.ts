@@ -83,13 +83,9 @@ export const todo = (text: string, checked: boolean) => {
 
 export const image = (alt: string, href: string, convertToBase64: boolean) => {
   // In case the user does not want to convert the images to Base64
-  if (!convertToBase64) {
-    return `![${alt}(${href})]`;
-  }
-
-  // return base64 images as is
-  if (href.startsWith("data:")) {
-    return `![${alt}(${href})]`;
+  // or the image is already base64
+  if (!convertToBase64 || href.startsWith("data:")) {
+    return `![${alt}](${href})`;
   }
 
   // Otherwise, download the image and convert it to base64
