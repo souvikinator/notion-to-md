@@ -204,14 +204,14 @@ export class NotionToMarkdown {
           const image_type = blockContent.type;
 
           if (image_type === "external")
-            return md.image(
+            return await md.image(
               image_caption_plain,
               blockContent.external.url,
               this.convertImagesToBase64
             );
 
           if (image_type === "file")
-            return md.image(
+            return await md.image(
               image_caption_plain,
               blockContent.file.url,
               this.convertImagesToBase64
