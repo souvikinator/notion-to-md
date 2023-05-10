@@ -1,7 +1,7 @@
 import { CalloutIcon } from "../types";
 import markdownTable from "markdown-table";
 
-import https from "https";
+import fetch from "node-fetch";
 
 export const inlineCode = (text: string) => {
   return `\`${text}\``;
@@ -81,36 +81,24 @@ export const todo = (text: string, checked: boolean) => {
   return checked ? `- [x] ${text}` : `- [ ] ${text}`;
 };
 
-export const image = (alt: string, href: string, convertToBase64: boolean) => {
+export const image = async (
+  alt: string,
+  href: string,
+  convertToBase64: boolean
+): Promise<string> => {
   // In case the user does not want to convert the images to Base64
   // or the image is already base64
   if (!convertToBase64 || href.startsWith("data:")) {
     return `![${alt}](${href})`;
+  } else {
+    // Otherwise, download the image and convert it to base64
+    const res = await fetch(href);
+    const buf = await res.arrayBuffer();
+
+    const base64 = Buffer.from(buf).toString("base64url");
+
+    return `![${alt}](${base64})`;
   }
-
-  // Otherwise, download the image and convert it to base64
-  https
-    .get(href, (res) => {
-      const chunks: any = [];
-
-      res.on("data", (chunk) => {
-        chunks.push(chunk);
-      });
-
-      res.on("end", () => {
-        const buffer = Buffer.concat(chunks);
-        const base64String = buffer.toString("base64url");
-
-        // TODO: Base64 string does not include the `data:image/png` prefix
-        return `![${alt}](${base64String})`;
-      });
-    })
-    .on("error", (e) => {
-      console.error(e);
-      return;
-    });
-
-  return `![${alt}](${href})`;
 };
 
 export const addTabSpace = (text: string, n = 0) => {
