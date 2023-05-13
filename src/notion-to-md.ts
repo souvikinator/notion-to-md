@@ -9,6 +9,8 @@ import {
   NotionToMarkdownOptions,
   Equation,
   Text,
+  ConfigurationOptions,
+  MdStringObject,
 } from "./types";
 import * as md from "./utils/md";
 import { getBlockChildren } from "./utils/notion";
@@ -18,12 +20,18 @@ import { getBlockChildren } from "./utils/notion";
  */
 export class NotionToMarkdown {
   private notionClient: Client;
+  private config: ConfigurationOptions;
+  private targetPage: string;
   private customTransformers: Record<string, CustomTransformer>;
   private convertImagesToBase64: boolean;
 
   constructor(options: NotionToMarkdownOptions) {
     this.notionClient = options.notionClient;
-    this.convertImagesToBase64 = options.convertImagesToBase64 ?? false;
+    const defaultConfig: ConfigurationOptions = {
+      separateChildPage: false,
+    };
+    this.targetPage = "";
+    this.config = { ...defaultConfig, ...options.config };
     this.customTransformers = {};
   }
 
@@ -40,26 +48,47 @@ export class NotionToMarkdown {
    * Converts Markdown Blocks to string
    * @param {MdBlock[]} mdBlocks - Array of markdown blocks
    * @param {number} nestingLevel - Defines max depth of nesting
-   * @returns {string} - Returns markdown string
+   * @returns {MdStringObject} - Returns markdown string with child pages separated
    */
-  toMarkdownString(mdBlocks: MdBlock[] = [], nestingLevel: number = 0): string {
-    let mdString = "";
+  toMarkdownString(
+    mdBlocks: MdBlock[] = [],
+    pageIdentifier: string = "parent",
+    nestingLevel: number = 0
+  ): MdStringObject {
+    let mdOutput: MdStringObject = {};
+
     mdBlocks.forEach((mdBlocks) => {
       // NOTE: toggle in the child blocks logic
       // adding a toggle check prevents duplicate
       // rendering of toggle title
 
       // process parent blocks
-      if (mdBlocks.parent && mdBlocks.type !== "toggle") {
+      if (
+        mdBlocks.parent &&
+        mdBlocks.type !== "toggle" &&
+        mdBlocks.type !== "child_page"
+      ) {
         if (
           mdBlocks.type !== "to_do" &&
           mdBlocks.type !== "bulleted_list_item" &&
           mdBlocks.type !== "numbered_list_item"
         ) {
+          // initialize if key doesn't exist
+          mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
+
           // add extra line breaks non list blocks
-          mdString += `\n${md.addTabSpace(mdBlocks.parent, nestingLevel)}\n\n`;
+          mdOutput[pageIdentifier] += `\n${md.addTabSpace(
+            mdBlocks.parent,
+            nestingLevel
+          )}\n\n`;
         } else {
-          mdString += `${md.addTabSpace(mdBlocks.parent, nestingLevel)}\n`;
+          // initialize if key doesn't exist
+          mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
+
+          mdOutput[pageIdentifier] += `${md.addTabSpace(
+            mdBlocks.parent,
+            nestingLevel
+          )}\n`;
         }
       }
 
@@ -67,29 +96,57 @@ export class NotionToMarkdown {
       if (mdBlocks.children && mdBlocks.children.length > 0) {
         if (
           mdBlocks.type === "synced_block" ||
-          mdBlocks.type === "child_page" ||
           mdBlocks.type === "column_list" ||
           mdBlocks.type === "column"
         ) {
-          let mdstr = this.toMarkdownString(mdBlocks.children);
-          mdString += mdstr;
+          let mdstr = this.toMarkdownString(mdBlocks.children, pageIdentifier);
+          // mdOutput[pageIdentifier] += mdstr[pageIdentifier];
+          mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
+
+          Object.keys(mdstr).forEach((key) => {
+            if (mdOutput[key]) {
+              mdOutput[key] + mdstr[key];
+            } else {
+              mdOutput[key] = mdstr[key];
+            }
+          });
+          mdOutput[pageIdentifier] += mdstr[pageIdentifier];
+
+          // mdOutput = { ...mdOutput, ...mdstr };
+        } else if (mdBlocks.type === "child_page") {
+          const childPageTitle = mdBlocks.parent;
+          let mdstr = this.toMarkdownString(mdBlocks.children, childPageTitle);
+
+          if (this.config.separateChildPage) {
+            // console.log("<<", mdOutput, mdstr);
+            mdOutput = { ...mdOutput, ...mdstr };
+            // console.log(">>", mdOutput, "\n\n");
+          } else {
+            mdOutput[pageIdentifier] += mdstr[childPageTitle];
+          }
         } else if (mdBlocks.type === "toggle") {
           // convert children md object to md string
           const toggle_children_md_string = this.toMarkdownString(
             mdBlocks.children
           );
 
-          mdString += md.toggle(mdBlocks.parent, toggle_children_md_string);
+          mdOutput[pageIdentifier] += md.toggle(
+            mdBlocks.parent,
+            toggle_children_md_string["parent"]
+          );
         } else {
           let mdstr = this.toMarkdownString(
             mdBlocks.children,
+            pageIdentifier,
             nestingLevel + 1
           );
-          mdString += mdstr;
+
+          mdOutput[pageIdentifier] += mdstr["parent"];
         }
       }
     });
-    return mdString;
+
+    return mdOutput;
   }
 
   /**
@@ -107,7 +164,7 @@ export class NotionToMarkdown {
         "notion client is not provided, for more details check out https://github.com/souvikinator/notion-to-md"
       );
     }
-
+    this.targetPage = id;
     const blocks = await getBlockChildren(this.notionClient, id, totalPage);
 
     const parsedData = await this.blocksToMarkdown(blocks);
@@ -267,18 +324,20 @@ export class NotionToMarkdown {
         break;
 
       case "child_page":
+        {
+          let pageTitle: string = block.child_page.title;
+
+          if (this.config.separateChildPage) {
+            return pageTitle;
+          }
+
+          return md.heading2(pageTitle);
+        }
+        break;
       case "child_database":
         {
-          let title: string = type;
-          if (type === "child_page") {
-            title = block.child_page.title;
-          }
-
-          if (type === "child_database") {
-            title = block.child_database.title || "child_database";
-          }
-
-          return title;
+          let pageTitle = block.child_database.title || `child_database`;
+          return pageTitle;
         }
         break;
 

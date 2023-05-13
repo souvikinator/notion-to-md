@@ -14,10 +14,15 @@ export type ListBlockChildrenResponseResult =
 
 export type TextRequest = string;
 
+export type ConfigurationOptions = {
+  separateChildPage?: boolean;
+};
 export interface NotionToMarkdownOptions {
   notionClient: Client;
-  convertImagesToBase64?: boolean;
+  config?: ConfigurationOptions;
 }
+
+export type MdStringObject = Record<string, string>;
 
 export type MdBlock = {
   type?: string;

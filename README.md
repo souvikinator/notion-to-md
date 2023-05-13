@@ -1,37 +1,33 @@
-<img src="https://imgur.com/WgXdz9r.png" />
 
-> 💡 For better readability and detailed instructions head over to the [wiki](https://github.com/souvikinator/notion-to-md/wiki).
 
-# Notion to Markdown
+<!-- 
+💡 For better readability and detailed instructions head over to the [wiki](https://github.com/souvikinator/notion-to-md/wiki). 
+-->
+<h1 align="center">
+  <br>
+<img src="https://imgur.com/WgXdz9r.png" alt="notion-to-md banner"  width="750" />
+  <br>
+  <b>Notion-to-MD</b>
+  <br>
+  <sub><sup><b>(Notion to Markdown)</b></sup></sub>
+  <br>
+</h1>
 
-Convert notion pages, block and list of blocks to markdown (supports nesting) using **[notion-sdk-js](https://github.com/makenotion/notion-sdk-js)**
+<p align="center">
+       Notion-to-MD is a Node.js package that allows you to convert Notion pages to Markdown format. 
+</p>
+<p align="center">
+  Convert notion pages, blocks and list of blocks to markdown (supports nesting) using <a href="https://github.com/makenotion/notion-sdk-js">notion-sdk-js</a>
+</p>
+<p align="center">
+        <img src="https://img.shields.io/github/stars/souvikinator/notion-to-md?style=for-the-badge"
+            alt="">
+    <a href="https://www.producthunt.com/products/notion-to-md?utm_source=badge-follow&utm_medium=badge&utm_souce=badge-notion&#0045;to&#0045;md" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/follow.svg?product_id=486574&theme=light&size=small" alt="notion&#0045;to&#0045;md - Programmatically&#0032;convert&#0032;notion&#0032;pages&#0032;to&#0032;markdown | Product Hunt" style="width: 86px; height: 32px;" width="86" height="32" /></a>
 
-> **Note:** Before getting started, create [an integration and find the token](https://www.notion.so/my-integrations).
+</p>
 
-<a href="https://www.producthunt.com/posts/notion-to-md?utm_source=badge-featured&utm_medium=badge&utm_souce=badge-notion&#0045;to&#0045;md" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=351669&theme=light" alt="notion&#0045;to&#0045;md - Programmatically&#0032;convert&#0032;notion&#0032;pages&#0032;to&#0032;markdown | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O5O1AFCJR)
 
-## Todo
-
-- [x] heading
-- [x] images
-- [x] quotes
-- [x] links
-- [x] bullets
-- [x] todo
-- [x] inline code
-- [x] code block
-- [x] strikethrough, underline, bold, italic
-- [x] nested blocks
-- [x] embeds, bookmarks, videos, files (converted to links)
-- [x] simple tables
-- [x] toggle
-- [x] divider
-- [x] equation block (converted to code blocks)
-- [x] convert returned markdown object to string (`toMarkdownString()`)
-- [x] typescript support
-- [x] add tests
 
 ## Install
 
@@ -40,16 +36,19 @@ npm install notion-to-md
 ```
 
 ## Usage
+> ⚠️ **Note:** Before getting started, create [an integration and find the token](https://www.notion.so/my-integrations).
+>  Details on methods can be found in [API section](https://github.com/souvikinator/notion-to-md#api)
 
-> **Note:** Details on methods can be found in [API section](https://github.com/souvikinator/notion-to-md#api)
+> ⚠️ **Note:** Starting from v2.7.0, `toMarkdownString` no longer automatically saves child pages. 
+> Now it provides an object containing the markdown content of child pages.
 
-### converting markdown objects to markdown string
+## converting markdown objects to markdown string
 
 This is how the notion page looks for this example:
 
-![Imgur](https://imgur.com/O6bKCmH.png)
+<img src="https://imgur.com/O6bKCmH.png"  width="500"  />
 
-```js
+```javascript
 const { Client } = require("@notionhq/client");
 const { NotionToMarkdown } = require("notion-to-md");
 const fs = require('fs');
@@ -66,23 +65,61 @@ const n2m = new NotionToMarkdown({ notionClient: notion });
 (async () => {
   const mdblocks = await n2m.pageToMarkdown("target_page_id");
   const mdString = n2m.toMarkdownString(mdblocks);
+  console.log(mdString.parent);
+})();
+```
+<img src="https://imgur.com/XrUYrZ0.png"  width="500"  />
 
-  //writing to file
-  fs.writeFile("test.md", mdString, (err) => {
-    console.log(err);
-  });
+## Separate child page content
+
+**parent page content:**
+
+<img src="https://github.com/souvikinator/notion-to-md/assets/64456160/531ef45d-2dc7-47f4-bbb3-12d6fd44d299" width="500" />
+
+**child page content:**
+
+<img src="https://github.com/souvikinator/notion-to-md/assets/64456160/7dde090b-7333-46f8-b6df-e6c9a7b62fa9" width="500" />
+
+`NotionToMarkdown` takes second argument, `config`
+
+```javascript
+const { Client } = require("@notionhq/client");
+const { NotionToMarkdown } = require("notion-to-md");
+const fs = require('fs');
+// or
+// import {NotionToMarkdown} from "notion-to-md";
+
+const notion = new Client({
+  auth: "your integration token",
+  config:{
+     separateChildPage:true, // default: false
+  }
+});
+
+// passing notion client to the option
+const n2m = new NotionToMarkdown({ notionClient: notion });
+
+(async () => {
+  const mdblocks = await n2m.pageToMarkdown("target_page_id");
+  const mdString = n2m.toMarkdownString(mdblocks);
+  
+  console.log(mdString);
 })();
 ```
 
 **Output:**
 
-![output](https://imgur.com/XrUYrZ0.png)
+`toMarkdownString` returns an object with target page content corresponding to `parent` property and if any child page exists then it's included in the same object.
 
-### converting page to markdown object
+<img src="https://github.com/souvikinator/notion-to-md/assets/64456160/99bcc14e-46e6-4bed-912d-8b9300c214c1" width="500" />
 
-Example notion page:
+User gets to save the content separately.
 
-![Imgur](https://imgur.com/9iqRpBl.png)
+## converting page to markdown object
+
+**Example notion page:**
+
+<img src="https://imgur.com/9iqRpBl.png"  width="500"  />
 
 ```js
 const { Client } = require("@notionhq/client");
@@ -147,9 +184,7 @@ const n2m = new NotionToMarkdown({ notionClient: notion });
 ]
 ```
 
-### converting list of blocks to markdown object
-
-same notion page as before
+## converting list of blocks to markdown object
 
 ```js
 const { Client } = require("@notionhq/client");
@@ -176,7 +211,7 @@ const n2m = new NotionToMarkdown({ notionClient: notion });
 
 **Output**: same as before
 
-### Converting a single block to markdown string
+## Converting a single block to markdown string
 
 - only takes a single notion block and returns corresponding markdown string
 - nesting is ignored

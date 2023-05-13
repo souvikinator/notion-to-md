@@ -21,7 +21,7 @@ jobs:
               Changelog:-
               ${{ github.event.release.html_url }}
 
-              drop a ⭐if you liked the project :)
+              Drop a ⭐ to show your support :)) 
               #DEVCommunity #OpenSource #100DaysOfCode #javascript
         env:
           # Get your tokens from https://developer.twitter.com/apps
