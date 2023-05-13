@@ -95,9 +95,9 @@ export const image = async (
     const res = await fetch(href);
     const buf = await res.arrayBuffer();
 
-    const base64 = Buffer.from(buf).toString("base64url");
+    const base64 = Buffer.from(buf).toString("base64");
 
-    return `![${alt}](${base64})`;
+    return `![${alt}](data:image/png;base64,${base64})`;
   }
 };
 
