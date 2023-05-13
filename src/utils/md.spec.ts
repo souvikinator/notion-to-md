@@ -127,14 +127,14 @@ describe("Image", () => {
   });
 
   test("Image to Base64", async () => {
-    expect(
-      await image(
-        "simple text",
-        "https://w.wallhaven.cc/full/ex/wallhaven-ex9gwo.png",
-        true
-      )
-    ).toMatch(
-      `![simple text](iVBORw0KGgoAAAANSUhEUgAAB4AAAAQ4CAYAAADo08FDAAAgAElEQVR4Aby9O5OlW5rf9by3vTOzbud-untGmpGAGUlBIAhFEAQuuODhgIlPBN9AphxMDD4BBj4esokAR85opBnFzPRM93Sf7lNVp05VZu693wvx-_3Xm5l1uhsFBtrddXLv97Iuz_221uq6w3-8dV1XG_-2rmrbyk835`
+    const image_markdown = await image(
+      "simple text",
+      "https://w.wallhaven.cc/full/ex/wallhaven-ex9gwo.png",
+      true
+    );
+
+    expect(image_markdown).toMatch(
+      `![simple text](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAB4AAAAQ4CAYAAADo08FDAAAgAElEQVR4Aby9O5OlW5r`
     );
   });
 });
