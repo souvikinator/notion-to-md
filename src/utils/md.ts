@@ -89,6 +89,15 @@ export const image = async (
   // In case the user does not want to convert the images to Base64
   // or the image is already base64
   if (!convertToBase64 || href.startsWith("data:")) {
+    if (href.startsWith("data:")) {
+      // Extract base64 data, i.e. the string after 'data:mime/type;base64,'
+      const base64 = href.split(",").pop();
+
+      // This overrides incorrect data: string format to png
+      // so that browsers can correctly render the data
+      return `![${alt}](data:image/png;base64,${base64})`;
+    }
+
     return `![${alt}](${href})`;
   } else {
     // Otherwise, download the image and convert it to base64
