@@ -1,4 +1,5 @@
 
+
 <!-- 
 💡 For better readability and detailed instructions head over to the [wiki](https://github.com/souvikinator/notion-to-md/wiki). 
 -->
@@ -16,7 +17,7 @@
        Notion-to-MD is a Node.js package that allows you to convert Notion pages to Markdown format. 
 </p>
 <p align="center">
-  Convert notion pages, block and list of blocks to markdown (supports nesting) using <a href="https://github.com/makenotion/notion-sdk-js">notion-sdk-js</a>
+  Convert notion pages, blocks and list of blocks to markdown (supports nesting) using <a href="https://github.com/makenotion/notion-sdk-js">notion-sdk-js</a>
 </p>
 <p align="center">
         <img src="https://img.shields.io/github/stars/souvikinator/notion-to-md?style=for-the-badge"
@@ -35,8 +36,11 @@ npm install notion-to-md
 ```
 
 ## Usage
-> **Note:** Before getting started, create [an integration and find the token](https://www.notion.so/my-integrations).
+> ⚠️ **Note:** Before getting started, create [an integration and find the token](https://www.notion.so/my-integrations).
 >  Details on methods can be found in [API section](https://github.com/souvikinator/notion-to-md#api)
+
+> ⚠️ **Note:** Starting from v2.7.0, `toMarkdownString` no longer automatically saves child pages. 
+> Now it provides an object containing the markdown content of child pages.
 
 ## converting markdown objects to markdown string
 
@@ -61,44 +65,22 @@ const n2m = new NotionToMarkdown({ notionClient: notion });
 (async () => {
   const mdblocks = await n2m.pageToMarkdown("target_page_id");
   const mdString = n2m.toMarkdownString(mdblocks);
-  console.log(mdString);
+  console.log(mdString.parent);
 })();
 ```
-
-**Output:**
-
 <img src="https://imgur.com/XrUYrZ0.png"  width="500"  />
 
-## Save content to file
+## Separate child page content
 
 **parent page content:**
 
-<img src="https://user-images.githubusercontent.com/64456160/236519171-b32d8f62-1e2c-4897-a302-ae0dd85adef9.png" width="500" />
+<img src="https://github.com/souvikinator/notion-to-md/assets/64456160/531ef45d-2dc7-47f4-bbb3-12d6fd44d299" width="500" />
 
 **child page content:**
 
-<img src="https://user-images.githubusercontent.com/64456160/236519726-37513735-db0c-4643-9c89-f8deb355a6d3.png" width="500" />
-
-### Saving page to a file
-
-Simply saving `mdString` from above code  to a file does the work like so
-
-```javascript
-  //writing to file
-  fs.writeFile("test.md", mdString, (err) => {
-    console.log(err);
-  });
-```
-> ⚠️ **Note**:  with this the `child_page` content is merged in the same file. 
-
-**Output:**
-
-<img src="https://user-images.githubusercontent.com/64456160/236520621-fc1d328f-51e3-4e39-a529-7ef1b9f75ab3.png" width="500"  />
-
-### Saving `child_page` to separate file
+<img src="https://github.com/souvikinator/notion-to-md/assets/64456160/7dde090b-7333-46f8-b6df-e6c9a7b62fa9" width="500" />
 
 `NotionToMarkdown` takes second argument, `config`
-
 
 ```javascript
 const { Client } = require("@notionhq/client");
@@ -110,8 +92,7 @@ const fs = require('fs');
 const notion = new Client({
   auth: "your integration token",
   config:{
-	saveChildPage: true, //default: false
-	saveToDir: "path/to/output/dir", //default: current directory
+     separateChildPage:true, // default: false
   }
 });
 
@@ -122,26 +103,22 @@ const n2m = new NotionToMarkdown({ notionClient: notion });
   const mdblocks = await n2m.pageToMarkdown("target_page_id");
   const mdString = n2m.toMarkdownString(mdblocks);
   
-  // writing parent page content to file
-  // where the child pages will be saved
-  // the child page will be linked to the parent page
-  fs.writeFile("test.md", mdString, (err) => {
-    console.log(err);
-  });
+  console.log(mdString);
 })();
 ```
 
 **Output:**
 
-> ⚠️ **Note:** make sure to save parent page in the same directory as that of child page
-> for the link from parent to child page to work.
+`toMarkdownString` returns an object with target page content corresponding to `parent` property and if any child page exists then it's included in the same object.
 
-<img src="https://user-images.githubusercontent.com/64456160/236521464-fd137be9-ade1-444b-86fc-562d5ad06568.png" width="500"  />
-<img src="https://user-images.githubusercontent.com/64456160/236521541-c08d6062-9229-4429-96d5-78ab699600a1.png" width="500"  />
+<img src="https://github.com/souvikinator/notion-to-md/assets/64456160/99bcc14e-46e6-4bed-912d-8b9300c214c1" width="500" />
+
+User gets to save the content separately.
 
 ## converting page to markdown object
 
 **Example notion page:**
+
 <img src="https://imgur.com/9iqRpBl.png"  width="500"  />
 
 ```js

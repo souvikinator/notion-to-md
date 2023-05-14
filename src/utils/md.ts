@@ -1,6 +1,8 @@
 import { CalloutIcon } from "../types";
 import markdownTable from "markdown-table";
 
+import fetch from "node-fetch";
+
 export const inlineCode = (text: string) => {
   return `\`${text}\``;
 };
@@ -79,8 +81,33 @@ export const todo = (text: string, checked: boolean) => {
   return checked ? `- [x] ${text}` : `- [ ] ${text}`;
 };
 
-export const image = (alt: string, href: string) => {
-  return `![${alt}](${href})`;
+export const image = async (
+  alt: string,
+  href: string,
+  convertToBase64: boolean = false
+): Promise<string> => {
+  // In case the user does not want to convert the images to Base64
+  // or the image is already base64
+  if (!convertToBase64 || href.startsWith("data:")) {
+    if (href.startsWith("data:")) {
+      // Extract base64 data, i.e. the string after 'data:mime/type;base64,'
+      const base64 = href.split(",").pop();
+
+      // This overrides incorrect data: string format to png
+      // so that browsers can correctly render the data
+      return `![${alt}](data:image/png;base64,${base64})`;
+    }
+
+    return `![${alt}](${href})`;
+  } else {
+    // Otherwise, download the image and convert it to base64
+    const res = await fetch(href);
+    const buf = await res.arrayBuffer();
+
+    const base64 = Buffer.from(buf).toString("base64");
+
+    return `![${alt}](data:image/png;base64,${base64})`;
+  }
 };
 
 export const addTabSpace = (text: string, n = 0) => {

@@ -16,6 +16,7 @@ export type TextRequest = string;
 
 export type ConfigurationOptions = {
   separateChildPage?: boolean;
+  convertImagesToBase64?: boolean;
 };
 export interface NotionToMarkdownOptions {
   notionClient: Client;

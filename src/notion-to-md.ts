@@ -28,6 +28,7 @@ export class NotionToMarkdown {
     this.notionClient = options.notionClient;
     const defaultConfig: ConfigurationOptions = {
       separateChildPage: false,
+      convertImagesToBase64: false,
     };
     this.targetPage = "";
     this.config = { ...defaultConfig, ...options.config };
@@ -260,10 +261,18 @@ export class NotionToMarkdown {
           const image_type = blockContent.type;
 
           if (image_type === "external")
-            return md.image(image_caption_plain, blockContent.external.url);
+            return await md.image(
+              image_caption_plain,
+              blockContent.external.url,
+              this.config.convertImagesToBase64
+            );
 
           if (image_type === "file")
-            return md.image(image_caption_plain, blockContent.file.url);
+            return await md.image(
+              image_caption_plain,
+              blockContent.file.url,
+              this.config.convertImagesToBase64
+            );
         }
         break;
 
