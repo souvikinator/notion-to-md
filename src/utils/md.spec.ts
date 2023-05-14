@@ -78,7 +78,7 @@ simple text
 E = mc^2
 $$`.trim()
     );
-  });  
+  });
   test("Bold", () => {
     expect(bold("simple text")).toBe("**simple text**");
   });
@@ -120,28 +120,36 @@ describe("List Elements", () => {
 });
 
 describe("Image", () => {
-  test("Image with alt text", () => {
-    expect(image("simple text", "https://example.com/image")).toBe(
+  test("Image with alt text", async () => {
+    expect(await image("simple text", "https://example.com/image", false)).toBe(
       `![simple text](https://example.com/image)`
+    );
+  });
+
+  test("Image to Base64", async () => {
+    const image_markdown = await image(
+      "simple text",
+      "https://w.wallhaven.cc/full/ex/wallhaven-ex9gwo.png",
+      true
+    );
+
+    expect(image_markdown).toMatch(
+      `![simple text](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAB4AAAAQ4CAYAAADo08FDAAAgAElEQVR4Aby9O5OlW5r`
     );
   });
 });
 
 describe("Toggle", () => {
-  const noSpaces = (text: string) => text.replace(/\s+/g, '')
+  const noSpaces = (text: string) => text.replace(/\s+/g, "");
   test("displays content if toggle title is empty", () => {
-    expect(noSpaces(toggle(undefined, "content"))).toBe(
-      "content"
-    );
-  })
+    expect(noSpaces(toggle(undefined, "content"))).toBe("content");
+  });
   test("return empty string if title and content are empty", () => {
-    expect(noSpaces(toggle(undefined, undefined))).toBe(
-      ""
-    );
-  })
+    expect(noSpaces(toggle(undefined, undefined))).toBe("");
+  });
   test("Displays toggle with <details> and <summary>", () => {
     expect(noSpaces(toggle("title", "content"))).toBe(
       "<details><summary>title</summary>content</details>"
     );
-  })
-})
+  });
+});
