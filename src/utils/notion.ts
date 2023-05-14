@@ -7,31 +7,26 @@ export const getBlockChildren = async (
   block_id: string,
   totalPage: number | null
 ) => {
-  try {
-    let result: ListBlockChildrenResponseResults = [];
-    let pageCount = 0;
-    let start_cursor = undefined;
+  let result: ListBlockChildrenResponseResults = [];
+  let pageCount = 0;
+  let start_cursor = undefined;
 
-    do {
-      const response = (await notionClient.blocks.children.list({
-        start_cursor: start_cursor,
-        block_id: block_id,
-      })) as ListBlockChildrenResponse;
-      result.push(...response.results);
+  do {
+    const response = (await notionClient.blocks.children.list({
+      start_cursor: start_cursor,
+      block_id: block_id,
+    })) as ListBlockChildrenResponse;
+    result.push(...response.results);
 
-      start_cursor = response?.next_cursor;
-      pageCount += 1;
-    } while (
-      start_cursor != null &&
-      (totalPage == null || pageCount < totalPage)
-    );
+    start_cursor = response?.next_cursor;
+    pageCount += 1;
+  } while (
+    start_cursor != null &&
+    (totalPage == null || pageCount < totalPage)
+  );
 
-    modifyNumberedListObject(result);
-    return result;
-  } catch (e) {
-    console.log(e);
-    return [];
-  }
+  modifyNumberedListObject(result);
+  return result;
 };
 
 export const modifyNumberedListObject = (
