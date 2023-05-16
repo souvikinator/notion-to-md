@@ -299,22 +299,32 @@ export class NotionToMarkdown {
       case "pdf":
         {
           let blockContent;
+          let title: string = type;
+
           if (type === "video") blockContent = block.video;
           if (type === "file") blockContent = block.file;
           if (type === "pdf") blockContent = block.pdf;
+
+          const caption = blockContent?.caption
+            .map((item: any) => item.plain_text)
+            .join("");
+
           if (blockContent) {
             const file_type = blockContent.type;
-            let link;
+            let link = "";
             if (file_type === "external") link = blockContent.external.url;
             if (file_type === "file") link = blockContent.file.url;
 
-            if (link) {
+            if (caption && caption.trim().length > 0) {
+              title = caption;
+            } else if (link) {
               const matches = link.match(
                 /[^\/\\&\?]+\.\w{3,4}(?=([\?&].*$|$))/
               );
-              let title = matches ? matches[0] : type;
-              return md.link(title, link);
+              title = matches ? matches[0] : type;
             }
+
+            return md.link(title, link);
           }
         }
         break;
