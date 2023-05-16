@@ -253,26 +253,38 @@ export class NotionToMarkdown {
       case "image":
         {
           let blockContent = block.image;
+          let image_title = "image";
 
           const image_caption_plain = blockContent.caption
             .map((item: any) => item.plain_text)
             .join("");
 
           const image_type = blockContent.type;
+          let link = "";
 
-          if (image_type === "external")
-            return await md.image(
-              image_caption_plain,
-              blockContent.external.url,
-              this.config.convertImagesToBase64
-            );
+          if (image_type === "external") {
+            link = blockContent.external.url;
+          }
 
-          if (image_type === "file")
-            return await md.image(
-              image_caption_plain,
-              blockContent.file.url,
-              this.config.convertImagesToBase64
-            );
+          if (image_type === "file") {
+            link = blockContent.file.url;
+          }
+
+          // image caption with high priority
+          // if no image caption but image type = file or ext
+          // then title = file name else title = "image"
+          if (image_caption_plain.trim().length > 0) {
+            image_title = image_caption_plain;
+          } else if (image_type === "file" || image_type === "external") {
+            const matches = link.match(/[^\/\\&\?]+\.\w{3,4}(?=([\?&].*$|$))/);
+            image_title = matches ? matches[0] : image_title;
+          }
+
+          return await md.image(
+            image_title,
+            link,
+            this.config.convertImagesToBase64
+          );
         }
         break;
 
