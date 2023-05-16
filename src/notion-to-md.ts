@@ -271,8 +271,6 @@ export class NotionToMarkdown {
           }
 
           // image caption with high priority
-          // if no image caption but image type = file or ext
-          // then title = file name else title = "image"
           if (image_caption_plain.trim().length > 0) {
             image_title = image_caption_plain;
           } else if (image_type === "file" || image_type === "external") {
@@ -306,10 +304,17 @@ export class NotionToMarkdown {
           if (type === "pdf") blockContent = block.pdf;
           if (blockContent) {
             const file_type = blockContent.type;
-            if (file_type === "external")
-              return md.link("image", blockContent.external.url);
-            if (file_type === "file")
-              return md.link("image", blockContent.file.url);
+            let link;
+            if (file_type === "external") link = blockContent.external.url;
+            if (file_type === "file") link = blockContent.file.url;
+
+            if (link) {
+              const matches = link.match(
+                /[^\/\\&\?]+\.\w{3,4}(?=([\?&].*$|$))/
+              );
+              let title = matches ? matches[0] : type;
+              return md.link(title, link);
+            }
           }
         }
         break;
