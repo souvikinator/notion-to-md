@@ -13,16 +13,16 @@ jobs:
     steps:
       - name: Release tweet
         uses: Eomm/why-don-t-you-tweet@v1
-#         if: ${{ !github.event.repository.private }}
+        #         if: ${{ !github.event.repository.private }}
         with:
           tweet-message: |
-              🥳Release ${{ github.event.repository.name }} ${{ github.event.release.tag_name }}
+            🥳Release ${{ github.event.repository.name }} ${{ github.event.release.tag_name }}
 
-              Changelog:-
-              ${{ github.event.release.html_url }}
+            Changelog:-
+            ${{ github.event.release.html_url }}
 
-              Drop a ⭐ to show your support :)) 
-              #DEVCommunity #OpenSource #100DaysOfCode #javascript
+            Drop a ⭐ to show your support :)) 
+            #DEVCommunity #OpenSource #100DaysOfCode #javascript
         env:
           # Get your tokens from https://developer.twitter.com/apps
           TWITTER_CONSUMER_API_KEY: ${{ secrets.TWITTER_CONSUMER_API_KEY }}
