@@ -75,7 +75,7 @@ export class NotionToMarkdown {
         ) {
           // initialize if key doesn't exist
           mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
-          mdOutput;
+
           // add extra line breaks non list blocks
           mdOutput[pageIdentifier] += `\n${md.addTabSpace(
             mdBlocks.parent,
@@ -116,7 +116,13 @@ export class NotionToMarkdown {
           if (this.config.separateChildPage) {
             mdOutput = { ...mdOutput, ...mdstr };
           } else {
-            mdOutput[pageIdentifier] += mdstr[childPageTitle];
+            mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
+            if (mdstr[childPageTitle]) {
+              // child page heading followed by child page content
+              mdOutput[
+                pageIdentifier
+              ] += `${childPageTitle}\n${mdstr[childPageTitle]}`;
+            }
           }
         } else if (mdBlocks.type === "toggle") {
           // convert children md object to md string
@@ -124,6 +130,7 @@ export class NotionToMarkdown {
             mdBlocks.children
           );
 
+          mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
           mdOutput[pageIdentifier] += md.toggle(
             mdBlocks.parent,
             toggle_children_md_string["parent"]
@@ -135,7 +142,10 @@ export class NotionToMarkdown {
             nestingLevel + 1
           );
 
-          mdOutput[pageIdentifier] += mdstr["parent"];
+          mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
+          if (mdstr["parent"]) {
+            mdOutput[pageIdentifier] += mdstr["parent"];
+          }
         }
       }
     });
