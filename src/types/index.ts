@@ -1,5 +1,5 @@
 import { Client } from "@notionhq/client";
-import { ListBlockChildrenResponse } from "@notionhq/client/build/src/api-endpoints";
+import type { ListBlockChildrenResponse } from "@notionhq/client/build/src/api-endpoints";
 
 export type BlockAttributes = {
   numbered_list_item?: {
