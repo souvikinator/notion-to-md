@@ -11,6 +11,7 @@ import {
   Text,
   ConfigurationOptions,
   MdStringObject,
+  BlockType,
 } from "./types";
 import * as md from "./utils/md";
 import { getBlockChildren } from "./utils/notion";
@@ -36,7 +37,7 @@ export class NotionToMarkdown {
   }
 
   setCustomTransformer(
-    type: string,
+    type: BlockType,
     transformer: CustomTransformer
   ): NotionToMarkdown {
     this.customTransformers[type] = transformer;

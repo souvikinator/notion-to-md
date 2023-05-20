@@ -1,11 +1,15 @@
 import { Client } from "@notionhq/client";
-import type { ListBlockChildrenResponse } from "@notionhq/client/build/src/api-endpoints";
+import type {
+  ListBlockChildrenResponse,
+  GetBlockParameters,
+} from "@notionhq/client/build/src/api-endpoints";
 
 export type BlockAttributes = {
   numbered_list_item?: {
     number?: number;
   };
 };
+
 export type ListBlockChildrenResponseResults =
   ListBlockChildrenResponse["results"] & BlockAttributes;
 
@@ -13,6 +17,46 @@ export type ListBlockChildrenResponseResult =
   ListBlockChildrenResponseResults[0] & BlockAttributes;
 
 export type TextRequest = string;
+
+export type BlockType =
+  | "image"
+  | "video"
+  | "file"
+  | "pdf"
+  | "table"
+  | "bookmark"
+  | "embed"
+  | "equation"
+  | "divider"
+  | "toggle"
+  | "to_do"
+  | "bulleted_list_item"
+  | "numbered_list_item"
+  | "synced_block"
+  | "column_list"
+  | "column"
+  | "link_preview"
+  | "link_to_page"
+  | "paragraph"
+  | "heading_1"
+  | "heading_2"
+  | "heading_3"
+  | "bulleted_list_item"
+  | "numbered_list_item"
+  | "quote"
+  | "to_do"
+  | "template"
+  | "synced_block"
+  | "child_page"
+  | "child_database"
+  | "code"
+  | "callout"
+  | "breadcrumb"
+  | "table_of_contents"
+  | "link_to_page"
+  | "audio"
+  | "unsupported"
+  | string;
 
 export type ConfigurationOptions = {
   separateChildPage?: boolean;
@@ -98,4 +142,4 @@ export type CalloutIcon =
 
 export type CustomTransformer = (
   block: ListBlockChildrenResponseResult
-) => string | Promise<string>;
+) => BlockType | Promise<string>;
