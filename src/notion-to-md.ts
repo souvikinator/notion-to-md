@@ -23,7 +23,7 @@ export class NotionToMarkdown {
   private notionClient: Client;
   private config: ConfigurationOptions;
   private targetPage: string;
-  private customTransformers: Record<string, CustomTransformer>;
+  private customTransformers: Record<BlockType, CustomTransformer>;
 
   constructor(options: NotionToMarkdownOptions) {
     this.notionClient = options.notionClient;

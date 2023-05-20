@@ -142,4 +142,4 @@ export type CalloutIcon =
 
 export type CustomTransformer = (
   block: ListBlockChildrenResponseResult
-) => BlockType | Promise<string>;
+) => string | Promise<string>;
