@@ -22,8 +22,7 @@ import { getBlockChildren } from "./utils/notion";
 export class NotionToMarkdown {
   private notionClient: Client;
   private config: ConfigurationOptions;
-  private targetPage: string;
-  private customTransformers: Record<BlockType, CustomTransformer>;
+  private customTransformers: Record<string, CustomTransformer>;
 
   constructor(options: NotionToMarkdownOptions) {
     this.notionClient = options.notionClient;
@@ -31,7 +30,6 @@ export class NotionToMarkdown {
       separateChildPage: false,
       convertImagesToBase64: false,
     };
-    this.targetPage = "";
     this.config = { ...defaultConfig, ...options.config };
     this.customTransformers = {};
   }
@@ -169,7 +167,6 @@ export class NotionToMarkdown {
         "notion client is not provided, for more details check out https://github.com/souvikinator/notion-to-md"
       );
     }
-    this.targetPage = id;
     const blocks = await getBlockChildren(this.notionClient, id, totalPage);
 
     const parsedData = await this.blocksToMarkdown(blocks);

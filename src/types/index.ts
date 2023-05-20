@@ -56,7 +56,7 @@ export type BlockType =
   | "link_to_page"
   | "audio"
   | "unsupported"
-  | string;
+  | (string & {});
 
 export type ConfigurationOptions = {
   separateChildPage?: boolean;
