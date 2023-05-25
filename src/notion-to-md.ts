@@ -453,7 +453,7 @@ export class NotionToMarkdown {
     switch (type) {
       case "code":
         {
-          parsedData = md.codeBlock(parsedData, block[type].language);
+          parsedData = md.codeBlock(parsedData, block[type].language, block[type].caption[0]?.plain_text);
         }
         break;
 

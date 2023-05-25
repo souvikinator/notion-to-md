@@ -31,10 +31,10 @@ export const link = (text: string, href: string) => {
   return `[${text}](${href})`;
 };
 
-export const codeBlock = (text: string, language?: string) => {
+export const codeBlock = (text: string, language?: string, caption?: string | undefined) => {
   if (language === "plain text") language = "text";
 
-  return `\`\`\`${language}
+  return `\`\`\`${language} ${caption ?? ""}
 ${text}
 \`\`\``;
 };
