@@ -23,6 +23,7 @@
         <img src="https://img.shields.io/github/stars/souvikinator/notion-to-md?style=for-the-badge"
             alt="">
     <a href="https://www.producthunt.com/products/notion-to-md?utm_source=badge-follow&utm_medium=badge&utm_souce=badge-notion&#0045;to&#0045;md" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/follow.svg?product_id=486574&theme=light&size=small" alt="notion&#0045;to&#0045;md - Programmatically&#0032;convert&#0032;notion&#0032;pages&#0032;to&#0032;markdown | Product Hunt" style="width: 86px; height: 32px;" width="86" height="32" /></a>
+<img src="https://img.shields.io/twitter/follow/souvikinator?color=blue&logo=twitter&style=for-the-badge" </img>
 
 </p>
 
