@@ -121,7 +121,7 @@ export class NotionToMarkdown {
               // child page heading followed by child page content
               mdOutput[
                 pageIdentifier
-              ] += `${childPageTitle}\n${mdstr[childPageTitle]}`;
+              ] += `\n${childPageTitle}\n${mdstr[childPageTitle]}`;
             }
           }
         } else if (mdBlocks.type === "toggle") {
@@ -145,6 +145,8 @@ export class NotionToMarkdown {
           mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
           if (mdstr["parent"]) {
             mdOutput[pageIdentifier] += mdstr["parent"];
+          } else {
+            mdOutput[pageIdentifier] += mdstr[pageIdentifier];
           }
         }
       }
