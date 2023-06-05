@@ -61,6 +61,7 @@ export type BlockType =
 export type ConfigurationOptions = {
   separateChildPage?: boolean;
   convertImagesToBase64?: boolean;
+  parseChildPages?: boolean;
 };
 export interface NotionToMarkdownOptions {
   notionClient: Client;

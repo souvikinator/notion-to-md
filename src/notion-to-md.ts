@@ -29,6 +29,7 @@ export class NotionToMarkdown {
     const defaultConfig: ConfigurationOptions = {
       separateChildPage: false,
       convertImagesToBase64: false,
+      parseChildPages: true,
     };
     this.config = { ...defaultConfig, ...options.config };
     this.customTransformers = {};
@@ -197,6 +198,11 @@ export class NotionToMarkdown {
     for (let i = 0; i < blocks.length; i++) {
       let block: ListBlockChildrenResponseResult = blocks[i];
 
+      // @ts-ignore
+      if (block.type === "child_page" && !this.config.parseChildPages) {
+        continue;
+      }
+
       if ("has_children" in block && block.has_children) {
         // Get children of this block.
         let child_blocks = await getBlockChildren(
@@ -361,6 +367,8 @@ export class NotionToMarkdown {
 
       case "child_page":
         {
+          if (!this.config.parseChildPages) return "";
+
           let pageTitle: string = block.child_page.title;
 
           if (this.config.separateChildPage) {
