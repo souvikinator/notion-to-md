@@ -198,10 +198,11 @@ export class NotionToMarkdown {
       let block: ListBlockChildrenResponseResult = blocks[i];
 
       if ("has_children" in block && block.has_children) {
+        const block_id = block.type == "synced_block" && block.synced_block.synced_from.block_id ? block.synced_block.synced_from.block_id : block.id;
         // Get children of this block.
         let child_blocks = await getBlockChildren(
           this.notionClient,
-          block.id,
+          block_id,
           totalPage
         );
 
