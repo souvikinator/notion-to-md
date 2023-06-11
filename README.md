@@ -92,13 +92,15 @@ const fs = require('fs');
 
 const notion = new Client({
   auth: "your integration token",
-  config:{
-     separateChildPage:true, // default: false
-  }
 });
 
 // passing notion client to the option
-const n2m = new NotionToMarkdown({ notionClient: notion });
+const n2m = new NotionToMarkdown({ 
+  notionClient: notion,
+    config:{
+     separateChildPage:true, // default: false
+  }
+ });
 
 (async () => {
   const mdblocks = await n2m.pageToMarkdown("target_page_id");
