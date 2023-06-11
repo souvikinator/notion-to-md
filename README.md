@@ -118,6 +118,21 @@ const n2m = new NotionToMarkdown({
 
 User gets to save the content separately.
 
+## Disable child page parsing
+
+```javascript
+...
+
+const n2m = new NotionToMarkdown({ 
+  notionClient: notion,
+    config:{
+     parseChildPages:false, // default: parseChildPages
+  }
+ });
+
+...
+```
+
 ## converting page to markdown object
 
 **Example notion page:**
