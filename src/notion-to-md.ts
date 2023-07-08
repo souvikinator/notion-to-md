@@ -124,7 +124,7 @@ export class NotionToMarkdown {
               ] += `\n${childPageTitle}\n${mdstr[childPageTitle]}`;
             }
           }
-        } else if (mdBlocks.type === "toggle") {
+        } else if (mdBlocks.type === "toggle" || mdBlocks.type === "table") {
           // convert children md object to md string
           const toggle_children_md_string = this.toMarkdownString(
             mdBlocks.children
@@ -143,7 +143,7 @@ export class NotionToMarkdown {
           );
 
           mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
-          if (mdstr["parent"]) {
+          if (pageIdentifier !== "parent" && mdstr["parent"]) {
             mdOutput[pageIdentifier] += mdstr["parent"];
           } else {
             mdOutput[pageIdentifier] += mdstr[pageIdentifier];
@@ -206,7 +206,11 @@ export class NotionToMarkdown {
       }
 
       if ("has_children" in block && block.has_children) {
-        const block_id = block.type == "synced_block" && block.synced_block?.synced_from?.block_id ? block.synced_block.synced_from.block_id : block.id;
+        const block_id =
+          block.type == "synced_block" &&
+          block.synced_block?.synced_from?.block_id
+            ? block.synced_block.synced_from.block_id
+            : block.id;
         // Get children of this block.
         let child_blocks = await getBlockChildren(
           this.notionClient,
