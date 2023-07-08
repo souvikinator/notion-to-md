@@ -128,11 +128,9 @@ export const divider = () => {
 export const toggle = (summary?: string, children?: string) => {
   if (!summary) return children || "";
   return `<details>
-  <summary>${summary}</summary>
-
+<summary>${summary}</summary>
 ${children || ""}
-
-  </details>`;
+</details>\n\n`;
 };
 
 export const table = (cells: string[][]) => {
