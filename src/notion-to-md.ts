@@ -124,7 +124,7 @@ export class NotionToMarkdown {
               ] += `\n${childPageTitle}\n${mdstr[childPageTitle]}`;
             }
           }
-        } else if (mdBlocks.type === "toggle" || mdBlocks.type === "table") {
+        } else if (mdBlocks.type === "toggle") {
           // convert children md object to md string
           const toggle_children_md_string = this.toMarkdownString(
             mdBlocks.children
@@ -145,7 +145,7 @@ export class NotionToMarkdown {
           mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
           if (pageIdentifier !== "parent" && mdstr["parent"]) {
             mdOutput[pageIdentifier] += mdstr["parent"];
-          } else {
+          } else if (mdstr[pageIdentifier]) {
             mdOutput[pageIdentifier] += mdstr[pageIdentifier];
           }
         }
