@@ -57,6 +57,10 @@ export const heading3 = (text: string) => {
   return `### ${text}`;
 };
 
+export const heading4 = (text: string) => {
+  return `#### ${text}`;
+};
+
 export const quote = (text: string) => {
   // the replace is done to handle multiple lines
   return `> ${text.replace(/\n/g, "  \n> ")}`;

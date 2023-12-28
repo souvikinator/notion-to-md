@@ -426,6 +426,7 @@ export class NotionToMarkdown {
       // "heading_1"
       // "heading_2"
       // "heading_3"
+      // "heading_4" (dummy)
       // "bulleted_list_item"
       // "numbered_list_item"
       // "quote"
@@ -487,6 +488,12 @@ export class NotionToMarkdown {
       case "heading_3":
         {
           parsedData = md.heading3(parsedData);
+        }
+        break;
+
+      case "heading_4":
+        {
+          parsedData = md.heading4(parsedData);
         }
         break;
 
