@@ -12,7 +12,8 @@
     "prebuild": "npm run clean",
     "clean": "rm -rf ./build",
     "test": "jest",
-    "test:watch": "jest -w"
+    "test:watch": "jest -w",
+    "gen": "node --env-file=.env ./src/notion2md.ts"
   },
   "keywords": [
     "notion",
