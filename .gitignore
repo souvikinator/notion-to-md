@@ -144,3 +144,5 @@ package-lock.json
 demo.ts
 test.md
 test.json
+
+.env

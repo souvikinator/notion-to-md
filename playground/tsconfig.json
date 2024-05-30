@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "notion-to-md": [
+        "../build"
+      ]
+    },
+    "typeRoots": [
+      "../build/types",
+    ]
+  },
+  "include": [
+    "./src/**/*.ts"
+  ]
+}
