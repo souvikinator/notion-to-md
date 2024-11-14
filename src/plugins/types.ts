@@ -144,3 +144,19 @@ export type CalloutIcon =
 export type CustomTransformer = (
   block: ListBlockChildrenResponseResult
 ) => string | boolean | Promise<string | boolean>;
+
+// Plugin Types
+export interface Plugin {
+  type: BlockType | BlockType[];
+  transform: (
+    block: ListBlockChildrenResponseResult,
+    context?: PluginContext
+  ) => Promise<string> | string;
+}
+
+export interface PluginContext {
+  getChildren: (
+    blockId: string,
+    options?: { recursive?: boolean; depth?: number }
+  ) => Promise<ListBlockChildrenResponseResults>;
+}
