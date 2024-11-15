@@ -1,9 +1,12 @@
-import { Client } from "@notionhq/client";
+// types.ts
 import type {
   ListBlockChildrenResponse,
   GetBlockParameters,
+  GetPageResponse,
+  PageObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
 
+// Block Types
 export type BlockAttributes = {
   numbered_list_item?: {
     number?: number;
@@ -11,139 +14,29 @@ export type BlockAttributes = {
 };
 
 export type ListBlockChildrenResponseResults =
-  ListBlockChildrenResponse["results"] & BlockAttributes;
+  (ListBlockChildrenResponse["results"] & BlockAttributes) & {
+    children?: ListBlockChildrenResponseResults;
+  };
 
 export type ListBlockChildrenResponseResult =
-  ListBlockChildrenResponseResults[0] & BlockAttributes;
+  ListBlockChildrenResponseResults[0];
 
-export type TextRequest = string;
-
-export type BlockType =
-  | "image"
-  | "video"
-  | "file"
-  | "pdf"
-  | "table"
-  | "bookmark"
-  | "embed"
-  | "equation"
-  | "divider"
-  | "toggle"
-  | "to_do"
-  | "bulleted_list_item"
-  | "numbered_list_item"
-  | "synced_block"
-  | "column_list"
-  | "column"
-  | "link_preview"
-  | "link_to_page"
-  | "paragraph"
-  | "heading_1"
-  | "heading_2"
-  | "heading_3"
-  | "bulleted_list_item"
-  | "numbered_list_item"
-  | "quote"
-  | "to_do"
-  | "template"
-  | "synced_block"
-  | "child_page"
-  | "child_database"
-  | "code"
-  | "callout"
-  | "breadcrumb"
-  | "table_of_contents"
-  | "link_to_page"
-  | "audio"
-  | "unsupported"
-  | (string & {});
-
-export type ConfigurationOptions = {
-  separateChildPage?: boolean;
-  convertImagesToBase64?: boolean;
-  parseChildPages?: boolean;
-};
-export interface NotionToMarkdownOptions {
-  notionClient: Client;
-  config?: ConfigurationOptions;
+// BlockFetcher Types
+export interface BlockFetcherConfig {
+  includeChildPageContent?: boolean;
+  fetchPageProperties?: boolean;
+  rateLimiting?: {
+    maxRequestsPerSecond?: number;
+    batchSize?: number;
+  };
 }
 
-export type MdStringObject = Record<string, string>;
+export type PageObjectProperties = PageObjectResponse["properties"];
 
-export type MdBlock = {
-  type?: string;
-  blockId: string;
-  parent: string;
-  children: MdBlock[];
-};
-
-export type Annotations = {
-  bold: boolean;
-  italic: boolean;
-  strikethrough: boolean;
-  underline: boolean;
-  code: boolean;
-  color:
-    | "default"
-    | "gray"
-    | "brown"
-    | "orange"
-    | "yellow"
-    | "green"
-    | "blue"
-    | "purple"
-    | "pink"
-    | "red"
-    | "gray_background"
-    | "brown_background"
-    | "orange_background"
-    | "yellow_background"
-    | "green_background"
-    | "blue_background"
-    | "purple_background"
-    | "pink_background"
-    | "red_background";
-};
-
-export type Text = {
-  type: "text";
-  text: {
-    content: string;
-    link: {
-      url: TextRequest;
-    } | null;
-  };
-  annotations: Annotations;
-  plain_text: string;
-  href: string | null;
-};
-
-export type Equation = {
-  type: "equation";
-  equation: {
-    expression: string;
-  };
-  annotations: {
-    bold: false;
-    italic: false;
-    strikethrough: false;
-    underline: false;
-    code: false;
-    color: "default";
-  };
-  plain_text: string;
-  href: null;
-};
-
-export type CalloutIcon =
-  | { type: "emoji"; emoji?: string }
-  | { type: "external"; external?: { url: string } }
-  | { type: "file"; file: { url: string; expiry_time: string } }
-  | null;
-
-export type CustomTransformer = (
-  block: ListBlockChildrenResponseResult
-) => string | boolean | Promise<string | boolean>;
+export interface FetcherOutput {
+  properties: PageObjectProperties;
+  blocks: ListBlockChildrenResponseResults;
+}
 
 // Plugin Types
 export interface Plugin {
@@ -160,3 +53,35 @@ export interface PluginContext {
     options?: { recursive?: boolean; depth?: number }
   ) => Promise<ListBlockChildrenResponseResults>;
 }
+
+export type BlockType =
+  | "paragraph"
+  | "heading_1"
+  | "heading_2"
+  | "heading_3"
+  | "bulleted_list_item"
+  | "numbered_list_item"
+  | "quote"
+  | "to_do"
+  | "toggle"
+  | "code"
+  | "image"
+  | "video"
+  | "file"
+  | "pdf"
+  | "bookmark"
+  | "equation"
+  | "divider"
+  | "table"
+  | "column"
+  | "column_list"
+  | "link_preview"
+  | "synced_block"
+  | "template"
+  | "link_to_page"
+  | "table_of_contents"
+  | "child_page"
+  | "child_database"
+  | "breadcrumb"
+  | "callout"
+  | (string & {});

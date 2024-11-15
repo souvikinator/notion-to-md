@@ -48,7 +48,7 @@ describe("PluginManager", () => {
     const manager = new PluginManager();
     const mockBlock = {
       type: "paragraph",
-      paragraph: { text: "test" },
+      paragraph: { rich_text: [{ type: "text", text: { content: "test" } }] },
     } as ListBlockChildrenResponseResult;
 
     const mockContext = {
