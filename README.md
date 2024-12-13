@@ -5,13 +5,19 @@
 -->
 <h1 align="center">
   <br>
-<img src="https://imgur.com/WgXdz9r.png" alt="notion-to-md banner"  width="750" />
+<img src="https://i.ibb.co/Pzyf13S/Group-168.png" alt="notion-to-md banner"  width="750" />
   <br>
   <b>Notion-to-MD</b>
   <br>
   <sub><sup><b>(Notion to Markdown)</b></sup></sub>
   <br>
 </h1>
+
+<div align="center">
+  <a href="https://github.com/souvikinator/notion-to-md/discussions/112">
+    <img src="https://i.ibb.co/Tmyf805/Group-167.png" />
+  </a>
+</div>
 
 <p align="center">
        Notion-to-MD is a Node.js package that allows you to convert Notion pages to Markdown format. 
