@@ -201,7 +201,7 @@ export class NotionToMarkdown {
       let block: ListBlockChildrenResponseResult = blocks[i];
 
       // @ts-ignore
-      if (block.type === "child_page" && !this.config.parseChildPages) {
+      if (block.type === 'unsupported' || (block.type === "child_page" && !this.config.parseChildPages)) {
         continue;
       }
 
