@@ -19,6 +19,12 @@
   </a>
 </div>
 
+<div align="center">
+  <a href="https://discord.gg/VDShhNK7">
+    <img src="https://i.ibb.co/ZTk7QCW/Group-186.png" />
+  </a>
+</div>
+
 <p align="center">
        Notion-to-MD is a Node.js package that allows you to convert Notion pages to Markdown format. 
 </p>
@@ -26,14 +32,10 @@
   Convert notion pages, blocks and list of blocks to markdown (supports nesting) using <a href="https://github.com/makenotion/notion-sdk-js">notion-sdk-js</a>
 </p>
 <p align="center">
-        <img src="https://img.shields.io/github/stars/souvikinator/notion-to-md?style=for-the-badge"
-            alt="">
-    <a href="https://www.producthunt.com/products/notion-to-md?utm_source=badge-follow&utm_medium=badge&utm_souce=badge-notion&#0045;to&#0045;md" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/follow.svg?product_id=486574&theme=light&size=small" alt="notion&#0045;to&#0045;md - Programmatically&#0032;convert&#0032;notion&#0032;pages&#0032;to&#0032;markdown | Product Hunt" style="width: 86px; height: 32px;" width="86" height="32" /></a>
-<img src="https://img.shields.io/twitter/follow/souvikinator?color=blue&logo=twitter&style=for-the-badge" </img>
-
+<img src="https://img.shields.io/github/stars/souvikinator/notion-to-md?style=flat" alt="github stars">
+<img src="https://img.shields.io/twitter/follow/souvikinator?color=blue&logo=x&style=flat" alt="twitter" />
+<img src="https://komarev.com/ghpvc/?username=notion-to-md&abbreviated=true&label=REPO+VIEWS" alt="repo views" />
 </p>
-
-
 
 
 ## Install
