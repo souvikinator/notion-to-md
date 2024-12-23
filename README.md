@@ -25,6 +25,12 @@
   </a>
 </div>
 
+<div align="center">
+  <a href="https://www.reddit.com/r/notion_to_md/">
+    <img src="https://i.ibb.co/vBN5Cgz/Frame-4.png" />
+  </a>
+</div>
+
 <p align="center">
        Notion-to-MD is a Node.js package that allows you to convert Notion pages to Markdown format. 
 </p>
