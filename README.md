@@ -20,7 +20,7 @@
 </div>
 
 <div align="center">
-  <a href="https://discord.gg/VDShhNK7">
+  <a href="https://discord.gg/drWw5Ya535">
     <img src="https://i.ibb.co/ZTk7QCW/Group-186.png" />
   </a>
 </div>
