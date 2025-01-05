@@ -37,7 +37,7 @@ export class NotionToMarkdown {
 
   setCustomTransformer(
     type: BlockType,
-    transformer: CustomTransformer
+    transformer: CustomTransformer,
   ): NotionToMarkdown {
     this.customTransformers[type] = transformer;
 
@@ -53,7 +53,7 @@ export class NotionToMarkdown {
   toMarkdownString(
     mdBlocks: MdBlock[] = [],
     pageIdentifier: string = "parent",
-    nestingLevel: number = 0
+    nestingLevel: number = 0,
   ): MdStringObject {
     let mdOutput: MdStringObject = {};
 
@@ -79,7 +79,7 @@ export class NotionToMarkdown {
           // add extra line breaks non list blocks
           mdOutput[pageIdentifier] += `\n${md.addTabSpace(
             mdBlocks.parent,
-            nestingLevel
+            nestingLevel,
           )}\n\n`;
         } else {
           // initialize if key doesn't exist
@@ -87,7 +87,7 @@ export class NotionToMarkdown {
 
           mdOutput[pageIdentifier] += `${md.addTabSpace(
             mdBlocks.parent,
-            nestingLevel
+            nestingLevel,
           )}\n`;
         }
       }
@@ -119,27 +119,26 @@ export class NotionToMarkdown {
             mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
             if (mdstr[childPageTitle]) {
               // child page heading followed by child page content
-              mdOutput[
-                pageIdentifier
-              ] += `\n${childPageTitle}\n${mdstr[childPageTitle]}`;
+              mdOutput[pageIdentifier] +=
+                `\n${childPageTitle}\n${mdstr[childPageTitle]}`;
             }
           }
         } else if (mdBlocks.type === "toggle") {
           // convert children md object to md string
           const toggle_children_md_string = this.toMarkdownString(
-            mdBlocks.children
+            mdBlocks.children,
           );
 
           mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
           mdOutput[pageIdentifier] += md.toggle(
             mdBlocks.parent,
-            toggle_children_md_string["parent"]
+            toggle_children_md_string["parent"],
           );
         } else {
           let mdstr = this.toMarkdownString(
             mdBlocks.children,
             pageIdentifier,
-            nestingLevel + 1
+            nestingLevel + 1,
           );
 
           mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
@@ -163,11 +162,11 @@ export class NotionToMarkdown {
    */
   async pageToMarkdown(
     id: string,
-    totalPage: number | null = null
+    totalPage: number | null = null,
   ): Promise<MdBlock[]> {
     if (!this.notionClient) {
       throw new Error(
-        "notion client is not provided, for more details check out https://github.com/souvikinator/notion-to-md"
+        "notion client is not provided, for more details check out https://github.com/souvikinator/notion-to-md",
       );
     }
     const blocks = await getBlockChildren(this.notionClient, id, totalPage);
@@ -181,17 +180,17 @@ export class NotionToMarkdown {
    * Converts list of Notion Blocks to Markdown Blocks
    * @param {ListBlockChildrenResponseResults | undefined} blocks - List of notion blocks
    * @param {number} totalPage - Retrieve block children request number, page_size Maximum = totalPage * 100
-   * @param {MdBlock[]} mdBlocks - Defines max depth of nesting
+   * @param {MdBlock[]} mdBlocks - Array of markdown blocks
    * @returns {Promise<MdBlock[]>} - Array of markdown blocks with their children
    */
   async blocksToMarkdown(
     blocks?: ListBlockChildrenResponseResults,
     totalPage: number | null = null,
-    mdBlocks: MdBlock[] = []
+    mdBlocks: MdBlock[] = [],
   ): Promise<MdBlock[]> {
     if (!this.notionClient) {
       throw new Error(
-        "notion client is not provided, for more details check out https://github.com/souvikinator/notion-to-md"
+        "notion client is not provided, for more details check out https://github.com/souvikinator/notion-to-md",
       );
     }
 
@@ -201,7 +200,10 @@ export class NotionToMarkdown {
       let block: ListBlockChildrenResponseResult = blocks[i];
 
       // @ts-ignore
-      if (block.type === 'unsupported' || (block.type === "child_page" && !this.config.parseChildPages)) {
+      if (
+        block.type === "unsupported" ||
+        (block.type === "child_page" && !this.config.parseChildPages)
+      ) {
         continue;
       }
 
@@ -215,7 +217,7 @@ export class NotionToMarkdown {
         let child_blocks = await getBlockChildren(
           this.notionClient,
           block_id,
-          totalPage
+          totalPage,
         );
 
         // Push this block to mdBlocks.
@@ -236,7 +238,7 @@ export class NotionToMarkdown {
           await this.blocksToMarkdown(
             child_blocks,
             totalPage,
-            mdBlocks[l - 1].children
+            mdBlocks[l - 1].children,
           );
         }
 
@@ -303,7 +305,7 @@ export class NotionToMarkdown {
           return await md.image(
             image_title,
             link,
-            this.config.convertImagesToBase64
+            this.config.convertImagesToBase64,
           );
         }
         break;
@@ -341,7 +343,7 @@ export class NotionToMarkdown {
               title = caption;
             } else if (link) {
               const matches = link.match(
-                /[^\/\\&\?]+\.\w{3,4}(?=([\?&].*$|$))/
+                /[^\/\\&\?]+\.\w{3,4}(?=([\?&].*$|$))/,
               );
               title = matches ? matches[0] : type;
             }
@@ -411,7 +413,7 @@ export class NotionToMarkdown {
                 await this.blockToMarkdown({
                   type: "paragraph",
                   paragraph: { rich_text: cell },
-                } as ListBlockChildrenResponseResult)
+                } as ListBlockChildrenResponseResult),
             );
 
             const cellStringArr = await Promise.all(cellStringPromise);
@@ -508,12 +510,12 @@ export class NotionToMarkdown {
           const callout_children_object = await getBlockChildren(
             this.notionClient,
             id,
-            100
+            100,
           );
 
           // // parse children blocks to md object
           const callout_children = await this.blocksToMarkdown(
-            callout_children_object
+            callout_children_object,
           );
 
           callout_string += `${parsedData}\n`;
