@@ -142,5 +142,5 @@ export type CalloutIcon =
   | null;
 
 export type CustomTransformer = (
-  block: ListBlockChildrenResponseResult
+  block: ListBlockChildrenResponseResult,
 ) => string | boolean | Promise<string | boolean>;

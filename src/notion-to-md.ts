@@ -391,7 +391,9 @@ export class NotionToMarkdown {
             type === "link_to_page" &&
             block.link_to_page.type === "page_id"
           ) {
-            blockContent = { url: block.link_to_page.page_id };
+            blockContent = {
+              url: `https://www.notion.so/${block.link_to_page.page_id}`,
+            };
           }
 
           if (blockContent) return md.link(title, blockContent.url);
