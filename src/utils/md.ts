@@ -84,7 +84,7 @@ export const todo = (text: string, checked: boolean) => {
 export const image = async (
   alt: string,
   href: string,
-  convertToBase64: boolean = false
+  convertToBase64: boolean = false,
 ): Promise<string> => {
   // In case the user does not want to convert the images to Base64
   // or the image is already base64

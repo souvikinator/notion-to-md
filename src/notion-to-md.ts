@@ -71,7 +71,8 @@ export class NotionToMarkdown {
         if (
           mdBlocks.type !== "to_do" &&
           mdBlocks.type !== "bulleted_list_item" &&
-          mdBlocks.type !== "numbered_list_item"
+          mdBlocks.type !== "numbered_list_item" &&
+          mdBlocks.type !== "quote"
         ) {
           // initialize if key doesn't exist
           mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
@@ -134,6 +135,28 @@ export class NotionToMarkdown {
             mdBlocks.parent,
             toggle_children_md_string["parent"],
           );
+        } else if (mdBlocks.type === "quote") {
+          let mdstr = this.toMarkdownString(
+            mdBlocks.children,
+            pageIdentifier,
+            nestingLevel,
+          );
+
+          const formattedContent = mdstr.parent
+            .split("\n")
+            .map((line) => (line.trim() ? `> ${line}` : ">"))
+            .join("\n")
+            .trim();
+
+          mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
+
+          if (pageIdentifier !== "parent" && mdstr["parent"]) {
+            mdOutput[pageIdentifier] += formattedContent;
+          } else if (mdstr[pageIdentifier]) {
+            mdOutput[pageIdentifier] += formattedContent;
+          }
+
+          mdOutput[pageIdentifier] += "\n";
         } else {
           let mdstr = this.toMarkdownString(
             mdBlocks.children,
@@ -199,9 +222,10 @@ export class NotionToMarkdown {
     for (let i = 0; i < blocks.length; i++) {
       let block: ListBlockChildrenResponseResult = blocks[i];
 
-      // @ts-ignore
       if (
+        // @ts-ignore
         block.type === "unsupported" ||
+        // @ts-ignore
         (block.type === "child_page" && !this.config.parseChildPages)
       ) {
         continue;
