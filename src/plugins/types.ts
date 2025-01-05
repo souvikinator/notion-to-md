@@ -25,10 +25,8 @@ export type ListBlockChildrenResponseResult =
 export interface BlockFetcherConfig {
   includeChildPageContent?: boolean;
   fetchPageProperties?: boolean;
-  rateLimiting?: {
-    maxRequestsPerSecond?: number;
-    batchSize?: number;
-  };
+  maxRequestsPerSecond?: number;
+  batchSize?: number;
 }
 
 export type PageObjectProperties = PageObjectResponse["properties"];

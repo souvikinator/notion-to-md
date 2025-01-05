@@ -24,8 +24,8 @@ export class BlockFetcher {
       fetchPageProperties: false,
     }
   ) {
-    this.maxRequestsPerSecond = config.rateLimiting?.maxRequestsPerSecond ?? 3;
-    this.batchSize = config.rateLimiting?.batchSize ?? 3;
+    this.maxRequestsPerSecond = config.maxRequestsPerSecond ?? 3;
+    this.batchSize = config.batchSize ?? 3;
   }
 
   private async rateLimitRequest<T>(request: () => Promise<T>): Promise<T> {
@@ -143,6 +143,10 @@ export class BlockFetcher {
         );
 
         blocks = [...blocks, ...response.results];
+        // remove unsupported block types
+        blocks = blocks.filter(
+          (block) => "type" in block && block.type !== "unsupported"
+        );
         cursor = response.next_cursor ?? undefined;
       } while (cursor);
 
