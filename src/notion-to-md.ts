@@ -157,7 +157,10 @@ export class NotionToMarkdown {
           }
 
           mdOutput[pageIdentifier] += "\n";
-        } else {
+        } else if (mdBlocks.type === "callout") {
+          // do nothing the callout block is already processed
+        }
+         else {
           let mdstr = this.toMarkdownString(
             mdBlocks.children,
             pageIdentifier,

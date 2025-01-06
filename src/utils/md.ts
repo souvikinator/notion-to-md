@@ -69,7 +69,15 @@ export const callout = (text: string, icon?: CalloutIcon) => {
   }
 
   // the replace is done to handle multiple lines
-  return `> ${emoji ? emoji + " " : ""}${text.replace(/\n/g, "  \n> ")}`;
+  const formattedText = text.replace(/\n/g, "  \n> ");
+  const formattedEmoji = emoji ? emoji + " " : "";
+  const headingMatch = text.match(/^(#{1,6})\s+(.*)/);
+  if (headingMatch) {
+    const headingLevel = headingMatch[1].length;
+    const headingContent = headingMatch[2];
+    return `> ${"#".repeat(headingLevel)} ${formattedEmoji}${headingContent}`;
+  }
+  return `> ${formattedEmoji}${formattedText}`;
 };
 
 export const bullet = (text: string, count?: number) => {
