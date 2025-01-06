@@ -71,10 +71,11 @@ export const callout = (text: string, icon?: CalloutIcon) => {
   // the replace is done to handle multiple lines
   const formattedText = text.replace(/\n/g, "  \n> ");
   const formattedEmoji = emoji ? emoji + " " : "";
-  const headingMatch = text.match(/^(#{1,6})\s/);
+  const headingMatch = text.match(/^(#{1,6})\s+(.*)/);
   if (headingMatch) {
     const headingLevel = headingMatch[1].length;
-    return `> ${"#".repeat(headingLevel)} ${formattedEmoji}${formattedText}`;
+    const headingContent = headingMatch[2];
+    return `> ${"#".repeat(headingLevel)} ${formattedEmoji}${headingContent}`;
   }
   return `> ${formattedEmoji}${formattedText}`;
 };
