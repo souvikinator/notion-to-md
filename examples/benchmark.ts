@@ -1,6 +1,6 @@
 import { Client } from "@notionhq/client";
 import { NotionToMarkdown } from "notion-to-md";
-import { BlockFetcher } from "./demo";
+import { BlockFetcher } from "../src/core/block-fetcher";
 
 // Statistics helper functions
 function calculateStats(times: number[]) {
