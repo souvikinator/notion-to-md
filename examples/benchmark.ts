@@ -49,7 +49,7 @@ async function runBenchmark({
 }) {
   // Initialize clients
   const notion = new Client({
-    auth: "secret_HWyj8UcHh6tPTs4LjWsZxlMruBR9Gqq0agwCZMc4ehp",
+    auth: "",
   });
 
   const blockFetcher = new BlockFetcher(notion, {
