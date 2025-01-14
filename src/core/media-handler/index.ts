@@ -1,96 +1,136 @@
 import {
-  MediaHandlerConfig,
-  MediaType,
-  MediaInfo,
-  FetcherOutput,
   ListBlockChildrenResponseResults,
   ListBlockChildrenResponseResult,
-  MediaStrategy,
+  MediaProcessingError,
+  MediaManifestEntry,
 } from "../../types";
+import { BaseModule } from "../base-module";
+import { MediaStrategy } from "./strategies/base";
 
-export class MediaHandler {
-  private mediaTypes: MediaType[];
-  private processedBlockIds: Set<string>;
-  private pageId: string;
-  private strategy: MediaStrategy;
+export class MediaHandler extends BaseModule {
+  private processedBlockIds: Set<string> = new Set();
+  private entriesToCleanup: MediaManifestEntry[] = [];
 
-  constructor(config: MediaHandlerConfig) {
-    this.pageId = config.pageId;
-    this.strategy = config.strategy;
-    this.mediaTypes = config.mediaTypes ?? ["image", "video", "file", "pdf"];
-    this.processedBlockIds = new Set();
+  constructor(private strategy: MediaStrategy) {
+    super();
   }
 
-  // Main entry point for processing content
-  async processContent(fetcherOutput: FetcherOutput): Promise<void> {
-    await this.strategy.initialize(this.pageId);
+  /**
+   * Process all media blocks in the provided block tree
+   * Updates blocks in place with processed media information
+   */
+  async processBlocks(blocks: ListBlockChildrenResponseResults): Promise<void> {
+    try {
+      // Clear processed blocks tracking
+      this.processedBlockIds.clear();
 
-    // Process all blocks recursively
-    await this.processBlocks(fetcherOutput.blocks);
+      // Process all blocks recursively
+      await this.processBlockArray(blocks);
 
-    // Finish processing and perform cleanup
-    await this.strategy.finish(this.processedBlockIds);
+      // Handle cleanup after processing
+      await this.handleCleanup();
+    } catch (error) {
+      throw new MediaProcessingError(
+        "Failed to process media blocks",
+        "root",
+        "processBlocks",
+        error,
+      );
+    }
   }
 
-  private async processBlocks(
+  /**
+   * Recursively process an array of blocks
+   */
+  private async processBlockArray(
     blocks: ListBlockChildrenResponseResults,
   ): Promise<void> {
     for (const block of blocks) {
-      if (this.isMediaBlock(block)) {
-        // Track processed blocks for cleanup purposes
-        this.processedBlockIds.add(block.id);
-
-        const mediaInfo = this.extractMediaInfo(block);
-        const processedUrl = await this.strategy.handleMedia(mediaInfo);
-
-        this.updateBlockUrl(block, processedUrl);
+      if (this.hasMedia(block)) {
+        await this.processMediaBlock(block);
       }
 
-      // @ts-ignore
-      if (block.has_children && block.children) {
-        await this.processBlocks(block.children);
+      // Recursively process children if they exist
+      if ("children" in block && Array.isArray(block.children)) {
+        await this.processBlockArray(block.children);
       }
     }
   }
 
-  private isMediaBlock(block: ListBlockChildrenResponseResult): boolean {
-    // @ts-ignore
-    return this.mediaTypes.includes(block.type as MediaType);
-  }
-
-  private extractMediaInfo(block: ListBlockChildrenResponseResult): MediaInfo {
-    // @ts-ignore
-    const blockContent = block[block.type as MediaType];
-    const fileInfo =
-      blockContent?.type === "external"
-        ? blockContent.external
-        : blockContent.file;
-
-    return {
-      blockId: block.id,
-      // @ts-ignore
-      lastEdited: block.last_edited_time,
-      // @ts-ignore
-      mediaType: block.type as MediaType,
-      url: fileInfo.url,
-      filename: block.id,
-      isExternal: blockContent?.type === "external",
-    };
-  }
-
-  private updateBlockUrl(
+  /**
+   * Process a single media block using the configured strategy
+   */
+  private async processMediaBlock(
     block: ListBlockChildrenResponseResult,
-    url: string,
-  ): void {
-    // @ts-ignore
-    const mediaType = block.type as MediaType;
-    // @ts-ignore
-    const blockContent = block[mediaType];
+  ): Promise<void> {
+    const existingEntry = this.getManifest().getMediaEntry(block.id);
 
-    if (blockContent.type === "external") {
-      blockContent.external.url = url;
-    } else {
-      blockContent.file.url = url;
+    try {
+      // If the block exists but has been updated, we need to clear the old content of block
+      if (
+        existingEntry &&
+        // @ts-ignore
+        existingEntry.lastEdited !== block.last_edited_time
+      ) {
+        // Clean up the old media before processing new content
+        // won't be removed from manifest as block can simply be updated
+        await this.strategy.cleanup(existingEntry);
+      }
+
+      const mediaInfo = await this.strategy.process(block);
+
+      this.getManifest().updateMediaEntry(block.id, {
+        blockId: block.id,
+        // @ts-ignore
+        lastEdited: block.last_edited_time,
+        mediaInfo,
+      });
+
+      this.processedBlockIds.add(block.id);
+    } catch (error) {
+      throw new MediaProcessingError(
+        "Failed to process media block",
+        block.id,
+        "processMediaBlock",
+        error,
+      );
+    }
+  }
+
+  private hasMedia(block: ListBlockChildrenResponseResult): boolean {
+    // @ts-ignore
+    return ["image", "video", "file", "pdf"].includes(block.type);
+  }
+
+  /**
+   * Handle cleanup of unused media files/resources
+   */
+  private async handleCleanup(): Promise<void> {
+    const manifest = this.getManifest();
+    const allEntries = manifest.getAllMediaEntries();
+
+    // Find entries that are there in new blocks but not in the manifest
+    for (const [blockId, entry] of Object.entries(allEntries)) {
+      if (!this.processedBlockIds.has(blockId)) {
+        this.entriesToCleanup.push(entry);
+      }
+    }
+
+    try {
+      // Let strategy handle the cleanup
+      const cleanupPromise = this.entriesToCleanup.map(async (entry) => {
+        manifest.removeMediaEntry(entry.blockId);
+        return this.strategy.cleanup(entry);
+      });
+
+      await Promise.all(cleanupPromise);
+    } catch (error) {
+      throw new MediaProcessingError(
+        "Failed to cleanup media files",
+        "cleanup",
+        "handleCleanup",
+        error,
+      );
     }
   }
 }

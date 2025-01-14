@@ -3,10 +3,17 @@ import {
   ListBlockChildrenResponseResult,
   PageObjectProperties,
   CommentResponseResults,
-  BlockFetcherConfig,
   FetcherOutput,
   ListBlockChildrenResponseResults,
 } from "../types";
+import { BaseModule } from "./base-module";
+
+export interface BlockFetcherConfig {
+  fetchPageProperties?: boolean;
+  fetchComments?: boolean;
+  maxRequestsPerSecond?: number;
+  batchSize?: number;
+}
 
 interface QueueTask {
   type: "fetch_properties" | "fetch_comments" | "fetch_blocks";
@@ -14,7 +21,7 @@ interface QueueTask {
   parentId?: string;
 }
 
-export class BlockFetcher {
+export class BlockFetcher extends BaseModule {
   private queue: QueueTask[] = [];
   private blocks = new Map<string, ListBlockChildrenResponseResult>();
   private processedTasks = new Set<string>();
@@ -37,6 +44,7 @@ export class BlockFetcher {
       batchSize: 3,
     },
   ) {
+    super();
     this.config.maxRequestsPerSecond = config.maxRequestsPerSecond ?? 3;
     this.config.batchSize = config.batchSize ?? 3;
   }

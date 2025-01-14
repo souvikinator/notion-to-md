@@ -11,7 +11,7 @@
     "build": "tsc",
     "prebuild": "npm run clean",
     "clean": "rm -rf ./build",
-    "test": "jest",
+    "test": "jest --coverage --verbose",
     "test:watch": "jest -w"
   },
   "keywords": [

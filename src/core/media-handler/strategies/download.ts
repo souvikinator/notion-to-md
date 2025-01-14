@@ -1,221 +1,178 @@
-import fetch from "node-fetch";
-import * as mime from "mime-types";
-import * as path from "path";
 import * as fs from "fs/promises";
-import { BaseStrategy } from "./base";
-import { DownloadStrategyConfig, MediaInfo } from "../../../types";
+import * as path from "path";
+import fetch from "node-fetch";
+import mime from "mime-types";
+import { MediaStrategy } from "./base";
+import {
+  ListBlockChildrenResponseResult,
+  MediaInfo,
+  MediaInfoType,
+  MediaManifestEntry,
+  MediaProcessingError,
+} from "../../../types";
 
-export class DownloadStrategy extends BaseStrategy {
-  // Track files that need to be cleaned up
-  private filesToCleanup: Set<string> = new Set();
+export interface DownloadConfig {
+  outputPath: string;
+  transformPath?: (localPath: string) => string;
+  preserveExternalUrls?: boolean;
+}
 
-  constructor(private config: DownloadStrategyConfig) {
-    super();
-
-    // Validate required configuration
+export class DownloadStrategy implements MediaStrategy {
+  constructor(private config: DownloadConfig) {
     if (!config.outputPath) {
-      throw new Error("Download strategy requires outputPath configuration");
+      throw new Error("outputPath is required for DownloadStrategy");
     }
-
-    // Ensure output directory exists
-    fs.mkdir(config.outputPath, { recursive: true }).catch((error) => {
-      throw new Error(`Failed to create output directory: ${error.message}`);
-    });
   }
 
-  async handleMedia(mediaInfo: MediaInfo): Promise<string> {
-    const existingEntry = this.manifestManager?.getEntry(mediaInfo.blockId);
-
-    // Handle special cases for external media first
-    if (this.shouldPreserveExternalUrl(mediaInfo)) {
-      return mediaInfo.url;
-    }
-
+  async process(block: ListBlockChildrenResponseResult): Promise<MediaInfo> {
     try {
-      // Check if content needs updating
-      if (existingEntry) {
-        const lastEditTime = new Date(mediaInfo.lastEdited);
-        const manifestEditTime = new Date(existingEntry.lastEdited);
+      // Get the media URL from the block based on its type
+      const url = this.extractMediaUrl(block);
 
-        if (lastEditTime <= manifestEditTime) {
-          // Content is up to date - use existing file
-          return existingEntry.transformedPath || existingEntry.originalPath;
-        }
-
-        // Content is outdated - mark for cleanup if it's a local file
-        if (!existingEntry.originalPath.startsWith("http")) {
-          console.log(
-            `Marking outdated file for cleanup: ${existingEntry.originalPath}`,
-          );
-          this.filesToCleanup.add(existingEntry.originalPath);
-        }
+      // If configured to preserve external URLs and URL isn't from Notion
+      if (this.config.preserveExternalUrls) {
+        return {
+          type: MediaInfoType.DIRECT,
+          originalUrl: url,
+          transformedUrl: url,
+        };
       }
 
-      // Download and process new content
-      const { filePath, transformedPath } = await this.downloadMedia(mediaInfo);
+      // Download the file and get its path
+      const { localPath, mimeType } = await this.downloadFile(url, block.id);
 
-      // Update manifest with new file information
-      this.manifestManager?.updateEntry(mediaInfo.blockId, {
-        lastEdited: mediaInfo.lastEdited,
-        originalPath: filePath,
-        transformedPath,
-        mediaType: mediaInfo.mediaType,
-        strategy: "download",
-      });
-
-      return transformedPath;
+      return {
+        type: MediaInfoType.DOWNLOAD,
+        originalUrl: url,
+        localPath,
+        mimeType,
+        transformedUrl: this.transform({
+          type: MediaInfoType.DOWNLOAD,
+          originalUrl: url,
+          localPath,
+          mimeType,
+        }),
+      };
     } catch (error) {
-      console.error(
-        `Failed to process media for block ${mediaInfo.blockId}:`,
+      throw new MediaProcessingError(
+        "Failed to process media",
+        block.id,
+        "process",
         error,
       );
-      return mediaInfo.url; // Fallback to original URL
     }
   }
 
-  async finish(processedBlockIds: Set<string>): Promise<void> {
-    if (!this.manifestManager) return;
-
-    // First, collect all files that need cleanup
-    this.gatherFilesForCleanup(processedBlockIds);
-
-    // Then perform the cleanup operations
-    await this.performCleanup();
-
-    // Finally, save the manifest state
-    await super.finish(processedBlockIds);
+  transform(mediaInfo: MediaInfo): string {
+    // If user provided a transform function, use it
+    if (this.config.transformPath) {
+      return this.config.transformPath(mediaInfo.localPath!);
+    }
+    // Default transformation: return the relative path from output directory
+    return path.relative(this.config.outputPath, mediaInfo.localPath!);
   }
 
-  private shouldPreserveExternalUrl(mediaInfo: MediaInfo): boolean {
-    if (!mediaInfo.isExternal) return false;
-
-    // Special handling for video platforms
+  async cleanup(entry: MediaManifestEntry): Promise<void> {
+    // Only cleanup downloaded files (not preserved external URLs)
     if (
-      mediaInfo.mediaType === "video" &&
-      this.isVideoHostingUrl(mediaInfo.url)
+      entry.mediaInfo.type === MediaInfoType.DOWNLOAD &&
+      entry.mediaInfo.localPath
     ) {
-      return true;
-    }
-
-    return !!this.config.preserveExternalUrls;
-  }
-
-  private async downloadMedia(
-    mediaInfo: MediaInfo,
-  ): Promise<{ filePath: string; transformedPath: string }> {
-    const response = await fetch(mediaInfo.url);
-    if (!response.ok) {
-      throw new Error(`Failed to download file: ${response.statusText}`);
-    }
-
-    // Determine file extension from content type or fallback
-    const contentType = response.headers.get("content-type");
-    const extension =
-      mime.extension(contentType || "") ||
-      this.getFallbackExtension(mediaInfo.mediaType);
-
-    const filename = `${mediaInfo.blockId}.${extension}`;
-    const filePath = path.join(this.config.outputPath, filename);
-
-    // Save the file
-    const buffer = await response.buffer();
-    await fs.writeFile(filePath, buffer);
-
-    // Transform the path if configured
-    const transformedPath = this.config.transformPath
-      ? this.config.transformPath(filePath)
-      : path.relative(process.cwd(), filePath);
-
-    return { filePath, transformedPath };
-  }
-
-  private async gatherFilesForCleanup(
-    processedBlockIds: Set<string>,
-  ): Promise<void> {
-    const entries = this.manifestManager?.getAllEntries() || {};
-
-    for (const [blockId, entry] of Object.entries(entries)) {
-      // Skip external URLs - we only clean up local files
-      if (entry.originalPath.startsWith("http")) continue;
-
-      // If block is no longer present in the content, mark for cleanup
-      if (!processedBlockIds.has(blockId)) {
-        console.log(
-          `Marking removed block's file for cleanup: ${entry.originalPath}`,
-        );
-        this.filesToCleanup.add(entry.originalPath);
+      try {
+        await fs.unlink(entry.mediaInfo.localPath);
+      } catch (error) {
+        // If file doesn't exist, that's okay - otherwise throw
+        // TODO: do not throw, if debug mode is on show it
+        // if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        //   throw new MediaProcessingError(
+        //     "Failed to cleanup file",
+        //     entry.blockId,
+        //     "cleanup",
+        //     error,
+        //   );
+        // }
       }
     }
   }
 
-  private async performCleanup(): Promise<void> {
-    if (this.filesToCleanup.size === 0) return;
-
-    console.log(`Starting cleanup of ${this.filesToCleanup.size} files`);
-
-    // Track failed deletions for reporting
-    const failedDeletions: Array<{ path: string; error: Error }> = [];
-
-    // Process each file independently
-    const cleanupPromises = Array.from(this.filesToCleanup).map(
-      async (filePath) => {
-        try {
-          // Check if file exists before attempting deletion
-          const fileExists = await fs
-            .access(filePath)
-            .then(() => true)
-            .catch(() => false);
-
-          if (!fileExists) {
-            console.log(`File already removed or not found: ${filePath}`);
-            return;
-          }
-
-          await fs.unlink(filePath);
-          console.log(`Successfully cleaned up: ${filePath}`);
-        } catch (error) {
-          console.error(`Failed to clean up file ${filePath}:`, error);
-          failedDeletions.push({
-            path: filePath,
-            error: error instanceof Error ? error : new Error(String(error)),
-          });
-        }
-      },
-    );
-
-    // Wait for all cleanup operations to complete
-    await Promise.allSettled(cleanupPromises);
-
-    // Log cleanup summary
-    if (failedDeletions.length > 0) {
-      console.warn(
-        `Cleanup completed with ${failedDeletions.length} failures:`,
-      );
-      failedDeletions.forEach(({ path, error }) => {
-        console.warn(`- ${path}: ${error.message}`);
-      });
-    } else {
-      console.log("All files cleaned up successfully");
+  private extractMediaUrl(block: ListBlockChildrenResponseResult): string {
+    // Handle different block types
+    // @ts-ignore
+    switch (block.type) {
+      case "image":
+        // @ts-ignore
+        return block.image.type === "external"
+          ? // @ts-ignore
+            block.image.external.url
+          : // @ts-ignore
+            block.image.file.url;
+      case "video":
+        // @ts-ignore
+        return block.video.type === "external"
+          ? // @ts-ignore
+            block.video.external.url
+          : // @ts-ignore
+            block.video.file.url;
+      case "file":
+        // @ts-ignore
+        return block.file.type === "external"
+          ? // @ts-ignore
+            block.file.external.url
+          : // @ts-ignore
+            block.file.file.url;
+      case "pdf":
+        // @ts-ignore
+        return block.pdf.type === "external"
+          ? // @ts-ignore
+            block.pdf.external.url
+          : // @ts-ignore
+            block.pdf.file.url;
+      default:
+        return "";
     }
-
-    this.filesToCleanup.clear();
   }
 
-  private isVideoHostingUrl(url: string): boolean {
-    return (
-      url.includes("youtube.com") ||
-      url.includes("youtu.be") ||
-      url.includes("vimeo.com")
-    );
-  }
+  private async downloadFile(
+    url: string,
+    blockId: string,
+  ): Promise<{ localPath: string; mimeType: string }> {
+    try {
+      // Fetch the file
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${response.statusText}`);
+      }
 
-  private getFallbackExtension(mediaType: string): string {
-    const fallbacks: Record<string, string> = {
-      image: "jpg",
-      video: "mp4",
-      file: "bin",
-      pdf: "pdf",
-    };
-    return fallbacks[mediaType] || "bin";
+      // Get content type and determine file extension
+      const contentType = response.headers.get("content-type") || "";
+      const mimeType = contentType.split(";")[0].trim();
+      const extension = mime.extension(mimeType);
+
+      if (!extension) {
+        throw new Error(
+          `Could not determine file extension for mime type: ${mimeType}`,
+        );
+      }
+
+      // Create output directory if it doesn't exist
+      await fs.mkdir(this.config.outputPath, { recursive: true });
+
+      // Generate unique filename using block ID and correct extension
+      const filename = `${blockId}.${extension}`;
+      const localPath = path.join(this.config.outputPath, filename);
+
+      // Save the file
+      const buffer = await response.buffer();
+      await fs.writeFile(localPath, buffer);
+
+      return { localPath, mimeType };
+    } catch (error) {
+      throw new MediaProcessingError(
+        "Failed to download file",
+        blockId,
+        "downloadFile",
+        error,
+      );
+    }
   }
 }

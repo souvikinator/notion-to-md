@@ -44,6 +44,12 @@ export type BlockAttributes = {
   children: ListBlockChildrenResponseResults;
 };
 
+export type FetcherOutput = {
+  properties: PageObjectProperties;
+  blocks: ListBlockChildrenResponseResults;
+  comments: CommentResponseResults;
+};
+
 export type ListBlockChildrenResponseResults =
   ListBlockChildrenResponseResult[];
 

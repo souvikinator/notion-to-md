@@ -1,22 +1,27 @@
-import { ManifestManager } from "../manifest-manager";
-import { MediaStrategy, MediaInfo } from "../../../types";
+import {
+  ListBlockChildrenResponseResult,
+  MediaInfo,
+  MediaManifestEntry,
+} from "../../../types";
 
-export abstract class BaseStrategy implements MediaStrategy {
-  protected manifestManager: ManifestManager | null = null;
+export interface MediaStrategy {
+  /**
+   * Process a media block and return information about the processed media
+   * @param block The block containing media to process
+   * @returns Promise resolving to MediaInfo with processing results
+   */
+  process(block: ListBlockChildrenResponseResult): Promise<MediaInfo>;
 
-  // Initialize the strategy with a specific page ID
-  async initialize(pageId: string): Promise<void> {
-    this.manifestManager = new ManifestManager(pageId);
-    await this.manifestManager.initialize();
-  }
+  /**
+   * Transform the processed media path/URL according to configuration
+   * @param mediaInfo The media information to transform
+   * @returns The transformed path or URL as a string
+   */
+  transform(mediaInfo: MediaInfo): string;
 
-  // Abstract method that each strategy must implement
-  abstract handleMedia(mediaInfo: MediaInfo): Promise<string>;
-
-  // Default finish implementation that saves the manifest
-  async finish(processedBlockIds: Set<string>): Promise<void> {
-    if (this.manifestManager) {
-      await this.manifestManager.saveManifest();
-    }
-  }
+  /**
+   * Clean up media files/resources that are no longer needed
+   * @param entries Array of manifest entries for cleanup
+   */
+  cleanup(entries: MediaManifestEntry): Promise<void>;
 }
