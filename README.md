@@ -43,6 +43,10 @@
 <img src="https://komarev.com/ghpvc/?username=notion-to-md&abbreviated=true&label=REPO+VIEWS" alt="repo views" />
 </p>
 
+## Looking for Support in Other Languages?
+> If you've created a specific client, please open an issue to have it added here.
+
+- [notion-to-md-py](https://github.com/SwordAndTea/notion-to-md-py) by [@SwordAndTea](https://github.com/SwordAndTea)
 
 ## Install
 
