@@ -1,6 +1,6 @@
 # Class architecture
 
-## Overview
+## Birds eye view
 
 ```mermaid
 classDiagram
@@ -200,6 +200,8 @@ classDiagram
     BaseManifestManager <|-- PageReferenceManifestManager : extends
 ```
 
+## Modules
+
 ### Base module
 
 All core modules inherit this class, kind of like orchestrator class for all the core modules
@@ -271,8 +273,6 @@ classDiagram
         <<abstract>>
     }
 ```
-
-## Modules
 
 ### Blocks Fetcher
 
