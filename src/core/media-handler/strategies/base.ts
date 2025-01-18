@@ -21,7 +21,7 @@ export interface MediaStrategy {
 
   /**
    * Clean up media files/resources that are no longer needed
-   * @param entries Array of manifest entries for cleanup
+   * @param entry from manifest entries for cleanup
    */
   cleanup(entries: MediaManifestEntry): Promise<void>;
 }
