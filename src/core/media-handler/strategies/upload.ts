@@ -1,82 +1,84 @@
-import { MediaStrategy } from "./base";
+import { ListBlockChildrenResponseResult } from "notion-to-md/build/types";
 import {
-  ListBlockChildrenResponseResult,
+  MediaStrategy,
+  UploadStrategyConfig,
   MediaInfo,
   MediaInfoType,
-  MediaProcessingError,
   MediaManifestEntry,
 } from "../../../types";
 
-export interface UploadConfig {
-  uploadHandler: (url: string, blockId: string) => Promise<string>;
-  transformPath?: (uploadedUrl: string) => string;
-  cleanupHandler?: (entry: MediaManifestEntry) => Promise<void>;
-  preserveExternalUrls?: boolean;
-}
-
 export class UploadStrategy implements MediaStrategy {
-  constructor(private config: UploadConfig) {
+  constructor(private config: UploadStrategyConfig) {
     if (!config.uploadHandler) {
       throw new Error("uploadHandler is required for UploadStrategy");
     }
   }
 
   async process(block: ListBlockChildrenResponseResult): Promise<MediaInfo> {
+    const url = this.extractMediaUrl(block);
     try {
-      // Extract the media URL from the block
-      const originalUrl = this.extractMediaUrl(block);
-
-      // If configured to preserve external URLs
-      if (this.config.preserveExternalUrls) {
+      // Fail forward: If no URL found, return a DIRECT type
+      if (!url) {
+        console.warn(`No media URL found in block ${block.id}`);
         return {
           type: MediaInfoType.DIRECT,
-          originalUrl,
-          transformedUrl: originalUrl,
+          originalUrl: "",
         };
       }
 
-      // Upload the file using the provided handler
-      const uploadedUrl = await this.config.uploadHandler(
-        originalUrl,
-        block.id,
-      );
+      // If configured to preserve external URLs and URL isn't from Notion
+      if (this.config.preserveExternalUrls && !this.isNotionUrl(url)) {
+        return {
+          type: MediaInfoType.DIRECT,
+          originalUrl: url,
+        };
+      }
 
-      // Create media info with upload details
-      const mediaInfo: MediaInfo = {
+      const uploadedUrl = await this.config.uploadHandler(url, block.id);
+
+      // Fail forward: If upload handler returns falsy value
+      if (!uploadedUrl) {
+        return {
+          type: MediaInfoType.DIRECT,
+          originalUrl: url,
+        };
+      }
+
+      return {
         type: MediaInfoType.UPLOAD,
-        originalUrl,
+        originalUrl: url,
         uploadedUrl,
-        transformedUrl: this.transform({
-          type: MediaInfoType.UPLOAD,
-          originalUrl,
-          uploadedUrl,
-        }),
       };
-
-      return mediaInfo;
     } catch (error) {
-      throw new MediaProcessingError(
-        "Failed to upload media",
-        block.id,
-        "process",
-        error instanceof Error ? error.message : String(error),
-      );
+      console.error(`Error processing block ${block.id}:`, error);
+      return {
+        type: MediaInfoType.DIRECT,
+        originalUrl: url || "",
+      };
     }
   }
 
   transform(mediaInfo: MediaInfo): string {
-    // If user provided a transform function, use it
-    if (this.config.transformPath && mediaInfo.uploadedUrl) {
-      return this.config.transformPath(mediaInfo.uploadedUrl);
+    // For direct types, return original URL
+    if (mediaInfo.type === MediaInfoType.DIRECT) {
+      return mediaInfo.originalUrl;
     }
-    // Default transformation: return the uploaded URL as-is
-    return mediaInfo.uploadedUrl || mediaInfo.originalUrl;
+
+    // For uploaded files, apply transformation if configured
+    if (mediaInfo.uploadedUrl) {
+      return this.config.transformPath
+        ? this.config.transformPath(mediaInfo.uploadedUrl)
+        : mediaInfo.uploadedUrl;
+    }
+
+    return mediaInfo.originalUrl;
   }
 
   async cleanup(entry: MediaManifestEntry): Promise<void> {
     // Only attempt cleanup if:
-    // 1. Entry is an uploaded file (not preserved external URL)
+    // 1. Entry is an uploaded file
     // 2. User provided a cleanup handler
+    // 3. We have an uploaded URL
     if (
       entry.mediaInfo.type === MediaInfoType.UPLOAD &&
       this.config.cleanupHandler &&
@@ -85,50 +87,26 @@ export class UploadStrategy implements MediaStrategy {
       try {
         await this.config.cleanupHandler(entry);
       } catch (error) {
-        throw new MediaProcessingError(
-          "Failed to cleanup uploaded file",
-          entry.blockId,
-          "cleanup",
-          error,
-        );
+        // Log but don't throw - fail forward
+        console.error(`Failed to cleanup uploaded file for entry:`, error);
       }
     }
   }
 
-  private extractMediaUrl(block: ListBlockChildrenResponseResult): string {
-    // Handle different block types
-    // @ts-ignore
-    switch (block.type) {
-      case "image":
-        // @ts-ignore
-        return block.image.type === "external"
-          ? // @ts-ignore
-            block.image.external.url
-          : // @ts-ignore
-            block.image.file.url;
-      case "video":
-        // @ts-ignore
-        return block.video.type === "external"
-          ? // @ts-ignore
-            block.video.external.url
-          : // @ts-ignore
-            block.video.file.url;
-      case "file":
-        // @ts-ignore
-        return block.file.type === "external"
-          ? // @ts-ignore
-            block.file.external.url
-          : // @ts-ignore
-            block.file.file.url;
-      case "pdf":
-        // @ts-ignore
-        return block.pdf.type === "external"
-          ? // @ts-ignore
-            block.pdf.external.url
-          : // @ts-ignore
-            block.pdf.file.url;
-      default:
-        return "";
+  private extractMediaUrl(
+    block: ListBlockChildrenResponseResult,
+  ): string | null {
+    try {
+      // @ts-ignore - we know these properties exist on media blocks
+      const mediaBlock = block[block.type];
+      if (!mediaBlock) return null;
+
+      return mediaBlock.type === "external"
+        ? mediaBlock.external?.url
+        : mediaBlock.file?.url;
+    } catch (error) {
+      console.error(`Failed to extract URL from block ${block.id}:`, error);
+      return null;
     }
   }
 
