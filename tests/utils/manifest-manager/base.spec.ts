@@ -1,145 +1,202 @@
-import { jest } from "@jest/globals";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
+import { beforeEach, describe, expect, jest, test } from "@jest/globals";
+import * as fs from "fs/promises";
+import * as path from "path";
 import { BaseManifestManager } from "../../../src/utils/manifest-manager/base";
+import {
+  ManifestError,
+  ManifestIOError,
+  ManifestNotFoundError,
+} from "../../../src/utils/manifest-manager/errors";
 
-// First, create our concrete test implementation
+// Create concrete test implementation
 class TestManifestManager extends BaseManifestManager {
-  // Implement required abstract methods
-  async initialize(): Promise<void> {
-    await this.ensureDirectories();
+  public async testSave<T>(filename: string, data: T): Promise<void> {
+    return this.save(filename, data);
   }
 
-  async save(): Promise<void> {
-    const testData = { test: "data" };
-    await this.saveManifest(this.getManifestPath("test"), testData);
+  public async testLoad<T>(filename: string): Promise<T> {
+    return this.load<T>(filename);
   }
 }
 
+jest.mock("fs/promises");
+
 describe("BaseManifestManager", () => {
-  let testManager: TestManifestManager;
-  let tempDir: string;
+  let manager: TestManifestManager;
+  const mockFs = fs as jest.Mocked<typeof fs>;
 
-  // Set up before each test
-  beforeEach(async () => {
-    // Create a temporary directory for testing
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "manifest-test-"));
-    testManager = new TestManifestManager(tempDir);
+  beforeEach(() => {
+    jest.resetAllMocks();
+    manager = new TestManifestManager();
   });
 
-  // Clean up after each test
-  afterEach(async () => {
-    await fs.rm(tempDir, { recursive: true, force: true });
-  });
-
-  describe("Directory Handling", () => {
-    test("creates base directory if it does not exist", async () => {
-      // Given a non-existent directory
-      const testDir = path.join(tempDir, "new-dir");
-      const manager = new TestManifestManager(testDir);
-
-      // When initializing
+  describe("initialization", () => {
+    test("creates base directory with default path", async () => {
       await manager.initialize();
 
-      // Then directory should be created
-      const stats = await fs.stat(testDir);
-      expect(stats.isDirectory()).toBe(true);
+      expect(mockFs.mkdir).toHaveBeenCalledWith(
+        expect.stringContaining(".notion-to-md"),
+        { recursive: true },
+      );
     });
 
-    test("uses existing base directory if it already exists", async () => {
-      // Given an existing directory
-      const existingDir = path.join(tempDir, "existing-dir");
-      await fs.mkdir(existingDir);
+    test("creates base directory with custom path", async () => {
+      const customPath = "/custom/path";
+      const customManager = new TestManifestManager(customPath);
 
-      // When creating manager with existing directory
-      const manager = new TestManifestManager(existingDir);
-      await manager.initialize();
+      await customManager.initialize();
 
-      // Then it should use the existing directory
-      const stats = await fs.stat(existingDir);
-      expect(stats.isDirectory()).toBe(true);
-
-      // And no error should be thrown
-      await expect(manager.initialize()).resolves.not.toThrow();
+      expect(mockFs.mkdir).toHaveBeenCalledWith(customPath, {
+        recursive: true,
+      });
     });
 
-    test("allows custom base directory through constructor", async () => {
-      // Given a custom directory path
-      const customDir = path.join(tempDir, "custom-dir");
+    test("throws ManifestIOError when directory creation fails", async () => {
+      mockFs.mkdir.mockRejectedValue(new Error("Permission denied"));
 
-      // When creating manager with custom path
-      const manager = new TestManifestManager(customDir);
-      await manager.initialize();
-
-      // Then it should use the custom directory
-      const stats = await fs.stat(customDir);
-      expect(stats.isDirectory()).toBe(true);
-    });
-
-    test("throws error if base directory path is invalid", async () => {
-      // Given an invalid directory path (using characters not allowed in file paths)
-      const invalidPath = path.join(tempDir, "invalid\0dir");
-      const manager = new TestManifestManager(invalidPath);
-
-      // When initializing
-      // Then it should throw an error
-      await expect(manager.initialize()).rejects.toThrow();
+      await expect(manager.initialize()).rejects.toBeInstanceOf(
+        ManifestIOError,
+      );
     });
   });
 
-  describe("File Operations", () => {
+  describe("save operations", () => {
+    const testData = { key: "value" };
+    const testFilename = "test.json";
+
     beforeEach(async () => {
-      await testManager.initialize();
+      await manager.initialize();
     });
 
-    test("generates correct manifest file paths", () => {
-      const testId = "test-manifest";
-      const manifestPath = testManager["getManifestPath"](testId);
-      expect(manifestPath).toBe(path.join(tempDir, `${testId}.json`));
+    test("successfully saves valid JSON data", async () => {
+      await manager.testSave(testFilename, testData);
+
+      const basePath = path.join(process.cwd(), ".notion-to-md");
+      const expectedPath = path.join(basePath, testFilename);
+
+      expect(mockFs.writeFile).toHaveBeenCalledWith(
+        expectedPath,
+        JSON.stringify(testData, null, 2),
+        "utf-8",
+      );
     });
 
-    test("creates new manifest file if none exists", async () => {
-      const testId = "test";
-      await testManager.save();
-      const manifestPath = testManager["getManifestPath"](testId);
-      const stats = await fs.stat(manifestPath);
-      expect(stats.isFile()).toBe(true);
+    test("throws ManifestError when saving invalid JSON data", async () => {
+      const circularData: any = {};
+      circularData.self = circularData;
+
+      await expect(
+        manager.testSave(testFilename, circularData),
+      ).rejects.toBeInstanceOf(ManifestError);
     });
 
-    test("loads existing manifest file correctly", async () => {
-      const testData = { test: "data" };
-      const manifestPath = testManager["getManifestPath"]("test");
-      await fs.writeFile(manifestPath, JSON.stringify(testData));
+    test("throws ManifestIOError when write operation fails", async () => {
+      mockFs.writeFile.mockRejectedValue(new Error("Write failed"));
 
-      // When loading manifest
-      const loadedData = await testManager["loadManifest"](manifestPath);
-
-      // Then data should match
-      expect(loadedData).toEqual(testData);
+      await expect(
+        manager.testSave(testFilename, testData),
+      ).rejects.toBeInstanceOf(ManifestIOError);
     });
   });
 
-  describe("Error Handling", () => {
-    test("handles permission issues when creating directory", async () => {
-      // Mock fs.mkdir to simulate permission error
-      jest
-        .spyOn(fs, "mkdir")
-        .mockRejectedValueOnce(new Error("EACCES: permission denied"));
+  describe("load operations", () => {
+    const testData = { key: "value" };
+    const testFilename = "test.json";
 
-      // When initializing
-      // Then it should throw an error
-      await expect(testManager.initialize()).rejects.toThrow();
+    beforeEach(async () => {
+      await manager.initialize();
     });
 
-    test("handles corrupt JSON in manifest file", async () => {
-      // Given a manifest file with invalid JSON
-      const manifestPath = testManager["getManifestPath"]("test");
-      await fs.writeFile(manifestPath, "invalid json");
+    test("successfully loads and parses JSON data", async () => {
+      mockFs.readFile.mockResolvedValue(JSON.stringify(testData));
 
-      // When loading manifest
-      // Then it should throw an error
-      await expect(testManager["loadManifest"](manifestPath)).rejects.toThrow();
+      const result = await manager.testLoad<typeof testData>(testFilename);
+
+      expect(result).toEqual(testData);
+    });
+
+    test("throws ManifestNotFoundError for ENOENT error", async () => {
+      const error = new Error("File not found");
+      (error as NodeJS.ErrnoException).code = "ENOENT";
+      mockFs.readFile.mockRejectedValue(error);
+
+      await expect(manager.testLoad(testFilename)).rejects.toBeInstanceOf(
+        ManifestNotFoundError,
+      );
+    });
+
+    test("throws ManifestError when file contains invalid JSON", async () => {
+      mockFs.readFile.mockResolvedValue("invalid json content");
+
+      await expect(manager.testLoad(testFilename)).rejects.toBeInstanceOf(
+        ManifestError,
+      );
+    });
+
+    test("throws ManifestIOError when read operation fails", async () => {
+      mockFs.readFile.mockRejectedValue(new Error("Read failed"));
+
+      await expect(manager.testLoad(testFilename)).rejects.toBeInstanceOf(
+        ManifestIOError,
+      );
+    });
+  });
+
+  describe("path handling", () => {
+    const testFilename = "test.json";
+
+    test("combines base directory and filename correctly with default path", async () => {
+      await manager.testSave(testFilename, { test: true });
+
+      expect(mockFs.writeFile).toHaveBeenCalledWith(
+        path.join(process.cwd(), ".notion-to-md", testFilename),
+        expect.any(String),
+        "utf-8",
+      );
+    });
+
+    test("combines base directory and filename correctly with custom path", async () => {
+      const customPath = "/custom/path";
+      const customManager = new TestManifestManager(customPath);
+
+      await customManager.testSave(testFilename, { test: true });
+
+      expect(mockFs.writeFile).toHaveBeenCalledWith(
+        path.join(customPath, testFilename),
+        expect.any(String),
+        "utf-8",
+      );
+    });
+
+    test("handles nested paths correctly", async () => {
+      const nestedPath = "nested/path/file.json";
+
+      await manager.testSave(nestedPath, { test: true });
+
+      expect(mockFs.writeFile).toHaveBeenCalledWith(
+        path.join(process.cwd(), ".notion-to-md", nestedPath),
+        expect.any(String),
+        "utf-8",
+      );
+    });
+  });
+
+  describe("JSON validation", () => {
+    test("validates JSON serializability", async () => {
+      const validData = [
+        { string: "test" },
+        { number: 123 },
+        { boolean: true },
+        { null: null },
+        { array: [1, 2, 3] },
+        { nested: { object: true } },
+      ];
+
+      for (const data of validData) {
+        await expect(
+          manager.testSave("test.json", data),
+        ).resolves.not.toThrow();
+      }
     });
   });
 });

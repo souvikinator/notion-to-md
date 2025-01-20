@@ -1,164 +1,89 @@
-import fs from "fs/promises";
-import path from "path";
+import * as fs from "fs/promises";
+import * as path from "path";
+import {
+  ManifestError,
+  ManifestIOError,
+  ManifestNotFoundError,
+} from "./errors";
 
-const BASE_MANIFEST_DIRECTORY = ".notion-to-md";
+const BASE_DIR = ".notion-to-md";
 
-// Custom error types for better error handling
-export class ManifestError extends Error {
-  constructor(
-    message: string,
-    public cause?: Error,
-  ) {
-    super(message);
-    this.name = "ManifestError";
-  }
-}
-
+/**
+ * Abstract base class for manifest management.
+ * Provides common functionality for directory handling and file operations.
+ */
 export abstract class BaseManifestManager {
-  private initialized: boolean = false;
+  protected readonly baseDir: string;
 
-  /**
-   * Creates a new manifest manager instance
-   * @param baseDir - The base directory for storing manifest files
-   */
-  constructor(protected readonly baseDir: string = BASE_MANIFEST_DIRECTORY) {}
+  constructor(customBaseDir?: string) {
+    this.baseDir = customBaseDir || path.join(process.cwd(), BASE_DIR);
+  }
 
-  /**
-   * Initialize the manifest system. Must be called before any other operations.
-   * Derived classes should override this to add their specific initialization logic.
-   */
-  abstract initialize(): Promise<void>;
-
-  /**
-   * Save the current manifest state.
-   * Derived classes must implement this to define what gets saved.
-   */
-  abstract save(): Promise<void>;
-
-  /**
-   * Ensures all required directories exist
-   * @throws ManifestError if directory creation fails
-   */
-  protected async ensureDirectories(): Promise<void> {
+  protected async ensureDirectory(dir: string): Promise<void> {
     try {
-      await fs.mkdir(this.baseDir, { recursive: true });
-      this.initialized = true;
+      await fs.mkdir(dir, { recursive: true });
     } catch (error) {
-      if (error instanceof Error) {
-        if ((error as NodeJS.ErrnoException).code === "EACCES") {
-          throw new ManifestError(
-            `Permission denied creating directory: ${this.baseDir}`,
-            error,
-          );
-        }
-        if ((error as NodeJS.ErrnoException).code === "EINVAL") {
-          throw new ManifestError(
-            `Invalid directory path: ${this.baseDir}`,
-            error,
-          );
-        }
-      }
-      throw new ManifestError(
-        "Failed to create manifest directory",
-        error as Error,
-      );
+      throw new ManifestIOError("create directory", dir, error as Error);
     }
   }
 
-  /**
-   * Gets the full path for a manifest file
-   * @param id - The identifier for the manifest file
-   * @returns The full path to the manifest file
-   */
-  protected getManifestPath(id: string): string {
-    // Sanitize the ID to prevent directory traversal
-    const sanitizedId = id.replace(/[^a-zA-Z0-9-]/g, "_");
-    return path.join(this.baseDir, `${sanitizedId}.json`);
+  public async initialize(dir?: string): Promise<void> {
+    const manifestDir = path.join(this.baseDir, dir || "");
+    await this.ensureDirectory(manifestDir);
   }
 
   /**
-   * Loads a manifest file from disk
-   * @param manifestPath - Path to the manifest file
-   * @returns The parsed manifest data
-   * @throws ManifestError if the file cannot be read or parsed
+   * Generic method to save any valid JSON data to a manifest file
+   * @param filename The name of the manifest file
+   * @param data The data to save (must be JSON-serializable)
    */
-  protected async loadManifest<T>(manifestPath: string): Promise<T> {
-    this.checkInitialized();
+  protected async save<T>(filename: string, data: T): Promise<void> {
+    const manifestPath = this.getManifestPath(filename);
 
     try {
-      const data = await fs.readFile(manifestPath, "utf-8");
-      return JSON.parse(data) as T;
+      if (!this.validateJson(data)) {
+        throw new ManifestError("Invalid JSON data structure");
+      }
+
+      await fs.writeFile(manifestPath, JSON.stringify(data, null, 2), "utf-8");
     } catch (error) {
-      if (error instanceof Error) {
-        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-          throw new ManifestError(
-            `Manifest file not found: ${manifestPath}`,
-            error,
-          );
-        }
-        if (error instanceof SyntaxError) {
-          throw new ManifestError(
-            `Invalid manifest file format: ${manifestPath}`,
-            error,
-          );
-        }
+      if (error instanceof ManifestError) {
+        throw error;
       }
-      throw new ManifestError("Failed to load manifest file", error as Error);
+      throw new ManifestIOError("save", manifestPath, error as Error);
     }
   }
 
   /**
-   * Saves data to a manifest file
-   * @param manifestPath - Path where the manifest should be saved
-   * @param data - Data to save in the manifest
-   * @throws ManifestError if the file cannot be written
+   * Generic method to load data from a manifest file
+   * @param filename The name of the manifest file to load
+   * @returns The parsed data with the specified type
    */
-  protected async saveManifest<T>(
-    manifestPath: string,
-    data: T,
-  ): Promise<void> {
-    this.checkInitialized();
+  protected async load<T>(filename: string): Promise<T> {
+    const manifestPath = this.getManifestPath(filename);
 
     try {
-      // Convert data to JSON with pretty printing for readability
-      const jsonData = JSON.stringify(data, null, 2);
-      await fs.writeFile(manifestPath, jsonData, "utf-8");
+      const content = await fs.readFile(manifestPath, "utf-8");
+      return JSON.parse(content) as T;
     } catch (error) {
-      if (error instanceof Error) {
-        if ((error as NodeJS.ErrnoException).code === "EACCES") {
-          throw new ManifestError(
-            `Permission denied writing manifest: ${manifestPath}`,
-            error,
-          );
-        }
+      const nodeError = error as NodeJS.ErrnoException;
+      if (nodeError.code === "ENOENT") {
+        throw new ManifestNotFoundError(manifestPath);
       }
-      throw new ManifestError("Failed to save manifest file", error as Error);
+      throw new ManifestIOError("read", manifestPath, error as Error);
     }
   }
 
-  /**
-   * Validates that the manifest manager has been initialized
-   * @throws ManifestError if not initialized
-   */
-  protected checkInitialized(): void {
-    if (!this.initialized) {
-      throw new ManifestError(
-        "ManifestManager not initialized. Call initialize() first.",
-      );
-    }
-  }
-
-  /**
-   * Checks if a manifest file exists
-   * @param manifestPath - Path to the manifest file
-   * @returns True if the manifest exists, false otherwise
-   */
-  protected async manifestExists(manifestPath: string): Promise<boolean> {
+  private validateJson(data: unknown): boolean {
     try {
-      await fs.access(manifestPath);
+      JSON.stringify(data);
       return true;
     } catch {
       return false;
     }
+  }
+
+  private getManifestPath(pathToFile: string): string {
+    return path.join(this.baseDir, pathToFile);
   }
 }

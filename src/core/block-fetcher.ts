@@ -6,7 +6,7 @@ import {
   FetcherOutput,
   ListBlockChildrenResponseResults,
 } from "../types";
-import { BaseModule } from "./base-module";
+import { BaseModule } from "./base";
 
 export interface BlockFetcherConfig {
   fetchPageProperties?: boolean;

@@ -1,172 +1,65 @@
-import { jest } from "@jest/globals";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
+import { beforeEach, describe, expect, jest, test } from "@jest/globals";
+import * as fs from "fs/promises";
+import * as path from "path";
+import {
+  MediaInfo,
+  MediaManifestInput,
+  MediaManifest,
+  MediaInfoType,
+} from "../../../src/types";
 import { MediaManifestManager } from "../../../src/utils/manifest-manager/media";
 import {
-  MediaManifestEntry,
-  MediaManifestInput,
-} from "../../../src/types/media";
+  ManifestIOError,
+  ManifestNotFoundError,
+  MediaManifestError,
+  MediaEntryNotFoundError,
+  MediaManifestStateError,
+} from "../../../src/utils/manifest-manager/errors";
+
+jest.mock("fs/promises");
 
 describe("MediaManifestManager", () => {
   let manager: MediaManifestManager;
-  let tempDir: string;
+  const mockFs = fs as jest.Mocked<typeof fs>;
+  const baseDir = path.join(process.cwd(), ".notion-to-md");
+  const mediaDir = "media";
 
-  // Before each test, create a temporary directory and initialize the manager
-  beforeEach(async () => {
-    const pageId = "page-123";
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "media-manifest-test-"));
-    manager = new MediaManifestManager(tempDir);
-    await manager.initialize();
-    await manager.initializeForPage(pageId);
+  // Common test data
+  const pageId = "test-page-123";
+  const blockId = "test-block-456";
+  const testMediaInfo: MediaInfo = {
+    type: MediaInfoType.DOWNLOAD,
+    originalUrl: "https://example.com/image.jpg",
+    localPath: "/path/to/image.jpg",
+  };
+  const testInput: MediaManifestInput = {
+    mediaInfo: testMediaInfo,
+    lastEdited: "2024-01-19T00:00:00.000Z",
+  };
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+    manager = new MediaManifestManager();
+    // Default successful directory creation
+    mockFs.mkdir.mockResolvedValue(undefined);
   });
 
-  // Clean up after each test
-  afterEach(async () => {
-    await fs.rm(tempDir, { recursive: true, force: true });
-  });
+  describe("initialization", () => {
+    test("successfully initializes with new manifest", async () => {
+      // Mock file not found for manifest load
+      const error = new Error("File not found");
+      (error as NodeJS.ErrnoException).code = "ENOENT";
+      mockFs.readFile.mockRejectedValueOnce(error);
 
-  describe("Media Entry Management", () => {
-    test("creates new media entry with required fields", async () => {
-      const blockId = "block-123";
-      const input: MediaManifestInput = {
-        mediaInfo: {
-          type: "download",
-          originalUrl: "https://example.com/image.jpg",
-          localPath: "/path/to/image.jpg",
-          mimeType: "image/jpeg",
-        },
-        lastEdited: new Date().toISOString(),
-      };
+      await manager.initialize(pageId);
+      const manifest = manager.getManifest();
 
-      await manager.updateMediaEntry(blockId, input);
-
-      const savedEntry = manager.getMediaEntry(blockId);
-
-      expect(savedEntry).toBeDefined();
-      expect(savedEntry?.mediaInfo).toEqual(input.mediaInfo);
-      expect(savedEntry?.lastEdited).toBe(input.lastEdited);
-      expect(savedEntry?.createdAt).toBeDefined();
-      expect(savedEntry?.updatedAt).toBeDefined();
-    });
-
-    test("updates existing entry while preserving creation timestamp", async () => {
-      const blockId = "block-123";
-      const originalInput: MediaManifestInput = {
-        mediaInfo: {
-          type: "download",
-          originalUrl: "https://example.com/image.jpg",
-          localPath: "/path/to/image.jpg",
-          mimeType: "image/jpeg",
-        },
-        lastEdited: "2024-01-01T00:00:00.000Z",
-      };
-
-      await manager.updateMediaEntry(blockId, originalInput);
-      const firstSave = manager.getMediaEntry(blockId);
-
-      const updatedEntry: MediaManifestInput = {
-        ...originalInput,
-        mediaInfo: {
-          ...originalInput.mediaInfo,
-          localPath: "/path/to/new-image.jpg",
-        },
-        lastEdited: "2024-01-02T00:00:00.000Z",
-      };
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      await manager.updateMediaEntry(blockId, updatedEntry);
-
-      const savedEntry = manager.getMediaEntry(blockId);
-      expect(savedEntry).toBeDefined();
-      expect(savedEntry?.mediaInfo).toEqual(updatedEntry.mediaInfo);
-      expect(savedEntry?.createdAt).toBe(firstSave?.createdAt);
-      expect(savedEntry?.updatedAt).not.toBe(firstSave?.updatedAt);
-    });
-
-    test("removes specified entries from manifest", async () => {
-      // Given existing entries
-      const blockId1 = "block-123";
-      const blockId2 = "block-456";
-      const entry: MediaManifestInput = {
-        mediaInfo: {
-          type: "download",
-          originalUrl: "https://example.com/image.jpg",
-          localPath: "/path/to/image.jpg",
-          mimeType: "image/jpeg",
-        },
-        lastEdited: new Date().toISOString(),
-      };
-
-      await manager.updateMediaEntry(blockId1, entry);
-      await manager.updateMediaEntry(blockId2, entry);
-
-      // When removing one entry
-      await manager.removeMediaEntry(blockId1);
-
-      // Then verify the removal
-      const removedEntry = manager.getMediaEntry(blockId1);
-      const remainingEntry = manager.getMediaEntry(blockId2);
-
-      expect(removedEntry).toBeUndefined();
-      expect(remainingEntry).toBeDefined();
-    });
-
-    test("handles missing entries gracefully", async () => {
-      const entry = manager.getMediaEntry("non-existent");
-
-      expect(entry).toBeUndefined();
-    });
-
-    test("maintains lastUpdated timestamp on modifications", async () => {
-      const blockId = "block-123";
-      const entry: MediaManifestInput = {
-        mediaInfo: {
-          type: "download",
-          originalUrl: "https://example.com/image.jpg",
-          localPath: "/path/to/image.jpg",
-          mimeType: "image/jpeg",
-        },
-        lastEdited: new Date().toISOString(),
-      };
-
-      await manager.updateMediaEntry(blockId, entry);
-      const firstSave = manager.getMediaEntry(blockId);
-
-      // Wait a bit to ensure timestamps will be different
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // When updating the entry
-      await manager.updateMediaEntry(blockId, {
-        ...entry,
-        lastEdited: new Date().toISOString(),
+      // Verify directory creation
+      expect(mockFs.mkdir).toHaveBeenCalledWith(path.join(baseDir, mediaDir), {
+        recursive: true,
       });
 
-      // Then verify the timestamp was updated
-      const updatedEntry = manager.getMediaEntry(blockId);
-      expect(updatedEntry?.updatedAt).not.toBe(firstSave?.updatedAt);
-    });
-  });
-
-  describe("Manifest File Operations", () => {
-    test("creates new page manifest with correct structure", async () => {
-      // Given a new page ID
-      const pageId = "page-123";
-      await manager.initializeForPage(pageId);
-
-      // When checking the manifest file
-      const manifestPath = path.join(tempDir, `${pageId}.json`);
-      const manifestExists = await fs
-        .access(manifestPath)
-        .then(() => true)
-        .catch(() => false);
-
-      // Then verify the file exists and has correct structure
-      expect(manifestExists).toBe(true);
-
-      const content = await fs.readFile(manifestPath, "utf8");
-      const manifest = JSON.parse(content);
-
+      // Verify manifest structure
       expect(manifest).toEqual({
         pageId,
         lastUpdated: expect.any(String),
@@ -174,68 +67,161 @@ describe("MediaManifestManager", () => {
       });
     });
 
-    test("maintains separate manifests for different pages", async () => {
-      // Given two different pages
-      const pageId1 = "page-123";
-      const pageId2 = "page-456";
-      const entry: MediaManifestInput = {
-        mediaInfo: {
-          type: "download",
-          originalUrl: "https://example.com/image.jpg",
-          localPath: "/path/to/image.jpg",
-          mimeType: "image/jpeg",
+    test("successfully loads existing manifest", async () => {
+      const existingManifest: MediaManifest = {
+        pageId,
+        lastUpdated: "2024-01-19T00:00:00.000Z",
+        mediaEntries: {
+          [blockId]: {
+            mediaInfo: testMediaInfo,
+            lastEdited: testInput.lastEdited,
+            createdAt: "2024-01-19T00:00:00.000Z",
+            updatedAt: "2024-01-19T00:00:00.000Z",
+          },
         },
-        lastEdited: new Date().toISOString(),
       };
+      mockFs.readFile.mockResolvedValue(JSON.stringify(existingManifest));
 
-      // When adding entries to different pages
-      await manager.initializeForPage(pageId1);
-      await manager.updateMediaEntry("block-1", entry);
+      await manager.initialize(pageId);
+      const manifest = manager.getManifest();
 
-      await manager.initializeForPage(pageId2);
-      await manager.updateMediaEntry("block-2", entry);
-
-      // Then verify entries are separate
-      await manager.initializeForPage(pageId1);
-      const entry1 = manager.getMediaEntry("block-1");
-      const noEntry2InPage1 = manager.getMediaEntry("block-2");
-
-      await manager.initializeForPage(pageId2);
-      const entry2 = manager.getMediaEntry("block-2");
-      const noEntry1InPage2 = manager.getMediaEntry("block-1");
-
-      expect(entry1).toBeDefined();
-      expect(entry2).toBeDefined();
-      expect(noEntry2InPage1).toBeUndefined();
-      expect(noEntry1InPage2).toBeUndefined();
+      expect(manifest).toEqual(existingManifest);
     });
 
-    test("loads existing page manifest correctly", async () => {
-      // Given an existing manifest with content
-      const pageId = "page-123";
-      const blockId = "block-123";
-      const entry: MediaManifestInput = {
-        mediaInfo: {
-          type: "download",
-          originalUrl: "https://example.com/image.jpg",
-          localPath: "/path/to/image.jpg",
-          mimeType: "image/jpeg",
-        },
-        lastEdited: new Date().toISOString(),
+    test("throws ManifestIOError when directory creation fails", async () => {
+      const originalError = new Error("Permission denied");
+      mockFs.mkdir.mockRejectedValue(originalError);
+
+      try {
+        await manager.initialize(pageId);
+        fail("Should have thrown an error");
+      } catch (error) {
+        expect(error).toBeInstanceOf(ManifestIOError);
+        expect((error as ManifestIOError).cause).toBe(originalError);
+      }
+    });
+
+    test("throws ManifestIOError for unexpected manifest load failures", async () => {
+      mockFs.readFile.mockRejectedValue(new Error("Unexpected error"));
+
+      await expect(manager.initialize(pageId)).rejects.toBeInstanceOf(
+        ManifestIOError,
+      );
+    });
+
+    test("resets state when initialization fails", async () => {
+      mockFs.mkdir.mockRejectedValue(new Error("Failed"));
+
+      try {
+        await manager.initialize(pageId);
+      } catch (error) {
+        expect(() => manager.getManifest()).toThrow(MediaManifestStateError);
+      }
+    });
+  });
+
+  describe("entry management", () => {
+    beforeEach(async () => {
+      // Setup for new manifest creation
+      const error = new Error("File not found");
+      (error as NodeJS.ErrnoException).code = "ENOENT";
+      mockFs.readFile.mockRejectedValueOnce(error);
+      await manager.initialize(pageId);
+    });
+
+    test("creates new media entry with timestamps", async () => {
+      await manager.updateEntry(blockId, testInput);
+      const entry = manager.getEntry(blockId);
+
+      expect(entry).toEqual({
+        ...testInput,
+        createdAt: expect.any(String),
+        updatedAt: expect.any(String),
+      });
+    });
+
+    test("updates existing entry preserving createdAt", async () => {
+      await manager.updateEntry(blockId, testInput);
+      const originalEntry = manager.getEntry(blockId);
+
+      const updatedInput = {
+        ...testInput,
+        mediaInfo: { ...testInput.mediaInfo, localPath: "/updated/path.jpg" },
       };
+      await manager.updateEntry(blockId, updatedInput);
+      const updatedEntry = manager.getEntry(blockId);
 
-      // When creating and then reloading the manifest
-      await manager.initializeForPage(pageId);
-      await manager.updateMediaEntry(blockId, entry);
+      expect(updatedEntry.createdAt).toBe(originalEntry.createdAt);
+      expect(updatedEntry.updatedAt).not.toBe(originalEntry.updatedAt);
+      expect(updatedEntry.mediaInfo.localPath).toBe("/updated/path.jpg");
+    });
 
-      // Create a new manager instance to force reload
-      const newManager = new MediaManifestManager(tempDir);
-      await newManager.initialize();
-      await newManager.initializeForPage(pageId);
+    test("throws MediaEntryNotFoundError for non-existent entry", () => {
+      expect(() => manager.getEntry("non-existent")).toThrow(
+        MediaEntryNotFoundError,
+      );
+    });
 
-      // Then verify the content is preserved
-      const loadedEntry = newManager.getMediaEntry(blockId);
-      expect(loadedEntry?.mediaInfo).toEqual(entry.mediaInfo);
+    test("removes entry and updates lastUpdated", () => {
+      manager.updateEntry(blockId, testInput);
+      const beforeRemove = manager.getManifest().lastUpdated;
+
+      jest.advanceTimersByTime(1000);
+      manager.removeEntry(blockId);
+
+      const manifest = manager.getManifest();
+      expect(manifest.mediaEntries[blockId]).toBeUndefined();
+      expect(manifest.lastUpdated).not.toBe(beforeRemove);
+    });
+  });
+
+  describe("save operations", () => {
+    beforeEach(async () => {
+      const error = new Error("File not found");
+      (error as NodeJS.ErrnoException).code = "ENOENT";
+      mockFs.readFile.mockRejectedValueOnce(error);
+      await manager.initialize(pageId);
+    });
+
+    test("saves manifest with correct path and content", async () => {
+      await manager.updateEntry(blockId, testInput);
+      await manager.save();
+
+      const expectedPath = path.join(baseDir, mediaDir, `${pageId}_media.json`);
+      expect(mockFs.writeFile).toHaveBeenCalledWith(
+        expectedPath,
+        expect.any(String),
+        "utf-8",
+      );
+
+      const savedContent = JSON.parse(
+        mockFs.writeFile.mock.calls[0][1] as string,
+      );
+      expect(savedContent).toEqual({
+        pageId,
+        lastUpdated: expect.any(String),
+        mediaEntries: {
+          [blockId]: {
+            mediaInfo: testMediaInfo,
+            lastEdited: testInput.lastEdited,
+            createdAt: expect.any(String),
+            updatedAt: expect.any(String),
+          },
+        },
+      });
+    });
+
+    test("throws ManifestIOError when save fails", async () => {
+      const originalError = new Error("Write failed");
+      mockFs.writeFile.mockRejectedValue(originalError);
+
+      try {
+        await manager.save();
+        fail("Should have thrown an error");
+      } catch (error) {
+        expect(error).toBeInstanceOf(ManifestIOError);
+        expect((error as ManifestIOError).cause).toBe(originalError);
+      }
     });
   });
 });
