@@ -40,7 +40,6 @@ describe("MediaManifestManager", () => {
   beforeEach(() => {
     jest.resetAllMocks();
     manager = new MediaManifestManager();
-    // Default successful directory creation
     mockFs.mkdir.mockResolvedValue(undefined);
   });
 
@@ -122,11 +121,17 @@ describe("MediaManifestManager", () => {
 
   describe("entry management", () => {
     beforeEach(async () => {
-      // Setup for new manifest creation
+      jest.useFakeTimers();
+
       const error = new Error("File not found");
       (error as NodeJS.ErrnoException).code = "ENOENT";
       mockFs.readFile.mockRejectedValueOnce(error);
       await manager.initialize(pageId);
+    });
+
+    afterEach(() => {
+      // Clean up timer mocks
+      jest.useRealTimers();
     });
 
     test("creates new media entry with timestamps", async () => {
@@ -143,6 +148,8 @@ describe("MediaManifestManager", () => {
     test("updates existing entry preserving createdAt", async () => {
       await manager.updateEntry(blockId, testInput);
       const originalEntry = manager.getEntry(blockId);
+
+      jest.advanceTimersByTime(1000);
 
       const updatedInput = {
         ...testInput,
