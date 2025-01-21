@@ -189,7 +189,6 @@ describe("UploadStrategy", () => {
         const result = await strategy.process(block as any);
         expect(result.type).toBe(MediaInfoType.UPLOAD);
         expect(result.uploadedUrl).toBe(uploadedUrl);
-        // @ts-ignore
         expect(mockUploadHandler).toHaveBeenCalledWith(
           // @ts-ignore
           block[block.type].file.url,

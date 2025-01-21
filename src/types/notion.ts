@@ -44,11 +44,19 @@ export type BlockAttributes = {
   children: ListBlockChildrenResponseResults;
 };
 
-export type FetcherOutput = {
+export interface FetcherOutput {
   properties: PageObjectProperties;
   blocks: ListBlockChildrenResponseResults;
   comments: CommentResponseResults;
-};
+}
+
+// Optional tracked blocks interface
+export interface TrackedBlocks {
+  mediaBlocks?: ListBlockChildrenResponseResult[];
+  pageRefBlocks?: ListBlockChildrenResponseResult[];
+}
+
+export type ExtendedFetcherOutput = FetcherOutput & TrackedBlocks;
 
 export type ListBlockChildrenResponseResults =
   ListBlockChildrenResponseResult[];

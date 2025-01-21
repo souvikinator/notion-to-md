@@ -5,7 +5,9 @@ import {
   CommentResponseResults,
   FetcherOutput,
   ListBlockChildrenResponseResults,
+  ExtendedFetcherOutput,
 } from "../types";
+import { isMediaBlock, isPageRefBlock } from "../utils/notion";
 import { BaseModule } from "./base";
 
 export interface BlockFetcherConfig {
@@ -13,6 +15,8 @@ export interface BlockFetcherConfig {
   fetchComments?: boolean;
   maxRequestsPerSecond?: number;
   batchSize?: number;
+  trackMediaBlocks?: boolean; // New flag
+  trackPageRefBlocks?: boolean; // New flag
 }
 
 interface QueueTask {
@@ -28,6 +32,8 @@ export class BlockFetcher extends BaseModule {
   private pageProperties?: PageObjectProperties;
   private rootComments: CommentResponseResults = [];
   private rootBlockId: string = "";
+  private mediaBlocks: ListBlockChildrenResponseResult[] = [];
+  private pageRefBlocks: ListBlockChildrenResponseResult[] = [];
 
   // Rate limiting state
   private rateLimitWindow = {
@@ -49,7 +55,7 @@ export class BlockFetcher extends BaseModule {
     this.config.batchSize = config.batchSize ?? 3;
   }
 
-  async getBlocks(pageId: string): Promise<FetcherOutput> {
+  async getBlocks(pageId: string): Promise<ExtendedFetcherOutput> {
     this.rootBlockId = pageId;
     this.queue = [];
     this.blocks.clear();
@@ -74,12 +80,24 @@ export class BlockFetcher extends BaseModule {
       await Promise.all(batch.map((task) => this.processTask(task)));
     }
 
-    // Build and return final output
-    return {
+    const baseOutput: FetcherOutput = {
       properties: this.pageProperties || {},
       comments: this.rootComments,
       blocks: this.buildBlockTree(pageId),
     };
+
+    // Only include special arrays if tracking was enabled
+    if (this.config.trackMediaBlocks || this.config.trackPageRefBlocks) {
+      return {
+        ...baseOutput,
+        ...(this.config.trackMediaBlocks && { mediaBlocks: this.mediaBlocks }),
+        ...(this.config.trackPageRefBlocks && {
+          pageRefBlocks: this.pageRefBlocks,
+        }),
+      };
+    }
+
+    return baseOutput;
   }
 
   private addTask(task: QueueTask): void {
@@ -98,11 +116,22 @@ export class BlockFetcher extends BaseModule {
         const blocks = await this.fetchBlockChildren(task.id);
 
         for (const block of blocks) {
-          this.blocks.set(block.id, {
+          const storedBlock = {
             ...block,
             children: [],
             comments: [],
-          });
+          };
+          this.blocks.set(block.id, storedBlock);
+
+          // Track special blocks if enabled (storing references)
+          // these will be used by the next stage saving us from a
+          // lot of recursive calls to idenitfy blocks
+          if (this.config.trackMediaBlocks && isMediaBlock(storedBlock)) {
+            this.mediaBlocks.push(storedBlock);
+          }
+          if (this.config.trackPageRefBlocks && isPageRefBlock(storedBlock)) {
+            this.pageRefBlocks.push(storedBlock);
+          }
 
           // If block has children, queue task to fetch them
           if ("has_children" in block && block.has_children) {
