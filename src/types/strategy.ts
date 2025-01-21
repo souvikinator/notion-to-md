@@ -28,8 +28,9 @@ export interface MediaStrategy {
 // download media strategy
 export interface DownloadStrategyConfig {
   outputDir: string;
-  transformPath?(localPath: string): string;
+  transformPath?: (localPath: string) => string;
   preserveExternalUrls?: boolean;
+  failForward?: boolean;
 }
 
 // upload media strategy
@@ -38,6 +39,7 @@ export interface UploadStrategyConfig {
   cleanupHandler?(entry: MediaManifestEntry): Promise<void>;
   transformPath?(uploadedUrl: string): string;
   preserveExternalUrls?: boolean;
+  failForward?: boolean;
 }
 
 // error handling

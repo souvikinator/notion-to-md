@@ -3,6 +3,7 @@ import {
   MediaInfo,
   MediaInfoType,
   MediaManifestEntry,
+  MediaProcessingError,
   DownloadStrategyConfig,
   ListBlockChildrenResponseResult,
 } from "../../../types";
@@ -13,72 +14,137 @@ import mime from "mime-types";
 
 export class DownloadStrategy implements MediaStrategy {
   constructor(private config: DownloadStrategyConfig) {
+    // Constructor validation always throws since it's a configuration error
     if (!config.outputDir) {
-      throw new Error("outputDir is required for DownloadStrategy");
+      throw new MediaProcessingError(
+        "Configuration Error",
+        "constructor",
+        "initialization",
+        new Error("outputDir is required for DownloadStrategy"),
+      );
     }
+
+    // Set default for failForward if not provided
+    this.config.failForward = config.failForward ?? true;
   }
 
   async process(block: ListBlockChildrenResponseResult): Promise<MediaInfo> {
     const url = this.extractMediaUrl(block);
-    try {
-      // Fail forward: If no URL found, return a DIRECT type with empty URL
-      // Ideally it should not happen because we are always sending media blocks
-      // but just in case
-      if (!url) {
-        console.warn(`No media URL found in block ${block.id}`);
-        return {
-          type: MediaInfoType.DIRECT,
-          originalUrl: "",
-        };
+
+    if (!url) {
+      const error = new MediaProcessingError(
+        "No media URL found in block",
+        block.id,
+        "process",
+        new Error("URL extraction failed"),
+      );
+
+      if (!this.config.failForward) {
+        throw error;
       }
 
-      // Check if we should preserve external URLs
-      if (this.config.preserveExternalUrls && this.isExternalUrl(url)) {
-        return {
-          type: MediaInfoType.DIRECT,
-          originalUrl: url,
-        };
-      }
-
-      // Download and save the file
-
-      const { localPath, mimeType } = await this.downloadFile(url, block.id);
+      console.error(error);
       return {
+        type: MediaInfoType.DIRECT,
+        originalUrl: "",
+        transformedUrl: "",
+      };
+    }
+
+    // Handle external URLs - this is always allowed regardless of failForward
+    if (this.config.preserveExternalUrls && this.isExternalUrl(url)) {
+      return {
+        type: MediaInfoType.DIRECT,
+        originalUrl: url,
+        transformedUrl: url,
+      };
+    }
+
+    try {
+      const { localPath, mimeType } = await this.downloadFile(url, block.id);
+
+      const mediaInfo: MediaInfo = {
         type: MediaInfoType.DOWNLOAD,
         originalUrl: url,
         localPath,
         mimeType,
+        transformedUrl: this.transform({
+          type: MediaInfoType.DOWNLOAD,
+          originalUrl: url,
+          localPath,
+          mimeType,
+        }),
       };
+
+      return mediaInfo;
     } catch (error) {
-      // If anything fails, return a direct type with original URL
-      console.error(`Failed to process media block ${block.id}:`, error);
+      const processingError = new MediaProcessingError(
+        "Failed to download media",
+        block.id,
+        "process",
+        error,
+      );
+
+      if (!this.config.failForward) {
+        throw processingError;
+      }
+
+      console.error(processingError);
       return {
         type: MediaInfoType.DIRECT,
-        originalUrl: url || "",
+        originalUrl: url,
+        transformedUrl: url,
       };
     }
   }
 
   transform(mediaInfo: MediaInfo): string {
-    // For direct types, return original URL
     if (mediaInfo.type === MediaInfoType.DIRECT) {
       return mediaInfo.originalUrl;
     }
 
-    // For downloaded files, apply transformation if configured
-    if (mediaInfo.localPath) {
+    if (!mediaInfo.localPath) {
+      const error = new MediaProcessingError(
+        "Missing local path for downloaded file",
+        "unknown",
+        "transform",
+        new Error("Local path required for transformation"),
+      );
+
+      if (!this.config.failForward) {
+        throw error;
+      }
+
+      console.error(error);
+      return mediaInfo.originalUrl;
+    }
+
+    try {
       if (this.config.transformPath) {
         return this.config.transformPath(mediaInfo.localPath);
       }
-      // Default transformation: return relative path from output directory
-      return path.relative(this.config.outputDir, mediaInfo.localPath);
-    }
 
-    return mediaInfo.originalUrl;
+      return path.relative(this.config.outputDir, mediaInfo.localPath);
+    } catch (error) {
+      const processingError = new MediaProcessingError(
+        "Failed to transform path",
+        "unknown",
+        "transform",
+        error,
+      );
+
+      if (!this.config.failForward) {
+        throw processingError;
+      }
+
+      console.error(processingError);
+      return mediaInfo.originalUrl;
+    }
   }
 
   async cleanup(entry: MediaManifestEntry): Promise<void> {
-    // Only cleanup downloaded files
+    // Cleanup always fails forward regardless of config
+    // This prevents cleanup errors from breaking the entire process
     if (
       entry.mediaInfo.type === MediaInfoType.DOWNLOAD &&
       entry.mediaInfo.localPath
@@ -86,13 +152,13 @@ export class DownloadStrategy implements MediaStrategy {
       try {
         await fs.unlink(entry.mediaInfo.localPath);
       } catch (error) {
-        // Ignore if file doesn't exist, but log other errors
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-          console.error(
-            `Failed to cleanup file ${entry.mediaInfo.localPath}:`,
-            error,
-          );
-        }
+        const processingError = new MediaProcessingError(
+          "Failed to cleanup file",
+          entry.mediaInfo.localPath,
+          "cleanup",
+          error,
+        );
+        console.error(processingError);
       }
     }
   }
@@ -101,13 +167,11 @@ export class DownloadStrategy implements MediaStrategy {
     url: string,
     blockId: string,
   ): Promise<{ localPath: string; mimeType: string }> {
-    // Fetch the file
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Failed to download file: ${response.statusText}`);
     }
 
-    // Get content type and determine file extension
     const contentType = response.headers.get("content-type") || "";
     const mimeType = contentType.split(";")[0].trim();
     const extension = mime.extension(mimeType);
@@ -118,10 +182,8 @@ export class DownloadStrategy implements MediaStrategy {
       );
     }
 
-    // Ensure output directory exists
     await fs.mkdir(this.config.outputDir, { recursive: true });
 
-    // Create file path and save file
     const filename = `${blockId}.${extension}`;
     const localPath = path.join(this.config.outputDir, filename);
 
@@ -134,16 +196,29 @@ export class DownloadStrategy implements MediaStrategy {
   private extractMediaUrl(
     block: ListBlockChildrenResponseResult,
   ): string | null {
-    // @ts-ignore
-    if (!["image", "video", "file", "pdf"].includes(block.type)) {
+    try {
+      if (!block || !("type" in block)) {
+        return null;
+      }
+
+      // @ts-ignore
+      if (!["image", "video", "file", "pdf"].includes(block.type)) {
+        return null;
+      }
+
+      // @ts-ignore
+      const mediaBlock = block[block.type];
+
+      if (!mediaBlock) {
+        return null;
+      }
+
+      return mediaBlock.type === "external"
+        ? mediaBlock.external?.url
+        : mediaBlock.file?.url;
+    } catch {
       return null;
     }
-
-    // @ts-ignore
-    const mediaBlock = block[block.type];
-    return mediaBlock.type === "external"
-      ? mediaBlock.external?.url
-      : mediaBlock.file?.url;
   }
 
   private isExternalUrl(url: string): boolean {
