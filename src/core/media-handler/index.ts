@@ -1,136 +1,133 @@
 import {
-  ListBlockChildrenResponseResults,
   ListBlockChildrenResponseResult,
-  MediaProcessingError,
-  MediaManifestEntry,
+  MediaStrategy,
+  MediaInfo,
 } from "../../types";
-import { BaseModule } from "../base-module";
-import { MediaStrategy } from "./strategies/base";
+import { BaseModule } from "../base";
+import { MediaHandlerError } from "../errors";
+import { MediaManifestManager } from "../../utils/manifest-manager/media";
+
+export interface MediaHandlerConfig {
+  strategy: MediaStrategy;
+  failForward?: boolean;
+}
 
 export class MediaHandler extends BaseModule {
+  private readonly strategy: MediaStrategy;
+  private readonly failForward: boolean;
   private processedBlockIds: Set<string> = new Set();
-  private entriesToCleanup: MediaManifestEntry[] = [];
 
-  constructor(private strategy: MediaStrategy) {
-    super();
-  }
+  constructor(
+    private config: MediaHandlerConfig,
+    manifestManager: MediaManifestManager,
+  ) {
+    super("MediaHandler");
 
-  /**
-   * Process all media blocks in the provided block tree
-   * Updates blocks in place with processed media information
-   */
-  async processBlocks(blocks: ListBlockChildrenResponseResults): Promise<void> {
-    try {
-      // Clear processed blocks tracking
-      this.processedBlockIds.clear();
-
-      // Process all blocks recursively
-      await this.processBlockArray(blocks);
-
-      // Handle cleanup after processing
-      await this.handleCleanup();
-    } catch (error) {
-      throw new MediaProcessingError(
-        "Failed to process media blocks",
-        "root",
-        "processBlocks",
-        error,
-      );
+    if (!this.config.strategy) {
+      throw new MediaHandlerError("Media strategy is required");
     }
+
+    this.strategy = this.config.strategy;
+    this.failForward = this.config.failForward ?? true;
+    this.setManifestManager(manifestManager);
   }
 
   /**
-   * Recursively process an array of blocks
+   * Process all media blocks
    */
-  private async processBlockArray(
-    blocks: ListBlockChildrenResponseResults,
+  async processBlocks(
+    mediaBlocks: ListBlockChildrenResponseResult[],
   ): Promise<void> {
-    for (const block of blocks) {
-      if (this.hasMedia(block)) {
-        await this.processMediaBlock(block);
-      }
-
-      // Recursively process children if they exist
-      if ("children" in block && Array.isArray(block.children)) {
-        await this.processBlockArray(block.children);
-      }
+    if (!this.manifestManager) {
+      throw new MediaHandlerError("Manifest manager not initialized");
     }
+
+    // Reset tracking state
+    this.processedBlockIds.clear();
+
+    await Promise.all(
+      mediaBlocks.map((block) => this.processMediaBlock(block)),
+    );
+
+    await this.cleanupRemovedBlocks();
+
+    await (this.manifestManager as MediaManifestManager).save();
   }
 
-  /**
-   * Process a single media block using the configured strategy
-   */
   private async processMediaBlock(
     block: ListBlockChildrenResponseResult,
   ): Promise<void> {
-    const existingEntry = this.getManifest().getMediaEntry(block.id);
+    const manifest = this.getManifest() as MediaManifestManager;
+    let existingEntry = manifest.getEntry(block.id);
+
+    // @ts-ignore - If block hasn't changed, just mark as processed and return
+    if (existingEntry && existingEntry.lastEdited === block.last_edited_time) {
+      this.processedBlockIds.add(block.id);
+      return;
+    }
 
     try {
-      // If the block exists but has been updated, we need to clear the old content of block
-      if (
-        existingEntry &&
-        // @ts-ignore
-        existingEntry.lastEdited !== block.last_edited_time
-      ) {
-        // Clean up the old media before processing new content
-        // won't be removed from manifest as block can simply be updated
+      // Cleanup old media if content changed (but block is same)
+      if (existingEntry) {
         await this.strategy.cleanup(existingEntry);
       }
 
       const mediaInfo = await this.strategy.process(block);
 
-      this.getManifest().updateMediaEntry(block.id, {
-        blockId: block.id,
+      this.updateBlockMedia(block, mediaInfo);
+
+      await manifest.updateEntry(block.id, {
+        mediaInfo,
         // @ts-ignore
         lastEdited: block.last_edited_time,
-        mediaInfo,
       });
 
       this.processedBlockIds.add(block.id);
     } catch (error) {
-      throw new MediaProcessingError(
-        "Failed to process media block",
-        block.id,
-        "processMediaBlock",
-        error,
-      );
+      if (!this.failForward) {
+        throw error;
+      }
+      console.error(error);
     }
   }
 
-  private hasMedia(block: ListBlockChildrenResponseResult): boolean {
-    // @ts-ignore
-    return ["image", "video", "file", "pdf"].includes(block.type);
+  private async cleanupRemovedBlocks(): Promise<void> {
+    const manifest = this.getManifest() as MediaManifestManager;
+    const manifestData = manifest.getManifest();
+
+    // Find entries for blocks that no longer exist and clean them up
+    for (const [blockId, entry] of Object.entries(manifestData.mediaEntries)) {
+      if (!this.processedBlockIds.has(blockId)) {
+        try {
+          await this.strategy.cleanup(entry);
+          manifest.removeEntry(blockId);
+        } catch (error) {
+          // Cleanup errors are always logged but don't stop processing
+          console.warn(error);
+        }
+      }
+    }
   }
 
   /**
-   * Handle cleanup of unused media files/resources
+   * Update block with processed media information
    */
-  private async handleCleanup(): Promise<void> {
-    const manifest = this.getManifest();
-    const allEntries = manifest.getAllMediaEntries();
+  private updateBlockMedia(
+    block: ListBlockChildrenResponseResult,
+    mediaInfo: MediaInfo,
+  ): void {
+    if (!("type" in block)) return;
 
-    // Find entries that are there in new blocks but not in the manifest
-    for (const [blockId, entry] of Object.entries(allEntries)) {
-      if (!this.processedBlockIds.has(blockId)) {
-        this.entriesToCleanup.push(entry);
-      }
-    }
+    const blockType = block.type as string;
+    if (!["image", "video", "file", "pdf"].includes(blockType)) return;
 
-    try {
-      // Let strategy handle the cleanup
-      const cleanupPromise = this.entriesToCleanup.map(async (entry) => {
-        manifest.removeMediaEntry(entry.blockId);
-        return this.strategy.cleanup(entry);
-      });
-
-      await Promise.all(cleanupPromise);
-    } catch (error) {
-      throw new MediaProcessingError(
-        "Failed to cleanup media files",
-        "cleanup",
-        "handleCleanup",
-        error,
-      );
+    // @ts-ignore
+    if (block[blockType].type === "external") {
+      // @ts-ignore
+      block[blockType].external.url = mediaInfo.transformedUrl;
+    } else {
+      // @ts-ignore
+      block[blockType].file.url = mediaInfo.transformedUrl;
     }
   }
 }

@@ -15,8 +15,8 @@ export interface BlockFetcherConfig {
   fetchComments?: boolean;
   maxRequestsPerSecond?: number;
   batchSize?: number;
-  trackMediaBlocks?: boolean; // New flag
-  trackPageRefBlocks?: boolean; // New flag
+  trackMediaBlocks?: boolean;
+  trackPageRefBlocks?: boolean;
 }
 
 interface QueueTask {
@@ -50,7 +50,8 @@ export class BlockFetcher extends BaseModule {
       batchSize: 3,
     },
   ) {
-    super();
+    const moduleType = "BlockFetcher";
+    super(moduleType);
     this.config.maxRequestsPerSecond = config.maxRequestsPerSecond ?? 3;
     this.config.batchSize = config.batchSize ?? 3;
   }
