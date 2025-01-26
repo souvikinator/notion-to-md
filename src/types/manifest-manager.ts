@@ -1,4 +1,5 @@
 type BlockId = string;
+type PageId = string;
 
 export interface MediaManifest {
   pageId: string;
@@ -31,14 +32,22 @@ export interface MediaInfo {
   mimeType?: string;
 }
 
-// Types for the page reference media handler
+/**
+ * Page reference handler types
+ */
+
+export enum PageReferenceEntryType {
+  PROPERTY = "PROPERTY",
+  MANIFEST = "MANIFEST",
+}
+
 export interface PageManifest {
   lastUpdated: string;
-  references: Record<string, PageReferenceEntry>;
+  references: Record<PageId, PageReferenceEntry>;
 }
 
 export interface PageReferenceEntry {
-  notionUrl: string; // Original Notion URL
-  siteUrl: string; // Corresponding site URL
-  lastUpdated: string; // When this reference was last updated
+  url: string;
+  source: PageReferenceEntryType;
+  lastUpdated: string;
 }

@@ -8,7 +8,6 @@ import {
   ExtendedFetcherOutput,
 } from "../types";
 import { isMediaBlock, isPageRefBlock } from "../utils/notion";
-import { BaseModule } from "./base";
 
 export interface BlockFetcherConfig {
   fetchPageProperties?: boolean;
@@ -25,7 +24,7 @@ interface QueueTask {
   parentId?: string;
 }
 
-export class BlockFetcher extends BaseModule {
+export class BlockFetcher {
   private queue: QueueTask[] = [];
   private blocks = new Map<string, ListBlockChildrenResponseResult>();
   private processedTasks = new Set<string>();
@@ -42,6 +41,7 @@ export class BlockFetcher extends BaseModule {
   };
 
   constructor(
+    pageId: string,
     private client: Client,
     private config: BlockFetcherConfig = {
       fetchPageProperties: false,
@@ -51,7 +51,6 @@ export class BlockFetcher extends BaseModule {
     },
   ) {
     const moduleType = "BlockFetcher";
-    super(moduleType);
     this.config.maxRequestsPerSecond = config.maxRequestsPerSecond ?? 3;
     this.config.batchSize = config.batchSize ?? 3;
   }

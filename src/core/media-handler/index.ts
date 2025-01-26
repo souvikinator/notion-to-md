@@ -3,7 +3,6 @@ import {
   MediaStrategy,
   MediaInfo,
 } from "../../types";
-import { BaseModule } from "../base";
 import { MediaHandlerError } from "../errors";
 import { MediaManifestManager } from "../../utils/manifest-manager/media";
 
@@ -12,24 +11,24 @@ export interface MediaHandlerConfig {
   failForward?: boolean;
 }
 
-export class MediaHandler extends BaseModule {
+export class MediaHandler {
   private readonly strategy: MediaStrategy;
   private readonly failForward: boolean;
   private processedBlockIds: Set<string> = new Set();
+  private manifestManager: MediaManifestManager;
 
   constructor(
+    pageId: string,
     private config: MediaHandlerConfig,
     manifestManager: MediaManifestManager,
   ) {
-    super("MediaHandler");
-
     if (!this.config.strategy) {
       throw new MediaHandlerError("Media strategy is required");
     }
 
     this.strategy = this.config.strategy;
     this.failForward = this.config.failForward ?? true;
-    this.setManifestManager(manifestManager);
+    this.manifestManager = manifestManager;
   }
 
   /**
@@ -57,8 +56,7 @@ export class MediaHandler extends BaseModule {
   private async processMediaBlock(
     block: ListBlockChildrenResponseResult,
   ): Promise<void> {
-    const manifest = this.getManifest() as MediaManifestManager;
-    let existingEntry = manifest.getEntry(block.id);
+    let existingEntry = this.manifestManager.getEntry(block.id);
 
     // @ts-ignore - If block hasn't changed, just mark as processed and return
     if (existingEntry && existingEntry.lastEdited === block.last_edited_time) {
@@ -76,7 +74,7 @@ export class MediaHandler extends BaseModule {
 
       this.updateBlockMedia(block, mediaInfo);
 
-      await manifest.updateEntry(block.id, {
+      await this.manifestManager.updateEntry(block.id, {
         mediaInfo,
         // @ts-ignore
         lastEdited: block.last_edited_time,
@@ -92,15 +90,14 @@ export class MediaHandler extends BaseModule {
   }
 
   private async cleanupRemovedBlocks(): Promise<void> {
-    const manifest = this.getManifest() as MediaManifestManager;
-    const manifestData = manifest.getManifest();
+    const manifestData = this.manifestManager.getManifest();
 
     // Find entries for blocks that no longer exist and clean them up
     for (const [blockId, entry] of Object.entries(manifestData.mediaEntries)) {
       if (!this.processedBlockIds.has(blockId)) {
         try {
           await this.strategy.cleanup(entry);
-          manifest.removeEntry(blockId);
+          this.manifestManager.removeEntry(blockId);
         } catch (error) {
           // Cleanup errors are always logged but don't stop processing
           console.warn(error);
