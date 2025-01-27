@@ -19,11 +19,13 @@ export class Exporter implements ProcessorChainNode {
   }
 
   async process(data: ChainData): Promise<ChainData> {
+    const errors: ExporterError[] = [];
+
+    // Try all exporters, collecting errors but continuing
     for (const exporter of this.exporters) {
       try {
         await exporter.export(data);
       } catch (error) {
-        // Convert to ExporterError if it isn't one already
         const exporterError =
           error instanceof ExporterError
             ? error
@@ -34,9 +36,18 @@ export class Exporter implements ProcessorChainNode {
                 error,
               );
 
-        // Re-throw to stop the chain - we want to know if exports fail
-        throw exporterError;
+        // Log error and continue with next exporter
+        console.error(exporterError);
+        errors.push(exporterError);
       }
+    }
+
+    // Add any export errors to metadata for potential handling upstream
+    if (errors.length > 0) {
+      data.metadata = {
+        ...data.metadata,
+        exportErrors: errors,
+      };
     }
 
     return data;
