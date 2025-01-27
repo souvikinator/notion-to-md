@@ -4,16 +4,20 @@ import {
   ListBlockChildrenResponseResults,
   ListBlockChildrenResponseResult,
   PageReferenceEntryType,
+  ProcessorChainNode,
+  ChainData,
 } from "../../types";
 import { PageReferenceHandlerError } from "../errors";
 
-interface PageRefConfig {
+export interface PageRefConfig {
   UrlPropertyNameNotion: string;
   baseUrl: string;
   transformUrl?: (url: string) => string;
 }
 
-export class PageReferenceHandler {
+export class PageReferenceHandler implements ProcessorChainNode {
+  next?: ProcessorChainNode;
+
   private pageId: string;
   private processedRefs: Set<string> = new Set();
   private pageProperties: PageProperties | null = null;
@@ -39,6 +43,17 @@ export class PageReferenceHandler {
 
     this.pageId = pageId;
     this.manifestManager = manifestManager;
+  }
+
+  async process(data: ChainData): Promise<ChainData> {
+    if (data.blockTree.pageRefBlocks && data.blockTree.properties) {
+      await this.processBlocks(
+        data.blockTree.pageRefBlocks,
+        data.blockTree.properties,
+      );
+    }
+
+    return this.next ? this.next.process(data) : data;
   }
 
   async processBlocks(

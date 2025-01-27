@@ -6,8 +6,10 @@ import {
   FetcherOutput,
   ListBlockChildrenResponseResults,
   ExtendedFetcherOutput,
-} from "../types";
-import { isMediaBlock, isPageRefBlock } from "../utils/notion";
+  ProcessorChainNode,
+  ChainData,
+} from "../../types";
+import { isMediaBlock, isPageRefBlock } from "../../utils/notion";
 
 export interface BlockFetcherConfig {
   fetchPageProperties?: boolean;
@@ -24,7 +26,9 @@ interface QueueTask {
   parentId?: string;
 }
 
-export class BlockFetcher {
+export class BlockFetcher implements ProcessorChainNode {
+  next?: ProcessorChainNode;
+
   private queue: QueueTask[] = [];
   private blocks = new Map<string, ListBlockChildrenResponseResult>();
   private processedTasks = new Set<string>();
@@ -34,7 +38,6 @@ export class BlockFetcher {
   private mediaBlocks: ListBlockChildrenResponseResult[] = [];
   private pageRefBlocks: ListBlockChildrenResponseResult[] = [];
 
-  // Rate limiting state
   private rateLimitWindow = {
     requests: 0,
     startTime: Date.now(),
@@ -53,6 +56,17 @@ export class BlockFetcher {
     const moduleType = "BlockFetcher";
     this.config.maxRequestsPerSecond = config.maxRequestsPerSecond ?? 3;
     this.config.batchSize = config.batchSize ?? 3;
+  }
+
+  async process(data: ChainData): Promise<ChainData> {
+    const blockTree = await this.getBlocks(data.pageId);
+
+    const updatedData: ChainData = {
+      ...data,
+      blockTree,
+    };
+
+    return this.next ? this.next.process(updatedData) : updatedData;
   }
 
   async getBlocks(pageId: string): Promise<ExtendedFetcherOutput> {

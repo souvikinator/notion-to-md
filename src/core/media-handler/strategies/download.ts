@@ -1,7 +1,7 @@
 import {
   MediaStrategy,
   MediaInfo,
-  MediaInfoType,
+  MediaStrategyType,
   MediaManifestEntry,
   MediaProcessingError,
   DownloadStrategyConfig,
@@ -45,7 +45,7 @@ export class DownloadStrategy implements MediaStrategy {
 
       console.error(error);
       return {
-        type: MediaInfoType.DIRECT,
+        type: MediaStrategyType.DIRECT,
         originalUrl: "",
         transformedUrl: "",
       };
@@ -54,7 +54,7 @@ export class DownloadStrategy implements MediaStrategy {
     // Handle external URLs - this is always allowed regardless of failForward
     if (this.config.preserveExternalUrls && this.isExternalUrl(url)) {
       return {
-        type: MediaInfoType.DIRECT,
+        type: MediaStrategyType.DIRECT,
         originalUrl: url,
         transformedUrl: url,
       };
@@ -64,12 +64,12 @@ export class DownloadStrategy implements MediaStrategy {
       const { localPath, mimeType } = await this.downloadFile(url, block.id);
 
       const mediaInfo: MediaInfo = {
-        type: MediaInfoType.DOWNLOAD,
+        type: MediaStrategyType.DOWNLOAD,
         originalUrl: url,
         localPath,
         mimeType,
         transformedUrl: this.transform({
-          type: MediaInfoType.DOWNLOAD,
+          type: MediaStrategyType.DOWNLOAD,
           originalUrl: url,
           localPath,
           mimeType,
@@ -91,7 +91,7 @@ export class DownloadStrategy implements MediaStrategy {
 
       console.error(processingError);
       return {
-        type: MediaInfoType.DIRECT,
+        type: MediaStrategyType.DIRECT,
         originalUrl: url,
         transformedUrl: url,
       };
@@ -99,7 +99,7 @@ export class DownloadStrategy implements MediaStrategy {
   }
 
   transform(mediaInfo: MediaInfo): string {
-    if (mediaInfo.type === MediaInfoType.DIRECT) {
+    if (mediaInfo.type === MediaStrategyType.DIRECT) {
       return mediaInfo.originalUrl;
     }
 
@@ -146,7 +146,7 @@ export class DownloadStrategy implements MediaStrategy {
     // Cleanup always fails forward regardless of config
     // This prevents cleanup errors from breaking the entire process
     if (
-      entry.mediaInfo.type === MediaInfoType.DOWNLOAD &&
+      entry.mediaInfo.type === MediaStrategyType.DOWNLOAD &&
       entry.mediaInfo.localPath
     ) {
       try {

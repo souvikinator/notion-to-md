@@ -2,6 +2,8 @@ import {
   ListBlockChildrenResponseResult,
   MediaStrategy,
   MediaInfo,
+  ProcessorChainNode,
+  ChainData,
 } from "../../types";
 import { MediaHandlerError } from "../errors";
 import { MediaManifestManager } from "../../utils/manifest-manager/media";
@@ -11,7 +13,9 @@ export interface MediaHandlerConfig {
   failForward?: boolean;
 }
 
-export class MediaHandler {
+export class MediaHandler implements ProcessorChainNode {
+  next?: ProcessorChainNode;
+
   private readonly strategy: MediaStrategy;
   private readonly failForward: boolean;
   private processedBlockIds: Set<string> = new Set();
@@ -29,6 +33,14 @@ export class MediaHandler {
     this.strategy = this.config.strategy;
     this.failForward = this.config.failForward ?? true;
     this.manifestManager = manifestManager;
+  }
+
+  async process(data: ChainData): Promise<ChainData> {
+    if (data.blockTree.mediaBlocks) {
+      await this.processBlocks(data.blockTree.mediaBlocks);
+    }
+
+    return this.next ? this.next.process(data) : data;
   }
 
   /**

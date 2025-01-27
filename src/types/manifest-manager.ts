@@ -1,13 +1,16 @@
 type BlockId = string;
 type PageId = string;
 
+/**
+ * Media Manifest manager
+ */
 export interface MediaManifest {
   pageId: string;
   lastUpdated: string;
   mediaEntries: Record<BlockId, MediaManifestEntry>;
 }
 
-export enum MediaInfoType {
+export enum MediaStrategyType {
   DOWNLOAD = "DOWNLOAD",
   UPLOAD = "UPLOAD",
   DIRECT = "DIRECT",
@@ -24,7 +27,7 @@ export interface MediaManifestEntry extends MediaManifestInput {
 }
 
 export interface MediaInfo {
-  type: MediaInfoType;
+  type: MediaStrategyType;
   originalUrl: string;
   localPath?: string;
   uploadedUrl?: string;

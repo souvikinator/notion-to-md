@@ -3,7 +3,7 @@ import {
   MediaStrategy,
   UploadStrategyConfig,
   MediaInfo,
-  MediaInfoType,
+  MediaStrategyType,
   MediaManifestEntry,
   MediaProcessingError,
 } from "../../../types";
@@ -42,7 +42,7 @@ export class UploadStrategy implements MediaStrategy {
 
       console.error(error);
       return {
-        type: MediaInfoType.DIRECT,
+        type: MediaStrategyType.DIRECT,
         originalUrl: "",
         transformedUrl: "",
       };
@@ -51,7 +51,7 @@ export class UploadStrategy implements MediaStrategy {
     // Handle external URLs preservation
     if (this.config.preserveExternalUrls && !this.isNotionUrl(url)) {
       return {
-        type: MediaInfoType.DIRECT,
+        type: MediaStrategyType.DIRECT,
         originalUrl: url,
         transformedUrl: url,
       };
@@ -76,7 +76,7 @@ export class UploadStrategy implements MediaStrategy {
 
         console.error(error);
         return {
-          type: MediaInfoType.DIRECT,
+          type: MediaStrategyType.DIRECT,
           originalUrl: url,
           transformedUrl: url,
         };
@@ -84,11 +84,11 @@ export class UploadStrategy implements MediaStrategy {
 
       // Successful upload
       const mediaInfo: MediaInfo = {
-        type: MediaInfoType.UPLOAD,
+        type: MediaStrategyType.UPLOAD,
         originalUrl: url,
         uploadedUrl,
         transformedUrl: this.transform({
-          type: MediaInfoType.UPLOAD,
+          type: MediaStrategyType.UPLOAD,
           originalUrl: url,
           uploadedUrl,
         }),
@@ -109,7 +109,7 @@ export class UploadStrategy implements MediaStrategy {
 
       console.error(processingError);
       return {
-        type: MediaInfoType.DIRECT,
+        type: MediaStrategyType.DIRECT,
         originalUrl: url,
         transformedUrl: url,
       };
@@ -118,7 +118,7 @@ export class UploadStrategy implements MediaStrategy {
 
   transform(mediaInfo: MediaInfo): string {
     // For direct types, always return original URL
-    if (mediaInfo.type === MediaInfoType.DIRECT) {
+    if (mediaInfo.type === MediaStrategyType.DIRECT) {
       return mediaInfo.originalUrl;
     }
 
@@ -166,7 +166,7 @@ export class UploadStrategy implements MediaStrategy {
   async cleanup(entry: MediaManifestEntry): Promise<void> {
     // Cleanup always fails forward regardless of config
     if (
-      entry.mediaInfo.type === MediaInfoType.UPLOAD &&
+      entry.mediaInfo.type === MediaStrategyType.UPLOAD &&
       this.config.cleanupHandler &&
       entry.mediaInfo.uploadedUrl
     ) {
