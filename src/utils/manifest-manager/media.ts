@@ -103,14 +103,9 @@ export class MediaManifestManager extends BaseManifestManager {
    * @throws {MediaManifestStateError} If manager is not initialized
    * @throws {MediaEntryNotFoundError} If entry doesn't exist
    */
-  public getEntry(blockId: string): MediaManifestEntry {
+  public getEntry(blockId: string): MediaManifestEntry | null {
     this.ensureInitialized();
-
     const entry = this.manifest!.mediaEntries[blockId];
-    if (!entry) {
-      throw new MediaEntryNotFoundError(blockId);
-    }
-
     return entry;
   }
 

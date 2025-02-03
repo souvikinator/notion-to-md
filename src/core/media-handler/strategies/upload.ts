@@ -7,6 +7,7 @@ import {
   MediaManifestEntry,
   MediaProcessingError,
 } from "../../../types";
+import { isExternalUrl } from "../../../utils/url";
 
 export class UploadStrategy implements MediaStrategy {
   constructor(private config: UploadStrategyConfig) {
@@ -49,7 +50,7 @@ export class UploadStrategy implements MediaStrategy {
     }
 
     // Handle external URLs preservation
-    if (this.config.preserveExternalUrls && !this.isNotionUrl(url)) {
+    if (this.config.preserveExternalUrls && isExternalUrl(url)) {
       return {
         type: MediaStrategyType.DIRECT,
         originalUrl: url,
@@ -210,14 +211,5 @@ export class UploadStrategy implements MediaStrategy {
     } catch {
       return null;
     }
-  }
-
-  private isNotionUrl(url: string): boolean {
-    return (
-      url.startsWith("https://prod-files.notion-static.com/") ||
-      url.startsWith(
-        "https://s3.us-west-2.amazonaws.com/secure.notion-static.com/",
-      )
-    );
   }
 }
