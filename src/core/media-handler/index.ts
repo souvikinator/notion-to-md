@@ -135,11 +135,14 @@ export class MediaHandler implements ProcessorChainNode {
         "[MediaHandler] Updating manifest entry for block:",
         block.id,
       );
-      await this.manifestManager.updateEntry(block.id, {
-        mediaInfo,
-        // @ts-ignore
-        lastEdited: block.last_edited_time,
-      });
+
+      if (mediaInfo.type !== "DIRECT") {
+        await this.manifestManager.updateEntry(block.id, {
+          mediaInfo,
+          // @ts-ignore
+          lastEdited: block.last_edited_time,
+        });
+      }
 
       this.processedBlockIds.add(block.id);
       console.debug("[MediaHandler] Block processing complete:", block.id);

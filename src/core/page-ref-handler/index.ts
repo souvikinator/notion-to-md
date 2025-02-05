@@ -10,8 +10,9 @@ import {
 import { PageReferenceHandlerError } from "../errors";
 
 export interface PageRefConfig {
-  UrlPropertyNameNotion: string;
-  baseUrl: string;
+  // this field is not use to link rather it's to make an entry in the manifest file
+  UrlPropertyNameNotion?: string;
+  baseUrl?: string;
   transformUrl?: (url: string) => string;
 }
 
@@ -25,22 +26,15 @@ export class PageReferenceHandler implements ProcessorChainNode {
 
   constructor(
     pageId: string,
-    private config: PageRefConfig,
+    private config: PageRefConfig = {},
     manifestManager: PageReferenceManifestManager,
   ) {
     if (!pageId) {
       throw new PageReferenceHandlerError("Page ID is required");
     }
-    if (!config.UrlPropertyNameNotion) {
-      throw new PageReferenceHandlerError("URL property name is required");
-    }
-    if (!config.baseUrl) {
-      throw new PageReferenceHandlerError("Base URL is required");
-    }
     if (!manifestManager) {
       throw new PageReferenceHandlerError("Manifest manager is required");
     }
-
     this.pageId = pageId;
     this.manifestManager = manifestManager;
   }
@@ -84,13 +78,12 @@ export class PageReferenceHandler implements ProcessorChainNode {
 
   private async handlePageProperties(): Promise<void> {
     try {
-      if (!this.pageProperties) {
-        throw new PageReferenceHandlerError("Page properties not initialized");
+      if (!this.config.UrlPropertyNameNotion || !this.pageProperties) {
+        return;
       }
 
       const urlProperty =
         this.pageProperties[this.config.UrlPropertyNameNotion];
-      if (!urlProperty) return;
 
       let url: string | null = null;
 
@@ -177,26 +170,21 @@ export class PageReferenceHandler implements ProcessorChainNode {
   }
 
   private transformUrl(url: string): string {
-    try {
-      if (!url) {
-        throw new PageReferenceHandlerError(
-          "URL is required for transformation",
-        );
-      }
+    if (!url) {
+      throw new PageReferenceHandlerError("URL is required for transformation");
+    }
 
-      if (this.config.transformUrl) {
-        return this.config.transformUrl(url);
-      }
+    if (this.config.transformUrl) {
+      return this.config.transformUrl(url);
+    }
 
+    if (this.config.baseUrl) {
       const baseUrl = this.config.baseUrl.replace(/\/$/, "");
       const pathUrl = url.replace(/^\//, "");
       return `${baseUrl}/${pathUrl}`;
-    } catch (error) {
-      throw new PageReferenceHandlerError(
-        "Failed to transform URL",
-        error instanceof Error ? error : undefined,
-      );
     }
+
+    return url;
   }
 
   private updateBlockContent(
