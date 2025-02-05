@@ -7,15 +7,11 @@ interface PageRefBuilderConfig {
   urlPropertyNameNotion: string;
   recursive: boolean;
   concurrency?: number;
+  baseUrl?: string;
 }
 
-/**
- * A utility for building page reference manifests by scanning Notion pages
- * and extracting their published URLs. It manages its own manifest internally
- * to maintain a clean separation of concerns.
- */
 export class PageReferenceManifestBuilder {
-  private processedPages: Set<string> = new Set();
+  private processedItems: Set<string> = new Set();
   private readonly concurrency: number;
   private manifestManager: PageReferenceManifestManager;
 
@@ -27,57 +23,124 @@ export class PageReferenceManifestBuilder {
     this.manifestManager = new PageReferenceManifestManager();
   }
 
-  /**
-   * Initializes the manifest system and builds the manifest starting from
-   * the provided root page. This is the main entry point for using the utility.
-   */
-  async build(rootPageId: string): Promise<void> {
+  async build(rootId: string): Promise<void> {
+    console.info(`Starting manifest build from root ${rootId}`);
     try {
-      // Initialize the manifest system
       await this.manifestManager.initialize();
 
-      // Process root page and optionally its children
-      await this.processPage(rootPageId);
-      if (this.config.recursive) {
-        await this.processChildPages(rootPageId);
+      try {
+        // Try database endpoint first
+        await this.client.databases.retrieve({ database_id: rootId });
+        console.info(`Processing database ${rootId}`);
+        await this.processDatabase(rootId);
+      } catch (error) {
+        // If not database, try as page
+        console.info(`Processing page ${rootId} for databases`);
+        await this.findAndProcessDatabases(rootId);
       }
 
-      // Save the final manifest
       await this.manifestManager.save();
+      console.info("Manifest build completed successfully");
     } catch (error) {
+      console.error(
+        `Build failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
       throw new PageReferenceHandlerError(
-        "Failed to build page reference manifest",
+        "Failed to build manifest",
         error instanceof Error ? error : undefined,
       );
     }
   }
 
-  private async processPage(pageId: string): Promise<void> {
-    if (this.processedPages.has(pageId)) return;
+  private async processDatabase(databaseId: string): Promise<void> {
+    if (this.processedItems.has(databaseId)) {
+      console.debug(`Skipping processed database ${databaseId}`);
+      return;
+    }
+
+    console.debug(`Querying database ${databaseId}`);
+    let cursor: string | undefined;
 
     try {
-      const response = await this.client.pages.retrieve({
-        page_id: pageId,
-      });
+      do {
+        const response = await this.client.databases.query({
+          database_id: databaseId,
+          start_cursor: cursor,
+        });
 
-      this.processedPages.add(pageId);
+        await Promise.all(
+          response.results.map(async (page) => {
+            await this.processDatabasePage(page);
+          }),
+        );
 
-      if (!("properties" in response)) return;
+        cursor = response.next_cursor ?? undefined;
+      } while (cursor);
 
-      const url = await this.extractPublishedUrl(response.properties);
-      if (!url) return;
+      this.processedItems.add(databaseId);
+    } catch (error) {
+      console.error(
+        `Database query failed for ${databaseId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
 
-      // Always update with latest value from Notion
-      await this.manifestManager.updateEntry(pageId, {
+  private async findAndProcessDatabases(pageId: string): Promise<void> {
+    let cursor: string | undefined;
+
+    try {
+      do {
+        const response = await this.client.blocks.children.list({
+          block_id: pageId,
+          start_cursor: cursor,
+        });
+
+        const databaseBlocks = response.results.filter(
+          // @ts-ignore
+          (block) => block.type === "child_database",
+        );
+
+        console.debug(
+          `Found ${databaseBlocks.length} databases in page ${pageId}`,
+        );
+
+        for (const block of databaseBlocks) {
+          await this.processDatabase(block.id);
+        }
+
+        cursor = response.next_cursor ?? undefined;
+      } while (cursor);
+    } catch (error) {
+      console.warn(
+        `Failed scanning page ${pageId} for databases: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  private async processDatabasePage(page: any): Promise<void> {
+    if (this.processedItems.has(page.id)) {
+      return;
+    }
+
+    console.debug(`Processing database page ${page.id}`);
+    try {
+      const url = await this.extractPublishedUrl(page.properties);
+      if (!url) {
+        console.debug(`No valid URL for page ${page.id}`);
+        return;
+      }
+
+      await this.manifestManager.updateEntry(page.id, {
         url,
         source: PageReferenceEntryType.PROPERTY,
         lastUpdated: new Date().toISOString(),
       });
+
+      console.debug(`Updated manifest for page ${page.id} with URL ${url}`);
+      this.processedItems.add(page.id);
     } catch (error) {
       console.warn(
-        `Failed to process page ${pageId}: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        `Failed processing page ${page.id}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -88,82 +151,24 @@ export class PageReferenceManifestBuilder {
     const urlProperty = properties[this.config.urlPropertyNameNotion];
     if (!urlProperty) return null;
 
-    if ("url" in urlProperty) {
-      return urlProperty.url;
-    }
+    let url: string | null = null;
 
-    if (
+    if ("url" in urlProperty) {
+      url = urlProperty.url;
+    } else if (
       "rich_text" in urlProperty &&
       Array.isArray(urlProperty.rich_text) &&
       urlProperty.rich_text.length > 0
     ) {
-      const text = urlProperty.rich_text[0]?.plain_text;
-      if (text?.startsWith("http")) {
-        return text;
-      }
+      url = urlProperty.rich_text[0]?.plain_text;
     }
 
-    return null;
-  }
-
-  private async processChildPages(pageId: string): Promise<void> {
-    try {
-      const children = await this.getChildPages(pageId);
-
-      // Process children in batches for controlled concurrency
-      for (let i = 0; i < children.length; i += this.concurrency) {
-        const batch = children.slice(i, i + this.concurrency);
-        await Promise.all(
-          batch.map(async (childId) => {
-            await this.processPage(childId);
-            await this.processChildPages(childId);
-          }),
-        );
-      }
-    } catch (error) {
-      console.warn(
-        `Failed to process child pages for ${pageId}: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
+    if (!url?.startsWith("http") && this.config.baseUrl) {
+      url = `${this.config.baseUrl}${url}`;
     }
+    return url;
   }
 
-  private async getChildPages(pageId: string): Promise<string[]> {
-    const childPages: string[] = [];
-    let cursor: string | undefined;
-
-    try {
-      do {
-        const response = await this.client.blocks.children.list({
-          block_id: pageId,
-          start_cursor: cursor,
-        });
-
-        // Collect child page IDs
-        response.results.forEach((block) => {
-          // @ts-ignore
-          if (block.type === "child_page") {
-            childPages.push(block.id);
-          }
-        });
-
-        cursor = response.next_cursor ?? undefined;
-      } while (cursor);
-    } catch (error) {
-      console.warn(
-        `Failed to get child pages for ${pageId}: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-    }
-
-    return childPages;
-  }
-
-  /**
-   * Provides access to the built manifest for the page reference handler
-   */
   getManifestManager(): PageReferenceManifestManager {
     return this.manifestManager;
   }

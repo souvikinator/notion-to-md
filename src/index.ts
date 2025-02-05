@@ -112,7 +112,7 @@ export class NotionConverter {
    * Configures page reference handling for transforming Notion URLs
    * into public-facing URLs.
    */
-  withPageReferences(config: PageRefConfig): this {
+  withPageReferences(config?: PageRefConfig): this {
     console.debug(
       "[NotionConverter] Configuring page reference handling with:",
       config,
