@@ -10,7 +10,6 @@ import {
 import { PageReferenceHandlerError } from "../errors";
 
 export interface PageRefConfig {
-  // this field is not use to link rather it's to make an entry in the manifest file
   UrlPropertyNameNotion?: string;
   baseUrl?: string;
   transformUrl?: (url: string) => string;
@@ -18,7 +17,6 @@ export interface PageRefConfig {
 
 export class PageReferenceHandler implements ProcessorChainNode {
   next?: ProcessorChainNode;
-
   private pageId: string;
   private processedRefs: Set<string> = new Set();
   private pageProperties: PageProperties | null = null;
@@ -29,24 +27,26 @@ export class PageReferenceHandler implements ProcessorChainNode {
     private config: PageRefConfig = {},
     manifestManager: PageReferenceManifestManager,
   ) {
-    if (!pageId) {
-      throw new PageReferenceHandlerError("Page ID is required");
-    }
-    if (!manifestManager) {
+    console.debug("[PageRefHandler] Initializing with config:", config);
+
+    if (!pageId) throw new PageReferenceHandlerError("Page ID is required");
+    if (!manifestManager)
       throw new PageReferenceHandlerError("Manifest manager is required");
-    }
+
     this.pageId = pageId;
     this.manifestManager = manifestManager;
+    console.debug("[PageRefHandler] Initialized for page:", pageId);
   }
 
   async process(data: ChainData): Promise<ChainData> {
+    console.debug("[PageRefHandler] Starting process");
     if (data.blockTree.pageRefBlocks && data.blockTree.properties) {
       await this.processBlocks(
         data.blockTree.pageRefBlocks,
         data.blockTree.properties,
       );
     }
-
+    console.debug("[PageRefHandler] Process complete");
     return this.next ? this.next.process(data) : data;
   }
 
@@ -55,12 +55,11 @@ export class PageReferenceHandler implements ProcessorChainNode {
     properties: PageProperties,
   ): Promise<void> {
     try {
-      if (!blocks || !Array.isArray(blocks)) {
-        throw new PageReferenceHandlerError("Invalid blocks array provided");
-      }
-      if (!properties) {
-        throw new PageReferenceHandlerError("Page properties are required");
-      }
+      console.debug("[PageRefHandler] Processing blocks:", blocks.length);
+      if (!blocks?.length)
+        throw new PageReferenceHandlerError("Invalid blocks array");
+      if (!properties)
+        throw new PageReferenceHandlerError("Properties required");
 
       this.pageProperties = properties;
       await this.handlePageProperties();
@@ -68,37 +67,41 @@ export class PageReferenceHandler implements ProcessorChainNode {
       for (const block of blocks) {
         await this.processPageRef(block);
       }
+      console.debug("[PageRefHandler] Blocks processing complete");
     } catch (error) {
+      console.error("[PageRefHandler] Block processing failed:", error);
       throw new PageReferenceHandlerError(
-        "Failed to process page reference blocks",
+        "Failed to process blocks",
         error instanceof Error ? error : undefined,
       );
     }
   }
 
   private async handlePageProperties(): Promise<void> {
-    try {
-      if (!this.config.UrlPropertyNameNotion || !this.pageProperties) {
-        return;
-      }
+    if (!this.config.UrlPropertyNameNotion || !this.pageProperties) {
+      console.debug(
+        "[PageRefHandler] Skipping property handling - no config/properties",
+      );
+      return;
+    }
 
+    try {
+      console.debug("[PageRefHandler] Processing page properties");
       const urlProperty =
         this.pageProperties[this.config.UrlPropertyNameNotion];
-
       let url: string | null = null;
 
       if ("url" in urlProperty) {
         url = urlProperty.url;
       } else if (
         "rich_text" in urlProperty &&
-        Array.isArray(urlProperty.rich_text) &&
-        urlProperty.rich_text.length > 0
+        urlProperty.rich_text?.[0]?.plain_text?.startsWith("http")
       ) {
-        const text = urlProperty.rich_text[0]?.plain_text;
-        if (text?.startsWith("http")) url = text;
+        url = urlProperty.rich_text[0].plain_text;
       }
 
       if (url) {
+        console.debug("[PageRefHandler] Updating manifest with URL:", url);
         await this.manifestManager.updateEntry(this.pageId, {
           url,
           source: PageReferenceEntryType.PROPERTY,
@@ -106,8 +109,9 @@ export class PageReferenceHandler implements ProcessorChainNode {
         });
       }
     } catch (error) {
+      console.error("[PageRefHandler] Property handling failed:", error);
       throw new PageReferenceHandlerError(
-        "Failed to handle page properties",
+        "Property handling failed",
         error instanceof Error ? error : undefined,
       );
     }
@@ -120,15 +124,24 @@ export class PageReferenceHandler implements ProcessorChainNode {
       const pageId = this.extractPageId(block);
       if (!pageId || this.processedRefs.has(pageId)) return;
 
+      console.debug("[PageRefHandler] Processing reference:", pageId);
       const entry = this.manifestManager.getEntry(pageId);
-      if (!entry) return;
+      if (!entry) {
+        console.debug("[PageRefHandler] No manifest entry for:", pageId);
+        return;
+      }
 
       const transformedUrl = this.transformUrl(entry.url);
       this.updateBlockContent(block, transformedUrl);
       this.processedRefs.add(pageId);
+      console.debug(
+        "[PageRefHandler] Reference processed successfully:",
+        pageId,
+      );
     } catch (error) {
+      console.error("[PageRefHandler] Reference processing failed:", error);
       throw new PageReferenceHandlerError(
-        `Failed to process page reference for block`,
+        "Reference processing failed",
         error instanceof Error ? error : undefined,
       );
     }
@@ -143,18 +156,15 @@ export class PageReferenceHandler implements ProcessorChainNode {
       return block.link_to_page.page_id;
     }
 
-    // Handle page mentions in rich text blocks
     const richTextBlocks = [
       "paragraph",
       "bulleted_list_item",
       "numbered_list_item",
       "quote",
     ];
-
     if ("type" in block && richTextBlocks.includes(block.type)) {
       // @ts-ignore
       const richText = block[block.type].rich_text;
-
       for (const text of richText) {
         if (
           text.type === "mention" &&
@@ -165,26 +175,27 @@ export class PageReferenceHandler implements ProcessorChainNode {
         }
       }
     }
-
     return null;
   }
 
   private transformUrl(url: string): string {
-    if (!url) {
-      throw new PageReferenceHandlerError("URL is required for transformation");
-    }
+    if (!url) throw new PageReferenceHandlerError("URL required");
 
-    if (this.config.transformUrl) {
-      return this.config.transformUrl(url);
+    try {
+      if (this.config.transformUrl) return this.config.transformUrl(url);
+      if (this.config.baseUrl) {
+        const baseUrl = this.config.baseUrl.replace(/\/$/, "");
+        const pathUrl = url.replace(/^\//, "");
+        return `${baseUrl}/${pathUrl}`;
+      }
+      return url;
+    } catch (error) {
+      console.error("[PageRefHandler] URL transformation failed:", error);
+      throw new PageReferenceHandlerError(
+        "URL transformation failed",
+        error instanceof Error ? error : undefined,
+      );
     }
-
-    if (this.config.baseUrl) {
-      const baseUrl = this.config.baseUrl.replace(/\/$/, "");
-      const pathUrl = url.replace(/^\//, "");
-      return `${baseUrl}/${pathUrl}`;
-    }
-
-    return url;
   }
 
   private updateBlockContent(
@@ -192,9 +203,8 @@ export class PageReferenceHandler implements ProcessorChainNode {
     url: string,
   ): void {
     try {
-      if (!("type" in block)) {
-        throw new PageReferenceHandlerError("Invalid block structure");
-      }
+      if (!("type" in block))
+        throw new PageReferenceHandlerError("Invalid block");
 
       if (block.type === "link_to_page" && "href" in block) {
         block.href = url;
@@ -205,8 +215,7 @@ export class PageReferenceHandler implements ProcessorChainNode {
       if (
         blockContent &&
         typeof blockContent === "object" &&
-        "rich_text" in blockContent &&
-        Array.isArray(blockContent.rich_text)
+        "rich_text" in blockContent
       ) {
         for (const text of blockContent.rich_text) {
           if (text.type === "mention" && text.mention?.type === "page") {
@@ -215,8 +224,9 @@ export class PageReferenceHandler implements ProcessorChainNode {
         }
       }
     } catch (error) {
+      console.error("[PageRefHandler] Block content update failed:", error);
       throw new PageReferenceHandlerError(
-        "Failed to update block content",
+        "Content update failed",
         error instanceof Error ? error : undefined,
       );
     }
