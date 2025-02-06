@@ -134,10 +134,6 @@ export class PageReferenceHandler implements ProcessorChainNode {
       const transformedUrl = this.transformUrl(entry.url);
       this.updateBlockContent(block, transformedUrl);
       this.processedRefs.add(pageId);
-      console.debug(
-        "[PageRefHandler] Reference processed successfully:",
-        pageId,
-      );
     } catch (error) {
       console.error("[PageRefHandler] Reference processing failed:", error);
       throw new PageReferenceHandlerError(
@@ -203,23 +199,60 @@ export class PageReferenceHandler implements ProcessorChainNode {
     url: string,
   ): void {
     try {
-      if (!("type" in block))
+      if (!("type" in block)) {
         throw new PageReferenceHandlerError("Invalid block");
-
-      if (block.type === "link_to_page" && "href" in block) {
-        block.href = url;
-        return;
       }
 
-      const blockContent = block[block.type as keyof typeof block];
       if (
-        blockContent &&
-        typeof blockContent === "object" &&
-        "rich_text" in blockContent
+        block.type === "link_to_page" &&
+        block.link_to_page?.type === "page_id"
       ) {
-        for (const text of blockContent.rich_text) {
-          if (text.type === "mention" && text.mention?.type === "page") {
-            text.href = url;
+        // convert to link_to_page to paragraph with mention
+        // since link_to_page doesn't have any url/href property
+        const pageId = block.link_to_page.page_id;
+
+        //@ts-ignore-First, clear out the link_to_page property
+        delete block.link_to_page;
+
+        //@ts-ignore
+        block.type = "paragraph";
+        //@ts-ignore Add the paragraph property with the mention structure
+        block.paragraph = {
+          rich_text: [
+            {
+              type: "mention",
+              mention: {
+                type: "page",
+                page: {
+                  id: pageId,
+                },
+              },
+              href: url,
+              plain_text: "",
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: "default",
+              },
+            },
+          ],
+          color: "default",
+        };
+      } else {
+        // Handle mentions as before
+        const blockContent = block[block.type as keyof typeof block];
+        if (
+          blockContent &&
+          typeof blockContent === "object" &&
+          "rich_text" in blockContent
+        ) {
+          for (const text of blockContent.rich_text) {
+            if (text.type === "mention" && text.mention?.type === "page") {
+              text.href = url;
+            }
           }
         }
       }

@@ -115,9 +115,9 @@ export class NotionConverter {
   withPageReferences(config?: PageRefConfig): this {
     console.debug(
       "[NotionConverter] Configuring page reference handling with:",
-      config,
+      config || {},
     );
-    this.config.pageRefConfig = config;
+    this.config.pageRefConfig = config || {};
     return this;
   }
 

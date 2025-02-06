@@ -311,10 +311,10 @@ export class BlockFetcher implements ProcessorChainNode {
       parentId: string,
     ): ListBlockChildrenResponseResults => {
       const children = childrenMap.get(this.normalizeId(parentId)) || [];
-      return children.map((block) => ({
-        ...block,
-        children: buildChildren(block.id),
-      }));
+      return children.map((block) => {
+        block.children = buildChildren(block.id);
+        return block;
+      });
     };
 
     return buildChildren(rootId);
