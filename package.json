@@ -7,12 +7,20 @@
   "main": "./build",
   "types": "./build/index.d.ts",
   "scripts": {
-    "prepare": "npm run build",
+    "prepare": "husky",
     "build": "tsc",
     "prebuild": "npm run clean",
     "clean": "rm -rf ./build",
     "test": "jest --coverage --verbose",
-    "test:watch": "jest -w"
+    "test:watch": "jest -w",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write ."
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   },
   "keywords": [
     "notion",
@@ -41,7 +49,15 @@
     "@types/download": "^8.0.5",
     "@types/jest": "^27.4.1",
     "@types/mime-types": "^2.1.4",
+    "@typescript-eslint/eslint-plugin": "^8.23.0",
+    "@typescript-eslint/parser": "^8.23.0",
+    "eslint": "^9.20.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.3",
+    "husky": "^9.1.7",
     "jest": "^27.4.7",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.4.2",
     "ts-jest": "^27.1.3",
     "typescript": "^4.5.4"
   },

@@ -1,10 +1,10 @@
-import { Client } from "@notionhq/client";
-import { BlockFetcher, BlockFetcherConfig } from "./core/block-fetcher";
-import { Exporter } from "./core/exporter";
-import { MediaHandler } from "./core/media-handler";
-import { DownloadStrategy } from "./core/media-handler/strategies/download";
-import { UploadStrategy } from "./core/media-handler/strategies/upload";
-import { PageRefConfig, PageReferenceHandler } from "./core/page-ref-handler";
+import { Client } from '@notionhq/client';
+import { BlockFetcher, BlockFetcherConfig } from './core/block-fetcher';
+import { Exporter } from './core/exporter';
+import { MediaHandler } from './core/media-handler';
+import { DownloadStrategy } from './core/media-handler/strategies/download';
+import { UploadStrategy } from './core/media-handler/strategies/upload';
+import { PageRefConfig, PageReferenceHandler } from './core/page-ref-handler';
 import {
   NotionExporter,
   ProcessorChainNode,
@@ -14,11 +14,12 @@ import {
   DownloadStrategyConfig,
   UploadStrategyConfig,
   MediaStrategyType,
-} from "./types";
+} from './types';
 import {
   MediaManifestManager,
   PageReferenceManifestManager,
-} from "./utils/manifest-manager";
+} from './utils/manifest-manager';
+import { BaseRendererPlugin } from './core/renderer';
 
 /**
  * Configuration interface for NotionConverter that is built up
@@ -30,7 +31,7 @@ interface NotionConverterConfig {
     config: DownloadStrategyConfig | UploadStrategyConfig;
   };
   pageRefConfig?: PageRefConfig;
-  // renderer?: RendererPlugin;
+  renderer?: BaseRendererPlugin;
   exporters?: Array<NotionExporter<any>>;
   blockFetcherConfig?: BlockFetcherConfig;
 }
@@ -44,7 +45,7 @@ export class NotionConverter {
   private processorChain?: ProcessorChainNode; // points to head of the processor chain
 
   constructor(private notionClient: Client) {
-    console.debug("[NotionConverter] Initializing with default configuration");
+    console.debug('[NotionConverter] Initializing with default configuration');
     this.config.blockFetcherConfig = {
       fetchPageProperties: true,
       fetchComments: false,
@@ -54,7 +55,7 @@ export class NotionConverter {
       trackPageRefBlocks: false,
     };
     console.debug(
-      "[NotionConverter] Default block fetcher config:",
+      '[NotionConverter] Default block fetcher config:',
       this.config.blockFetcherConfig,
     );
   }
@@ -64,13 +65,13 @@ export class NotionConverter {
    * Controls how blocks are fetched from Notion and what additional data is tracked.
    */
   configureFetcher(config: Partial<BlockFetcherConfig>): this {
-    console.debug("[NotionConverter] Configuring block fetcher with:", config);
+    console.debug('[NotionConverter] Configuring block fetcher with:', config);
     this.config.blockFetcherConfig = {
       ...this.config.blockFetcherConfig,
       ...config,
     };
     console.debug(
-      "[NotionConverter] Updated block fetcher config:",
+      '[NotionConverter] Updated block fetcher config:',
       this.config.blockFetcherConfig,
     );
     return this;
@@ -82,7 +83,7 @@ export class NotionConverter {
    */
   downloadMediaTo(config: DownloadStrategyConfig): this {
     console.debug(
-      "[NotionConverter] Configuring download media strategy with:",
+      '[NotionConverter] Configuring download media strategy with:',
       config,
     );
     this.config.mediaConfig = {
@@ -98,7 +99,7 @@ export class NotionConverter {
    */
   uploadMediaUsing(config: UploadStrategyConfig): this {
     console.debug(
-      "[NotionConverter] Configuring upload media strategy with:",
+      '[NotionConverter] Configuring upload media strategy with:',
       config,
     );
     this.config.mediaConfig = {
@@ -114,7 +115,7 @@ export class NotionConverter {
    */
   withPageReferences(config?: PageRefConfig): this {
     console.debug(
-      "[NotionConverter] Configuring page reference handling with:",
+      '[NotionConverter] Configuring page reference handling with:',
       config || {},
     );
     this.config.pageRefConfig = config || {};
@@ -122,14 +123,13 @@ export class NotionConverter {
   }
 
   /**
-   * TODO: Implement renderer plugin
    * Sets the renderer to use for converting blocks to the target format.
    * If not set, default markdown renderer is used.
    */
-  // withRenderer(renderer: RendererPlugin): this {
-  //   this.config.renderer = renderer;
-  //   return this;
-  // }
+  withRenderer(renderer: BaseRendererPlugin): this {
+    this.config.renderer = renderer;
+    return this;
+  }
 
   /**
    * Configures one or more exporters to handle the final output.
@@ -138,10 +138,10 @@ export class NotionConverter {
   withExporter(
     exporter: NotionExporter<any> | Array<NotionExporter<any>>,
   ): this {
-    console.debug("[NotionConverter] Configuring exporters");
+    console.debug('[NotionConverter] Configuring exporters');
     this.config.exporters = Array.isArray(exporter) ? exporter : [exporter];
     console.debug(
-      "[NotionConverter] Number of configured exporters:",
+      '[NotionConverter] Number of configured exporters:',
       this.config.exporters.length,
     );
     return this;
@@ -151,30 +151,30 @@ export class NotionConverter {
    * Main conversion method that processes a Notion page through the chain.
    */
   async convert(pageId: string): Promise<void> {
-    console.debug("[NotionConverter] Starting conversion for page:", pageId);
+    console.debug('[NotionConverter] Starting conversion for page:', pageId);
     try {
       // Initialize the processor chain if not already done
       if (!this.processorChain) {
-        console.debug("[NotionConverter] Initializing processor chain");
+        console.debug('[NotionConverter] Initializing processor chain');
         await this.initializeProcessorChain(pageId);
       }
 
       // Start the processing chain with initial data
-      console.debug("[NotionConverter] Creating initial chain data");
+      console.debug('[NotionConverter] Creating initial chain data');
       const chainData: ChainData = {
         pageId,
         blockTree: {} as ExtendedFetcherOutput,
-        content: "",
+        content: '',
       };
 
       // Process through the chain
-      console.debug("[NotionConverter] Beginning chain processing");
+      console.debug('[NotionConverter] Beginning chain processing');
       await this.processorChain!.process(chainData);
       console.debug(
-        "[NotionConverter] Chain processing completed successfully",
+        '[NotionConverter] Chain processing completed successfully',
       );
     } catch (error) {
-      console.debug("[NotionConverter] Error during conversion:", error);
+      console.debug('[NotionConverter] Error during conversion:', error);
       this.handleError(error);
     }
   }
@@ -185,7 +185,7 @@ export class NotionConverter {
    */
   private async initializeProcessorChain(pageId: string): Promise<void> {
     console.debug(
-      "[NotionConverter] Initializing processor chain for page:",
+      '[NotionConverter] Initializing processor chain for page:',
       pageId,
     );
 
@@ -200,7 +200,7 @@ export class NotionConverter {
         : this.config.blockFetcherConfig?.trackPageRefBlocks,
     };
     console.debug(
-      "[NotionConverter] Creating BlockFetcher with config \n",
+      '[NotionConverter] Creating BlockFetcher with config \n',
       this.config.blockFetcherConfig,
     );
 
@@ -213,7 +213,7 @@ export class NotionConverter {
 
     // Add MediaHandler if media processing is configured
     if (this.config.mediaConfig) {
-      console.debug("[NotionConverter] Adding MediaHandler to chain");
+      console.debug('[NotionConverter] Adding MediaHandler to chain');
       const strategy = this.createMediaStrategy(this.config.mediaConfig);
       const mediaManifestManager = new MediaManifestManager();
       await mediaManifestManager.initialize(pageId);
@@ -229,7 +229,7 @@ export class NotionConverter {
 
     // Add PageReferenceHandler if configured
     if (this.config.pageRefConfig) {
-      console.debug("[NotionConverter] Adding PageReferenceHandler to chain");
+      console.debug('[NotionConverter] Adding PageReferenceHandler to chain');
       const pageReferenceManifestManager = new PageReferenceManifestManager();
       await pageReferenceManifestManager.initialize();
 
@@ -242,36 +242,39 @@ export class NotionConverter {
       current = pageRefHandler;
     }
 
-    // Add renderer node if configured else throw error
-    // if (!this.config.renderer) {
-    //   throw new Error("Renderer is required for conversion process");
-    // }
-    // current.next = this.config.renderer;
-    // current = this.config.renderer;
+    // Add renderer node if configured else fallback to default
+    if (!this.config.renderer) {
+      console.debug('[NotionConverter] Using default markdown renderer');
+      this.config.renderer = new DefaultMarkdownRenderer();
+    }
+
+    console.debug('[NotionConverter] Adding renderer to chain');
+    current.next = this.config.renderer;
+    current = this.config.renderer;
 
     // Add exporter node if exporters are configured
     if (this.config.exporters?.length) {
-      console.debug("[NotionConverter] Adding Exporter to chain");
+      console.debug('[NotionConverter] Adding Exporter to chain');
       const exporterNode = new Exporter(this.config.exporters);
       current.next = exporterNode;
       // No need to update current since exporter is last as of now
     }
 
     this.processorChain = head;
-    console.debug("[NotionConverter] Processor chain initialization complete");
+    console.debug('[NotionConverter] Processor chain initialization complete');
   }
 
   /**
    * Creates appropriate media strategy based on configuration
    */
   private createMediaStrategy(
-    config: NotionConverterConfig["mediaConfig"],
+    config: NotionConverterConfig['mediaConfig'],
   ): MediaStrategy {
     console.debug(
-      "[NotionConverter] Creating media strategy of type:",
+      '[NotionConverter] Creating media strategy of type:',
       config?.type,
     );
-    if (!config) throw new Error("Media config is required to create strategy");
+    if (!config) throw new Error('Media config is required to create strategy');
 
     return config.type === MediaStrategyType.DOWNLOAD
       ? new DownloadStrategy(config.config as DownloadStrategyConfig)
@@ -282,7 +285,7 @@ export class NotionConverter {
    * Handles errors that occur during the conversion process
    */
   private handleError(error: unknown): never {
-    console.debug("[NotionConverter] Handling error:", error);
+    console.debug('[NotionConverter] Handling error:', error);
     throw error;
   }
 }
