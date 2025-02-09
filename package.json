@@ -13,7 +13,7 @@
     "clean": "rm -rf ./build",
     "test": "jest --coverage --verbose",
     "test:watch": "jest -w",
-    "lint": "eslint . --ext .ts",
+    "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write ."
   },
   "lint-staged": {
