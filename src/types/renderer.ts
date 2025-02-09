@@ -8,10 +8,11 @@ import {
 
 export type ContextMetadata = Map<string, any>;
 
-export type VariableCollector = Map<string, string[]>;
-export type VariableResolvers = Map<string, VariableResolver>;
+export type VariableNames = 'imports' | 'content' | string;
+export type VariableCollector = Map<VariableNames, string[]>;
+export type VariableResolvers = Map<VariableNames, VariableResolver>;
 export interface VariableResolver {
-  (variableName: string, context: RendererContext): Promise<string>;
+  (variableName: VariableNames, context: RendererContext): Promise<string>;
 }
 
 export type RichTextAnnotation = RichTextItemResponse['annotations'];

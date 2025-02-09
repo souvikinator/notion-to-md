@@ -19,13 +19,13 @@ import {
  * Base class for renderer plugins that handles the core rendering logic
  * while providing a flexible API for creating custom renderers.
  */
-abstract class BaseRendererPlugin implements ProcessorChainNode {
+export abstract class BaseRendererPlugin implements ProcessorChainNode {
   next?: ProcessorChainNode;
 
   // Core template that defines document structure
   protected abstract template: string;
 
-  // Registry for block transformers
+  // Registry for block transformers - now with better type inference
   protected blockTransformers: Partial<Record<BlockType, BlockTransformer>> =
     {};
 
@@ -55,13 +55,15 @@ abstract class BaseRendererPlugin implements ProcessorChainNode {
       },
     };
 
-    // Initialize variable collectors from template
-    this.initializeVariables();
+    // Initialize required variables
+    this.initializeDefaultVariables();
+
+    // Initialize additional variables from template
+    this.initializeTemplateVariables();
   }
 
   /**
-   * Allows plugins to add custom metadata that will be available
-   * throughout the rendering process
+   * Adds custom metadata that will be available throughout rendering
    */
   public addMetadata(key: string, value: any): this {
     this.context.metadata.set(key, value);
@@ -69,11 +71,13 @@ abstract class BaseRendererPlugin implements ProcessorChainNode {
   }
 
   /**
-   * Adds a new variable to the renderer with an optional resolver
+   * Adds a new variable with an optional custom resolver
    */
   public addVariable(name: string, resolver?: VariableResolver): this {
-    // Create collector for this variable
-    this.variableDataCollector.set(name, []);
+    // Create collector if it doesn't exist
+    if (!this.variableDataCollector.has(name)) {
+      this.variableDataCollector.set(name, []);
+    }
 
     // Register resolver if provided
     if (resolver) {
@@ -84,33 +88,53 @@ abstract class BaseRendererPlugin implements ProcessorChainNode {
   }
 
   /**
-   * Updates the template while validating variable usage
+   * Adds imports that will be collected in the imports variable
    */
-  public setTemplate(template: string): this {
-    this.validateTemplate(template);
-    this.template = template;
-    this.initializeVariables();
+  public addImports(...imports: string[]): this {
+    const importCollector = this.variableDataCollector.get('imports') || [];
+    imports.forEach((imp) => {
+      if (!importCollector.includes(imp)) {
+        importCollector.push(imp);
+      }
+    });
+    this.variableDataCollector.set('imports', importCollector);
     return this;
   }
 
   /**
-   * Allows customization of block transformers
+   * Updates template while ensuring required variables exist
    */
-  public customizeBlock(
-    type: BlockType,
-    transformer: Partial<BlockTransformer>,
+  public setTemplate(template: string): this {
+    this.validateTemplate(template);
+    this.template = template;
+    this.initializeTemplateVariables();
+    return this;
+  }
+
+  /**
+   * Creates a single block transformer with proper type inference.
+   * Note: Block level imports are stored with the transformer, not added to import variable immediately.
+   * Only added when the transformer is actually used.
+   */
+  public createBlockTransformer<T extends BlockType>(
+    type: T,
+    transformer: BlockTransformer,
   ): this {
-    const existing = this.blockTransformers[type] || {
-      transform: async () => '',
-      imports: [],
-    };
+    this.blockTransformers[type] = transformer;
+    return this;
+  }
 
-    this.blockTransformers[type] = {
-      ...existing,
-      ...transformer,
-      imports: [...(existing.imports || []), ...(transformer.imports || [])],
-    };
-
+  /**
+   * Creates multiple block transformers at once
+   */
+  public createBlockTransformers(
+    transformers: Partial<Record<BlockType, BlockTransformer>>,
+  ): this {
+    for (const [type, transformer] of Object.entries(transformers)) {
+      if (transformer) {
+        this.createBlockTransformer(type as BlockType, transformer);
+      }
+    }
     return this;
   }
 
@@ -119,10 +143,7 @@ abstract class BaseRendererPlugin implements ProcessorChainNode {
    */
   public async process(data: ChainData): Promise<ChainData> {
     try {
-      // Update context with new data
       this.updateContext(data);
-
-      // Reset collectors
       this.resetCollectors();
 
       // Process all blocks
@@ -130,7 +151,6 @@ abstract class BaseRendererPlugin implements ProcessorChainNode {
         await this.processBlock(block);
       }
 
-      // Resolve variables and render template
       const content = await this.renderTemplate();
 
       return {
@@ -144,11 +164,6 @@ abstract class BaseRendererPlugin implements ProcessorChainNode {
     }
   }
 
-  // Protected utility methods available to child classes
-
-  /**
-   * Processes rich text with annotations
-   */
   protected async processRichText(
     richText: RichTextItemResponse[],
     metadata?: ContextMetadata,
@@ -157,13 +172,11 @@ abstract class BaseRendererPlugin implements ProcessorChainNode {
       richText.map(async (item) => {
         let text = item.plain_text;
 
-        // Apply annotations
         for (const [name, value] of Object.entries(item.annotations)) {
           if (value && this.defaultAnnotationTransformers[name]) {
-            // Pass the complete annotations object rather than just the value
             text = await this.defaultAnnotationTransformers[name].transform({
               text,
-              annotations: item.annotations, // Pass the complete annotations object
+              annotations: item.annotations,
               metadata,
             });
           }
@@ -176,9 +189,6 @@ abstract class BaseRendererPlugin implements ProcessorChainNode {
     return results.join('');
   }
 
-  /**
-   * Processes child blocks recursively
-   */
   protected async processChildren(
     blocks: ListBlockChildrenResponseResults,
     metadata?: ContextMetadata,
@@ -190,8 +200,6 @@ abstract class BaseRendererPlugin implements ProcessorChainNode {
     return results.filter(Boolean).join('\n');
   }
 
-  // Private implementation details
-
   private defaultAnnotationTransformers: Record<string, AnnotationTransformer> =
     {
       bold: { transform: async ({ text }) => `**${text}**` },
@@ -199,7 +207,7 @@ abstract class BaseRendererPlugin implements ProcessorChainNode {
       code: { transform: async ({ text }) => `\`${text}\`` },
     };
 
-  private async processBlock(
+  protected async processBlock(
     block: ListBlockChildrenResponseResult,
     metadata?: ContextMetadata,
   ): Promise<string> {
@@ -208,18 +216,34 @@ abstract class BaseRendererPlugin implements ProcessorChainNode {
     if (!transformer) return '';
 
     try {
-      const output = await transformer.transform({
+      // Create context for this block transformation
+      const blockContext: RendererContext = {
         ...this.context,
         block,
-        metadata: {
-          ...this.context.metadata,
-          ...metadata,
-        },
-      });
+        metadata: new Map([
+          ...Array.from(this.context.metadata.entries()),
+          ...(metadata ? Array.from(metadata.entries()) : []),
+        ]),
+      };
 
-      // Add to appropriate collector
-      const target = transformer.targetVariable || 'content';
-      this.addToCollector(target, output);
+      // Process the block
+      const output = await transformer.transform(blockContext);
+
+      // Add imports only when this transformer is actually used
+      if (transformer.imports?.length) {
+        this.addImports(...transformer.imports);
+      }
+
+      // Handle target variable - default to 'content' if not specified
+      const targetVariable = transformer.targetVariable || 'content';
+
+      // Ensure target variable exists in collector
+      if (!this.variableDataCollector.has(targetVariable)) {
+        this.addVariable(targetVariable);
+      }
+
+      // Add output to appropriate variable collector
+      this.addToCollector(targetVariable, output);
 
       return output;
     } catch (error) {
@@ -229,11 +253,42 @@ abstract class BaseRendererPlugin implements ProcessorChainNode {
     }
   }
 
+  private initializeDefaultVariables(): void {
+    // Initialize required variables with default resolvers
+    this.addVariable('imports', async (_, context) => {
+      const imports = context.variableData.get('imports') || [];
+      return imports.join('\n');
+    });
+
+    this.addVariable('content');
+  }
+
+  private initializeTemplateVariables(): void {
+    const variables = this.template.match(/{{{(\w+)}}}/g) || [];
+    variables.forEach((variable) => {
+      const name = variable.replace(/{{{|}}}/, '');
+      this.addVariable(name);
+    });
+  }
+
+  private validateTemplate(template: string): void {
+    const required = ['content', 'imports'];
+    required.forEach((name) => {
+      if (!template.includes(`{{{${name}}}}`)) {
+        throw new Error(`Template must contain ${name} variable`);
+      }
+    });
+  }
+
   private addToCollector(variable: string, content: string): void {
-    const collector = this.variableDataCollector.get(variable);
-    if (collector) {
-      collector.push(content);
+    // Ensure the collector exists
+    if (!this.variableDataCollector.has(variable)) {
+      this.variableDataCollector.set(variable, []);
     }
+
+    // Add content to collector
+    const collector = this.variableDataCollector.get(variable)!;
+    collector.push(content);
   }
 
   private async renderTemplate(): Promise<string> {
@@ -257,33 +312,13 @@ abstract class BaseRendererPlugin implements ProcessorChainNode {
     return collected.join('\n');
   };
 
-  private initializeVariables(): void {
-    // Extract variables from template
-    const variables = this.template.match(/{{{(\w+)}}}/g) || [];
-
-    // Initialize collectors for each variable
-    variables.forEach((variable) => {
-      const name = variable.replace(/{{{|}}}/, '');
-      if (!this.variableDataCollector.has(name)) {
-        this.variableDataCollector.set(name, []);
-      }
-    });
-  }
-
-  private validateTemplate(template: string): void {
-    // Ensure required variables exist
-    const required = ['content'];
-    required.forEach((name) => {
-      if (!template.includes(`{{{${name}}}}`)) {
-        throw new Error(`Template must contain ${name} variable`);
-      }
-    });
-  }
-
   private resetCollectors(): void {
-    // Reset all collectors to empty arrays
+    // Preserve imports when resetting collectors
+    const imports = this.variableDataCollector.get('imports') || [];
+
+    // Reset all collectors
     for (const [name] of this.variableDataCollector) {
-      this.variableDataCollector.set(name, []);
+      this.variableDataCollector.set(name, name === 'imports' ? imports : []);
     }
   }
 
@@ -293,10 +328,12 @@ abstract class BaseRendererPlugin implements ProcessorChainNode {
       pageId: data.pageId,
       pageProperties: data.blockTree.properties,
       blockTree: data.blockTree.blocks,
-      metadata: {
-        ...this.context.metadata,
-        ...data.metadata,
-      },
+      metadata: new Map<string, any>([
+        ...Array.from(this.context.metadata.entries()),
+        ...(data.metadata
+          ? Array.from((data.metadata as Map<string, any>).entries())
+          : []),
+      ]),
     };
   }
 }

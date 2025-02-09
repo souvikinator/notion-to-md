@@ -19,7 +19,7 @@ import {
   MediaManifestManager,
   PageReferenceManifestManager,
 } from './utils/manifest-manager';
-// import { BaseRendererPlugin } from './core/renderer';
+import { BaseRendererPlugin } from './core/renderer';
 
 /**
  * Configuration interface for NotionConverter that is built up
@@ -31,7 +31,7 @@ interface NotionConverterConfig {
     config: DownloadStrategyConfig | UploadStrategyConfig;
   };
   pageRefConfig?: PageRefConfig;
-  // renderer?: BaseRendererPlugin;
+  renderer?: BaseRendererPlugin;
   exporters?: Array<NotionExporter<any>>;
   blockFetcherConfig?: BlockFetcherConfig;
 }
@@ -243,10 +243,10 @@ export class NotionConverter {
     }
 
     // Add renderer node if configured else fallback to default
-    // if (!this.config.renderer) {
-    //   console.debug('[NotionConverter] Using default markdown renderer');
-    //   this.config.renderer = new DefaultMarkdownRenderer();
-    // }
+    if (!this.config.renderer) {
+      console.debug('[NotionConverter] Using default markdown renderer');
+      this.config.renderer = new DefaultMarkdownRenderer();
+    }
 
     console.debug('[NotionConverter] Adding renderer to chain');
     current.next = this.config.renderer;
