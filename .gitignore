@@ -143,4 +143,4 @@ package-lock.json
 # misc
 demo.ts
 test.md
-test.json
+test.json.DS_Store
