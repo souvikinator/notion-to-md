@@ -32,10 +32,11 @@ export const link = (text: string, href: string) => {
 };
 
 export const codeBlock = (text: string, language?: string) => {
-  if (language === "plain text") language = "text";
-
-  return `\`\`\`${language}
-${text}
+  if (!text) return "";
+  // Ensure a valid language, default to "plaintext" if missing
+  const lang = language && language.trim() ? language.toLowerCase() : "plaintext";
+  return `\`\`\`${lang}
+${text.trim()}
 \`\`\``;
 };
 
