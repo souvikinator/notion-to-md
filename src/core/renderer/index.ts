@@ -16,18 +16,17 @@ import {
 } from '../../types';
 
 /**
- * Base class for renderer plugins that handles the core rendering logic
- * while providing a flexible API for creating custom renderers.
+ * Interface for renderer plugins in the Notion-to-MD system.
+ * Provides core framework for transforming Notion blocks into any desired output format.
  */
 export abstract class BaseRendererPlugin implements ProcessorChainNode {
   next?: ProcessorChainNode;
 
-  // Core template that defines document structure
+  /**
+   * Defines the document structure using variables in {{{variableName}}} format.
+   * Must include at least 'content' and 'imports' variables.
+   */
   protected abstract template: string;
-
-  // Registry for block transformers - now with better type inference
-  protected blockTransformers: Partial<Record<BlockType, BlockTransformer>> =
-    {};
 
   // Internal state
   private variableDataCollector: VariableCollector = new Map();
@@ -41,13 +40,13 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
     this.context = {
       pageId: '',
       pageProperties: {},
-      metadata: new Map(),
+      metadata: {},
       block: {} as ListBlockChildrenResponseResult,
       blockTree: [],
       variableData: this.variableDataCollector,
       transformers: {
         blocks: {} as Record<BlockType, BlockTransformer>,
-        annotations: this.defaultAnnotationTransformers,
+        annotations: {} as Record<string, AnnotationTransformer>,
       },
       utils: {
         processRichText: this.processRichText.bind(this),
@@ -66,7 +65,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
    * Adds custom metadata that will be available throughout rendering
    */
   public addMetadata(key: string, value: any): this {
-    this.context.metadata.set(key, value);
+    this.context.metadata[key] = value;
     return this;
   }
 
@@ -120,7 +119,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
     type: T,
     transformer: BlockTransformer,
   ): this {
-    this.blockTransformers[type] = transformer;
+    this.context.transformers.blocks[type] = transformer;
     return this;
   }
 
@@ -135,6 +134,29 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
         this.createBlockTransformer(type as BlockType, transformer);
       }
     }
+    return this;
+  }
+
+  /**
+   * Creates a single annotation transformer with proper type inference.
+   */
+  public createAnnotationTransformer(
+    name: string,
+    transformer: AnnotationTransformer,
+  ): this {
+    this.context.transformers.annotations[name] = transformer;
+    return this;
+  }
+
+  /**
+   * Creates multiple annotation transformers simultaneously.
+   */
+  public createAnnotationTransformers(
+    transformers: Record<string, AnnotationTransformer>,
+  ): this {
+    Object.entries(transformers).forEach(([name, transformer]) => {
+      this.createAnnotationTransformer(name, transformer);
+    });
     return this;
   }
 
@@ -164,6 +186,10 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
     }
   }
 
+  /**
+   * Core processing function that processes Notion rich text content.
+   * Applies registered annotation transformers in order.
+   */
   protected async processRichText(
     richText: RichTextItemResponse[],
     metadata?: ContextMetadata,
@@ -172,9 +198,10 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
       richText.map(async (item) => {
         let text = item.plain_text;
 
+        // Process each annotation that has a registered transformer
         for (const [name, value] of Object.entries(item.annotations)) {
-          if (value && this.defaultAnnotationTransformers[name]) {
-            text = await this.defaultAnnotationTransformers[name].transform({
+          if (value && this.context.transformers.annotations[name]) {
+            text = await this.context.transformers.annotations[name].transform({
               text,
               annotations: item.annotations,
               metadata,
@@ -189,6 +216,9 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
     return results.join('');
   }
 
+  /**
+   * Processes a block's child blocks recursively.
+   */
   protected async processChildren(
     blocks: ListBlockChildrenResponseResults,
     metadata?: ContextMetadata,
@@ -200,19 +230,16 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
     return results.filter(Boolean).join('\n');
   }
 
-  private defaultAnnotationTransformers: Record<string, AnnotationTransformer> =
-    {
-      bold: { transform: async ({ text }) => `**${text}**` },
-      italic: { transform: async ({ text }) => `*${text}*` },
-      code: { transform: async ({ text }) => `\`${text}\`` },
-    };
-
+  /**
+   * Processes an individual block using registered transformers.
+   * Handles import collection and variable targeting.
+   */
   protected async processBlock(
     block: ListBlockChildrenResponseResult,
     metadata?: ContextMetadata,
   ): Promise<string> {
     // @ts-ignore
-    const transformer = this.blockTransformers[block.type];
+    const transformer = this.context.transformers.blocks[block.type];
     if (!transformer) return '';
 
     try {
@@ -220,10 +247,10 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
       const blockContext: RendererContext = {
         ...this.context,
         block,
-        metadata: new Map([
-          ...Array.from(this.context.metadata.entries()),
-          ...(metadata ? Array.from(metadata.entries()) : []),
-        ]),
+        metadata: {
+          ...this.context.metadata,
+          ...metadata,
+        },
       };
 
       // Process the block
@@ -253,15 +280,24 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
     }
   }
 
+  /**
+   * Initializes the required 'content' and 'imports' variables.
+   * Sets up default resolver for 'imports' variable.
+   */
   private initializeDefaultVariables(): void {
     // Initialize required variables with default resolvers
-    this.addVariable('imports', async (_, context) => {
-      const imports = context.variableData.get('imports') || [];
-      return imports.join('\n');
-    });
-
-    this.addVariable('content');
+    this.addVariable('imports', this.defaultResolver);
+    this.addVariable('content', this.defaultResolver);
   }
+
+  /**
+   * Default resolver for variables without custom resolvers.
+   * Joins collected content with newlines.
+   */
+  private defaultResolver: VariableResolver = async (variableName, context) => {
+    const collected = context.variableData.get(variableName) || [];
+    return collected.join('\n');
+  };
 
   private initializeTemplateVariables(): void {
     const variables = this.template.match(/{{{(\w+)}}}/g) || [];
@@ -280,6 +316,9 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
     });
   }
 
+  /**
+   * Adds content to a variable's collector, creating it if needed.
+   */
   private addToCollector(variable: string, content: string): void {
     // Ensure the collector exists
     if (!this.variableDataCollector.has(variable)) {
@@ -291,6 +330,10 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
     collector.push(content);
   }
 
+  /**
+   * Resolves variables using their registered resolvers or default resolver.
+   * Replaces {{{variableName}}} in template with resolved content.
+   */
   private async renderTemplate(): Promise<string> {
     const resolvedVariables: Record<string, string> = {};
 
@@ -307,11 +350,10 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
     );
   }
 
-  private defaultResolver: VariableResolver = async (variableName, context) => {
-    const collected = context.variableData.get(variableName) || [];
-    return collected.join('\n');
-  };
-
+  /**
+   * Resets all variable collectors while preserving imports.
+   * Called at the start of each processing cycle.
+   */
   private resetCollectors(): void {
     // Preserve imports when resetting collectors
     const imports = this.variableDataCollector.get('imports') || [];
@@ -328,12 +370,10 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
       pageId: data.pageId,
       pageProperties: data.blockTree.properties,
       blockTree: data.blockTree.blocks,
-      metadata: new Map<string, any>([
-        ...Array.from(this.context.metadata.entries()),
-        ...(data.metadata
-          ? Array.from((data.metadata as Map<string, any>).entries())
-          : []),
-      ]),
+      metadata: {
+        ...this.context.metadata,
+        ...data.metadata,
+      },
     };
   }
 }

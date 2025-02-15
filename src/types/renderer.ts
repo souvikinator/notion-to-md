@@ -6,7 +6,7 @@ import {
   BlockType,
 } from './notion';
 
-export type ContextMetadata = Map<string, any>;
+export type ContextMetadata = Record<string, any>;
 
 export type VariableNames = 'imports' | 'content' | string;
 export type VariableCollector = Map<VariableNames, string[]>;
