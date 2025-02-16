@@ -20,6 +20,7 @@ import {
   PageReferenceManifestManager,
 } from './utils/manifest-manager';
 import { BaseRendererPlugin } from './core/renderer';
+import { MDXRenderer } from './core/renderer/default/mdx';
 
 /**
  * Configuration interface for NotionConverter that is built up
@@ -245,7 +246,7 @@ export class NotionConverter {
     // Add renderer node if configured else fallback to default
     if (!this.config.renderer) {
       console.debug('[NotionConverter] Using default markdown renderer');
-      this.config.renderer = new DefaultMarkdownRenderer();
+      this.config.renderer = new MDXRenderer(); // without frontmatter or anything
     }
 
     console.debug('[NotionConverter] Adding renderer to chain');
