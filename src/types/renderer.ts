@@ -1,9 +1,10 @@
-import { RichTextItemResponse } from '@notionhq/client/build/src/api-endpoints';
 import {
   PageProperties,
   ListBlockChildrenResponseResult,
   ListBlockChildrenResponseResults,
   BlockType,
+  RichTextAnnotation,
+  RichTextItem,
 } from './notion';
 
 export type ContextMetadata = Record<string, any>;
@@ -14,8 +15,6 @@ export type VariableResolvers = Map<VariableNames, VariableResolver>;
 export interface VariableResolver {
   (variableName: VariableNames, context: RendererContext): Promise<string>;
 }
-
-export type RichTextAnnotation = RichTextItemResponse['annotations'];
 
 interface AnnotationContext {
   text: string;
@@ -40,7 +39,7 @@ export interface RendererContext {
   utils: {
     // Helper functions
     processRichText: (
-      richText: RichTextItemResponse[],
+      richText: RichTextItem[],
       metadata?: ContextMetadata,
     ) => Promise<string>;
 

@@ -48,6 +48,7 @@
   "devDependencies": {
     "@types/download": "^8.0.5",
     "@types/jest": "^27.4.1",
+    "@types/mime": "^3.0.0",
     "@types/mime-types": "^2.1.4",
     "@typescript-eslint/eslint-plugin": "^8.23.0",
     "@typescript-eslint/parser": "^8.24.0",
@@ -63,7 +64,7 @@
   },
   "dependencies": {
     "@notionhq/client": "^2.2.15",
-    "mime-types": "^2.1.35",
+    "mime": "^3.0.0",
     "node-fetch": "^2.7.0",
     "notion-to-md": "^3.1.4"
   }

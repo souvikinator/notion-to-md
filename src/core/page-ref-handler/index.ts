@@ -206,63 +206,22 @@ export class PageReferenceHandler implements ProcessorChainNode {
   ): void {
     try {
       if (!('type' in block)) {
-        throw new PageReferenceHandlerError('Invalid block');
+        throw new PageReferenceHandlerError('Invalid block structure');
       }
 
-      // Handle both link_to_page and child_page blocks
+      // Handle direct page references
       if (
-        (block.type === 'link_to_page' &&
-          block.link_to_page?.type === 'page_id') ||
-        block.type === 'child_page'
+        block.type === 'link_to_page' &&
+        block.link_to_page?.type === 'page_id'
       ) {
-        // Get the page ID based on block type
-        const pageId =
-          // @ts-ignore
-          block.type === 'link_to_page' ? block.link_to_page.page_id : block.id;
-
-        // Get the display text (empty for link_to_page, title for child_page)
-        const displayText =
-          block.type === 'child_page' ? block.child_page.title : '';
-
-        // Clear out the original properties
-        if (block.type === 'link_to_page') {
-          //@ts-ignore
-          delete block.link_to_page;
-        } else {
-          //@ts-ignore
-          delete block.child_page;
-        }
-
-        // Convert to paragraph with mention
-        //@ts-ignore
-        block.type = 'paragraph';
-        //@ts-ignore
-        block.paragraph = {
-          rich_text: [
-            {
-              type: 'mention',
-              mention: {
-                type: 'page',
-                page: {
-                  id: pageId,
-                },
-              },
-              href: url,
-              plain_text: displayText,
-              annotations: {
-                bold: false,
-                italic: false,
-                strikethrough: false,
-                underline: false,
-                code: false,
-                color: 'default',
-              },
-            },
-          ],
-          color: 'default',
-        };
-      } else {
-        // Handle other mentions as before
+        //@ts-ignore - url doesn't exist in block, we are forcefully a
+        block.link_to_page.url = url;
+      } else if (block.type === 'child_page') {
+        //@ts-ignore - Add URL to child page block
+        block.child_page.url = url;
+      }
+      // Handle mentions within rich text
+      else {
         const blockContent = block[block.type as keyof typeof block];
         if (
           blockContent &&

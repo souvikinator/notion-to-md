@@ -26,7 +26,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
    * Defines the document structure using variables in {{{variableName}}} format.
    * Must include at least 'content' and 'imports' variables.
    */
-  protected abstract template: string;
+  protected template: string = `{{{imports}}}\n{{{content}}}`;
 
   // Internal state
   private variableDataCollector: VariableCollector = new Map();
@@ -58,6 +58,22 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
     this.initializeDefaultVariables();
 
     // Initialize additional variables from template
+    this.validateAndInitializeTemplate();
+  }
+
+  private validateAndInitializeTemplate(): void {
+    // First validate the template exists
+    if (!this.template) {
+      throw new Error('Template must be defined');
+    }
+
+    // Reuse existing validation method
+    this.validateTemplate(this.template);
+
+    // Initialize default variables first - these are required
+    this.initializeDefaultVariables();
+
+    // Then initialize template-specific variables
     this.initializeTemplateVariables();
   }
 
