@@ -246,7 +246,7 @@ export class NotionConverter {
     // Add renderer node if configured else fallback to default
     if (!this.config.renderer) {
       console.debug('[NotionConverter] Using default markdown renderer');
-      this.config.renderer = new MDXRenderer(); // without frontmatter or anything
+      this.config.renderer = new MDXRenderer(); // without frontmatter
     }
 
     console.debug('[NotionConverter] Adding renderer to chain');

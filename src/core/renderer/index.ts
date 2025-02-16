@@ -53,17 +53,24 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
         processChildren: this.processChildren.bind(this),
       },
     };
+    console.debug('[BaseRendererPlugin] Context initialized');
 
     // Initialize required variables
     this.initializeDefaultVariables();
 
     // Initialize additional variables from template
     this.validateAndInitializeTemplate();
+    console.debug(
+      '[BaseRendererPlugin] Renderer plugin initialization complete',
+    );
   }
 
   private validateAndInitializeTemplate(): void {
+    console.debug('[BaseRendererPlugin] Validating and initializing template');
+
     // First validate the template exists
     if (!this.template) {
+      console.debug('[BaseRendererPlugin] Template not defined');
       throw new Error('Template must be defined');
     }
 
@@ -75,6 +82,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
 
     // Then initialize template-specific variables
     this.initializeTemplateVariables();
+    console.debug('[BaseRendererPlugin] Template initialization complete');
   }
 
   /**
@@ -89,14 +97,20 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
    * Adds a new variable with an optional custom resolver
    */
   public addVariable(name: string, resolver?: VariableResolver): this {
+    console.debug(`[BaseRendererPlugin] Adding variable: ${name}`);
+
     // Create collector if it doesn't exist
     if (!this.variableDataCollector.has(name)) {
       this.variableDataCollector.set(name, []);
+      console.debug(`[BaseRendererPlugin] Created new collector for: ${name}`);
     }
 
     // Register resolver if provided
     if (resolver) {
       this.variableResolvers.set(name, resolver);
+      console.debug(
+        `[BaseRendererPlugin] Registered custom resolver for: ${name}`,
+      );
     }
 
     return this;
@@ -180,22 +194,34 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
    * Main processing method that orchestrates the rendering pipeline
    */
   public async process(data: ChainData): Promise<ChainData> {
+    console.debug('[BaseRendererPlugin] Starting rendering process', {
+      pageId: data.pageId,
+      blockCount: data.blockTree.blocks.length,
+    });
+
     try {
       this.updateContext(data);
       this.resetCollectors();
 
       // Process all blocks
+      console.debug('[BaseRendererPlugin] Processing blocks');
       for (const block of data.blockTree.blocks) {
         await this.processBlock(block);
       }
 
       const content = await this.renderTemplate();
+      console.debug(
+        '[BaseRendererPlugin] Rendering process completed successfully',
+      );
 
-      return {
+      data = {
         ...data,
         content,
       };
+
+      return this.next ? this.next.process(data) : data;
     } catch (error) {
+      console.debug('[BaseRendererPlugin] Error during rendering:', error);
       throw new Error(
         `Renderer failed: ${error instanceof Error ? error.message : String(error)}`,
       );
@@ -255,8 +281,18 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
     metadata?: ContextMetadata,
   ): Promise<string> {
     // @ts-ignore
-    const transformer = this.context.transformers.blocks[block.type];
-    if (!transformer) return '';
+    const blockType = block.type;
+    console.debug(
+      `[BaseRendererPlugin] Processing block of type: ${blockType}`,
+    );
+
+    const transformer = this.context.transformers.blocks[blockType];
+    if (!transformer) {
+      console.debug(
+        `[BaseRendererPlugin] No transformer found for type: ${blockType}`,
+      );
+      return '';
+    }
 
     try {
       // Create context for this block transformation
@@ -271,25 +307,32 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
 
       // Process the block
       const output = await transformer.transform(blockContext);
+      console.debug(
+        `[BaseRendererPlugin] Successfully transformed block: ${blockType}`,
+      );
 
-      // Add imports only when this transformer is actually used
+      // Handle imports
       if (transformer.imports?.length) {
+        console.debug(`[BaseRendererPlugin] Adding imports for ${blockType}`);
         this.addImports(...transformer.imports);
       }
 
-      // Handle target variable - default to 'content' if not specified
+      // Handle variable targeting
       const targetVariable = transformer.targetVariable || 'content';
-
-      // Ensure target variable exists in collector
       if (!this.variableDataCollector.has(targetVariable)) {
+        console.debug(
+          `[BaseRendererPlugin] Creating new collector for target: ${targetVariable}`,
+        );
         this.addVariable(targetVariable);
       }
 
-      // Add output to appropriate variable collector
       this.addToCollector(targetVariable, output);
-
       return output;
     } catch (error) {
+      console.debug(
+        `[BaseRendererPlugin] Error processing block ${blockType}:`,
+        error,
+      );
       throw new Error(
         `Failed to process block: ${error instanceof Error ? error.message : String(error)}`,
       );
@@ -301,9 +344,10 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
    * Sets up default resolver for 'imports' variable.
    */
   private initializeDefaultVariables(): void {
-    // Initialize required variables with default resolvers
+    console.debug('[BaseRendererPlugin] Initializing default variables');
     this.addVariable('imports', this.defaultResolver);
     this.addVariable('content', this.defaultResolver);
+    console.debug('[BaseRendererPlugin] Default variables initialized');
   }
 
   /**
@@ -351,15 +395,20 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
    * Replaces {{{variableName}}} in template with resolved content.
    */
   private async renderTemplate(): Promise<string> {
+    console.debug('[BaseRendererPlugin] Starting template rendering');
     const resolvedVariables: Record<string, string> = {};
 
     for (const [name, collector] of this.variableDataCollector.entries()) {
+      console.debug(`[BaseRendererPlugin] Resolving variable: ${name}`);
       const resolver = this.variableResolvers.get(name) || this.defaultResolver;
       resolvedVariables[name] = await resolver(name, {
         ...this.context,
       });
     }
 
+    console.debug(
+      '[BaseRendererPlugin] Template variables resolved, applying to template',
+    );
     return this.template.replace(
       /{{{(\w+)}}}/g,
       (_, name) => resolvedVariables[name] || '',
