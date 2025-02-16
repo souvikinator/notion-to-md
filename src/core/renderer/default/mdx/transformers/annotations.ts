@@ -20,4 +20,9 @@ export const annotationTransformers: Record<string, AnnotationTransformer> = {
   underline: {
     transform: async ({ text }) => `<u>${text}</u>`,
   },
+
+  link: {
+    transform: async ({ text, link }) =>
+      link?.url ? `[${text}](${link.url})` : text,
+  },
 };

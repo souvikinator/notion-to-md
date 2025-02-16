@@ -239,7 +239,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
     const results = await Promise.all(
       richText.map(async (item) => {
         let text = item.plain_text;
-
+        let link = item.href;
         // Process each annotation that has a registered transformer
         for (const [name, value] of Object.entries(item.annotations)) {
           if (value && this.context.transformers.annotations[name]) {
@@ -249,6 +249,14 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
               metadata,
             });
           }
+        }
+
+        // Apply link transformation last if exists
+        if (item.href) {
+          text = await this.context.transformers.annotations.link.transform({
+            text,
+            link: link ? { url: link } : undefined,
+          });
         }
 
         return text;

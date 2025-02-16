@@ -1,4 +1,4 @@
-import { Client } from "@notionhq/client";
+import { Client } from '@notionhq/client';
 import {
   ListBlockChildrenResponseResult,
   PageObjectProperties,
@@ -8,8 +8,8 @@ import {
   ExtendedFetcherOutput,
   ProcessorChainNode,
   ChainData,
-} from "../../types";
-import { isMediaBlock, isPageRefBlock } from "../../utils/notion";
+} from '../../types';
+import { isMediaBlock, isPageRefBlock } from '../../utils/notion';
 
 export interface BlockFetcherConfig {
   fetchPageProperties?: boolean;
@@ -21,7 +21,7 @@ export interface BlockFetcherConfig {
 }
 
 interface QueueTask {
-  type: "fetch_properties" | "fetch_comments" | "fetch_blocks";
+  type: 'fetch_properties' | 'fetch_comments' | 'fetch_blocks';
   id: string;
   parentId?: string;
 }
@@ -34,7 +34,7 @@ export class BlockFetcher implements ProcessorChainNode {
   private processedTasks = new Set<string>();
   private pageProperties?: PageObjectProperties;
   private rootComments: CommentResponseResults = [];
-  private rootBlockId: string = "";
+  private rootBlockId: string = '';
   private mediaBlocks: ListBlockChildrenResponseResult[] = [];
   private pageRefBlocks: ListBlockChildrenResponseResult[] = [];
 
@@ -53,7 +53,7 @@ export class BlockFetcher implements ProcessorChainNode {
       batchSize: 3,
     },
   ) {
-    const moduleType = "BlockFetcher";
+    const moduleType = 'BlockFetcher';
     this.config.maxRequestsPerSecond = config.maxRequestsPerSecond ?? 3;
     this.config.batchSize = config.batchSize ?? 3;
   }
@@ -78,14 +78,14 @@ export class BlockFetcher implements ProcessorChainNode {
     this.rootComments = [];
 
     // Initialize queue with root level tasks
-    this.addTask({ type: "fetch_blocks", id: pageId });
+    this.addTask({ type: 'fetch_blocks', id: pageId });
 
     if (this.config.fetchPageProperties) {
-      this.addTask({ type: "fetch_properties", id: pageId });
+      this.addTask({ type: 'fetch_properties', id: pageId });
     }
 
     if (this.config.fetchComments) {
-      this.addTask({ type: "fetch_comments", id: pageId });
+      this.addTask({ type: 'fetch_comments', id: pageId });
     }
 
     // Process queue until empty
@@ -126,7 +126,7 @@ export class BlockFetcher implements ProcessorChainNode {
     if (this.processedTasks.has(taskId)) return;
 
     switch (task.type) {
-      case "fetch_blocks": {
+      case 'fetch_blocks': {
         const blocks = await this.fetchBlockChildren(task.id);
 
         for (const block of blocks) {
@@ -148,9 +148,9 @@ export class BlockFetcher implements ProcessorChainNode {
           }
 
           // If block has children, queue task to fetch them
-          if ("has_children" in block && block.has_children) {
+          if ('has_children' in block && block.has_children) {
             this.addTask({
-              type: "fetch_blocks",
+              type: 'fetch_blocks',
               id: block.id,
               parentId: task.id,
             });
@@ -160,7 +160,7 @@ export class BlockFetcher implements ProcessorChainNode {
           // extra api call for comment fetching, no way to know otherwise
           if (this.config.fetchComments) {
             this.addTask({
-              type: "fetch_comments",
+              type: 'fetch_comments',
               id: block.id,
             });
           }
@@ -168,7 +168,7 @@ export class BlockFetcher implements ProcessorChainNode {
         break;
       }
 
-      case "fetch_comments": {
+      case 'fetch_comments': {
         const comments = await this.fetchAllComments(task.id);
         if (task.id === this.rootBlockId) {
           // page level comments
@@ -182,7 +182,7 @@ export class BlockFetcher implements ProcessorChainNode {
         break;
       }
 
-      case "fetch_properties": {
+      case 'fetch_properties': {
         const properties = await this.fetchPageProperties(task.id);
         this.pageProperties = properties;
         break;
@@ -236,7 +236,7 @@ export class BlockFetcher implements ProcessorChainNode {
       // Filter out unsupported blocks
       // should we leave it here or let user handle it in renderer?
       const blocks = response.results.filter(
-        (block) => "type" in block && block.type !== "unsupported",
+        (block) => 'type' in block && block.type !== 'unsupported',
       ) as ListBlockChildrenResponseResults;
 
       allBlocks = [...allBlocks, ...blocks];
@@ -277,11 +277,11 @@ export class BlockFetcher implements ProcessorChainNode {
       this.client.pages.retrieve({ page_id: pageId }),
     );
 
-    return "properties" in response ? response.properties : {};
+    return 'properties' in response ? response.properties : {};
   }
 
   private normalizeId(id: string): string {
-    return id.replace(/-/g, "");
+    return id.replace(/-/g, '');
   }
 
   private buildBlockTree(rootId: string): ListBlockChildrenResponseResults {
@@ -290,11 +290,11 @@ export class BlockFetcher implements ProcessorChainNode {
     for (const [id, block] of this.blocks.entries()) {
       const parentId =
         // @ts-ignore
-        block.parent?.type === "block_id"
+        block.parent?.type === 'block_id'
           ? // @ts-ignore
             this.normalizeId(block.parent.block_id)
           : // @ts-ignore
-            block.parent?.type === "page_id"
+            block.parent?.type === 'page_id'
             ? // @ts-ignore
               this.normalizeId(block.parent.page_id)
             : undefined;

@@ -18,7 +18,10 @@ export interface VariableResolver {
 
 interface AnnotationContext {
   text: string;
-  annotations: RichTextAnnotation;
+  annotations?: RichTextAnnotation;
+  link?: {
+    url: string;
+  };
   metadata?: ContextMetadata;
 }
 
