@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Welcome to Doks on My Docs</title>
+    <link>http://localhost:1313/</link>
+    <description>Recent content in Welcome to Doks on My Docs</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <copyright>Copyright (c) 2020-2024 Thulite</copyright>
+    <lastBuildDate>Tue, 27 Feb 2024 09:30:56 +0100</lastBuildDate>
+    <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Example Post</title>
+      <link>http://localhost:1313/blog/example-post/</link>
+      <pubDate>Thu, 07 Sep 2023 16:27:22 +0200</pubDate>
+      <guid>http://localhost:1313/blog/example-post/</guid>
+      <description>You can use blog posts for announcing product updates and features.</description>
+    </item>
+    <item>
+      <title>Example Guide</title>
+      <link>http://localhost:1313/docs/guides/example-guide/</link>
+      <pubDate>Thu, 07 Sep 2023 16:04:48 +0200</pubDate>
+      <guid>http://localhost:1313/docs/guides/example-guide/</guid>
+      <description>&lt;p&gt;Guides lead a user through a specific task they want to accomplish, often with a sequence of steps. Writing a good guide requires thinking about what your users are trying to do.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Example Reference</title>
+      <link>http://localhost:1313/docs/reference/example-reference/</link>
+      <pubDate>Thu, 07 Sep 2023 16:13:18 +0200</pubDate>
+      <guid>http://localhost:1313/docs/reference/example-reference/</guid>
+      <description>&lt;p&gt;Reference pages are ideal for outlining how things work in terse and clear terms. Less concerned with telling a story or addressing a specific use case, they should give a comprehensive outline of what your documenting.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Resources</title>
+      <link>http://localhost:1313/docs/resources/</link>
+      <pubDate>Tue, 27 Feb 2024 09:30:56 +0100</pubDate>
+      <guid>http://localhost:1313/docs/resources/</guid>
+      <description>&lt;p&gt;Link to valuable, relevant resources.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Privacy Policy</title>
+      <link>http://localhost:1313/privacy/</link>
+      <pubDate>Thu, 07 Sep 2023 17:19:07 +0200</pubDate>
+      <guid>http://localhost:1313/privacy/</guid>
+      <description></description>
+    </item>
+  </channel>
+</rss>

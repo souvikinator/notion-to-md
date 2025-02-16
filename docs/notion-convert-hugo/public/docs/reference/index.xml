@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Reference on My Docs</title>
+    <link>http://localhost:1313/docs/reference/</link>
+    <description>Recent content in Reference on My Docs</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <copyright>Copyright (c) 2020-2024 Thulite</copyright>
+    <lastBuildDate>Thu, 07 Sep 2023 16:13:18 +0200</lastBuildDate>
+    <atom:link href="http://localhost:1313/docs/reference/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Example Reference</title>
+      <link>http://localhost:1313/docs/reference/example-reference/</link>
+      <pubDate>Thu, 07 Sep 2023 16:13:18 +0200</pubDate>
+      <guid>http://localhost:1313/docs/reference/example-reference/</guid>
+      <description>&lt;p&gt;Reference pages are ideal for outlining how things work in terse and clear terms. Less concerned with telling a story or addressing a specific use case, they should give a comprehensive outline of what your documenting.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

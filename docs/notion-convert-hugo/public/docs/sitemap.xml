@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  
+    <url>
+      <loc>http://localhost:1313/docs/guides/</loc>
+      <lastmod>2023-09-07T16:06:50+02:00</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.5</priority>
+    </url>
+    
+    <url>
+      <loc>http://localhost:1313/docs/reference/</loc>
+      <lastmod>2023-09-07T16:12:37+02:00</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.5</priority>
+    </url>
+    
+    <url>
+      <loc>http://localhost:1313/docs/resources/</loc>
+      <lastmod>2024-02-27T09:30:56+01:00</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>http://localhost:1313/docs/guides/example-guide/</loc>
+        <lastmod>2023-09-07T16:04:48+02:00</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.5</priority>
+      </url>
+      <url>
+        <loc>http://localhost:1313/docs/reference/example-reference/</loc>
+        <lastmod>2023-09-07T16:13:18+02:00</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.5</priority>
+      </url>
+      </urlset>

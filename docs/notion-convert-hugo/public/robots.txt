@@ -1,0 +1,3 @@
+User-agent: *
+Disallow: /admin/
+Sitemap: http://localhost:1313/sitemap.xml

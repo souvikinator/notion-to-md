@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Blog on My Docs</title>
+    <link>http://localhost:1313/blog/</link>
+    <description>Recent content in Blog on My Docs</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <copyright>Copyright (c) 2020-2024 Thulite</copyright>
+    <lastBuildDate>Thu, 07 Sep 2023 16:27:22 +0200</lastBuildDate>
+    <atom:link href="http://localhost:1313/blog/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Example Post</title>
+      <link>http://localhost:1313/blog/example-post/</link>
+      <pubDate>Thu, 07 Sep 2023 16:27:22 +0200</pubDate>
+      <guid>http://localhost:1313/blog/example-post/</guid>
+      <description>You can use blog posts for announcing product updates and features.</description>
+    </item>
+  </channel>
+</rss>

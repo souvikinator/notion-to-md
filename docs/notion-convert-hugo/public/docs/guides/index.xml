@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Guides on My Docs</title>
+    <link>http://localhost:1313/docs/guides/</link>
+    <description>Recent content in Guides on My Docs</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <copyright>Copyright (c) 2020-2024 Thulite</copyright>
+    <lastBuildDate>Thu, 07 Sep 2023 16:04:48 +0200</lastBuildDate>
+    <atom:link href="http://localhost:1313/docs/guides/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Example Guide</title>
+      <link>http://localhost:1313/docs/guides/example-guide/</link>
+      <pubDate>Thu, 07 Sep 2023 16:04:48 +0200</pubDate>
+      <guid>http://localhost:1313/docs/guides/example-guide/</guid>
+      <description>&lt;p&gt;Guides lead a user through a specific task they want to accomplish, often with a sequence of steps. Writing a good guide requires thinking about what your users are trying to do.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>
