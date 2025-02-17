@@ -9,9 +9,9 @@ export function isPageRefBlock(
   block: ListBlockChildrenResponseResult,
 ): boolean {
   //@ts-ignore - Check for page mentions in paragraphs
-  if (block.type === 'paragraph') {
-    // @ts-ignore
-    const hasPageMention = block.paragraph.rich_text.some(
+  if (block.type && block[block.type].rich_text) {
+    // @ts-ignore - Check for mentions in rich text for any block
+    const hasPageMention = block[block.type].rich_text.some(
       (text: any) => text.type === 'mention' && text.mention?.type === 'page',
     );
     if (hasPageMention) return true;

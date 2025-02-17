@@ -122,7 +122,7 @@ export class PageReferenceHandler implements ProcessorChainNode {
   ): Promise<void> {
     try {
       const pageId = this.extractPageId(block);
-      if (!pageId || this.processedRefs.has(pageId)) return;
+      if (!pageId) return;
 
       console.debug('[PageRefHandler] Processing reference:', pageId);
       const entry = this.manifestManager.getEntry(pageId);
@@ -132,6 +132,7 @@ export class PageReferenceHandler implements ProcessorChainNode {
       }
 
       const transformedUrl = this.transformUrl(entry.url);
+      console.log({ transformedUrl });
       this.updateBlockContent(block, transformedUrl);
       this.processedRefs.add(pageId);
     } catch (error) {
@@ -152,13 +153,8 @@ export class PageReferenceHandler implements ProcessorChainNode {
       return block.link_to_page.page_id;
     }
 
-    const richTextBlocks = [
-      'paragraph',
-      'bulleted_list_item',
-      'numbered_list_item',
-      'quote',
-    ];
-    if ('type' in block && richTextBlocks.includes(block.type)) {
+    // @ts-ignore
+    if ('type' in block && block[block.type] && block[block.type].rich_text) {
       // @ts-ignore
       const richText = block[block.type].rich_text;
       for (const text of richText) {
@@ -208,31 +204,29 @@ export class PageReferenceHandler implements ProcessorChainNode {
       if (!('type' in block)) {
         throw new PageReferenceHandlerError('Invalid block structure');
       }
-
+      console.log('@@@@ ', block.type);
       // Handle direct page references
       if (
         block.type === 'link_to_page' &&
         block.link_to_page?.type === 'page_id'
       ) {
-        //@ts-ignore - url doesn't exist in block, we are forcefully a
+        //@ts-ignore - url doesn't exist in block, we are forcefully adding one
         block.link_to_page.url = url;
       } else if (block.type === 'child_page') {
         //@ts-ignore - Add URL to child page block
         block.child_page.url = url;
-      }
-      // Handle mentions within rich text
-      else {
+      } else {
+        // Handle mentions
         const blockContent = block[block.type as keyof typeof block];
-        if (
-          blockContent &&
-          typeof blockContent === 'object' &&
-          'rich_text' in blockContent
-        ) {
+        // @ts-ignore
+        if (blockContent && 'rich_text' in blockContent) {
+          console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
           for (const text of blockContent.rich_text) {
             if (text.type === 'mention' && text.mention?.type === 'page') {
               text.href = url;
             }
           }
+          console.log(JSON.stringify(blockContent, null, 2));
         }
       }
     } catch (error) {
