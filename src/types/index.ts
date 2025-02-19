@@ -94,6 +94,7 @@ export type Annotations = {
     | "purple"
     | "pink"
     | "red"
+    | "default_background"
     | "gray_background"
     | "brown_background"
     | "orange_background"
@@ -139,6 +140,7 @@ export type CalloutIcon =
   | { type: "emoji"; emoji?: string }
   | { type: "external"; external?: { url: string } }
   | { type: "file"; file: { url: string; expiry_time: string } }
+  | { type: "custom_emoji"; custom_emoji: { id: string; name: string; url: string } }
   | null;
 
 export type CustomTransformer = (
