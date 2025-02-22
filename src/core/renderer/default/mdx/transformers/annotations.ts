@@ -1,6 +1,9 @@
-import { AnnotationTransformer } from '../../../../../types';
+import { AnnotationTransformer, AnnotationType } from '../../../../../types';
 
-export const annotationTransformers: Record<string, AnnotationTransformer> = {
+export const annotationTransformers: Record<
+  AnnotationType,
+  AnnotationTransformer
+> = {
   bold: {
     transform: async ({ text }) => `**${text}**`,
   },
@@ -24,5 +27,11 @@ export const annotationTransformers: Record<string, AnnotationTransformer> = {
   link: {
     transform: async ({ text, link }) =>
       link?.url ? `[${text}](${link.url})` : text,
+  },
+
+  equation: {
+    transform: async ({ text }) => {
+      return `$${text}$`;
+    },
   },
 };

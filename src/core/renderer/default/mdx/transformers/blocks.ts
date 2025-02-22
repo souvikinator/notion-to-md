@@ -3,177 +3,233 @@ import { BlockTransformer, BlockType } from '../../../../../types';
 export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
   paragraph: {
     transform: async ({ block, utils }) => {
-      // @ts-ignore
+      //@ts-ignore Just process this block's content
       const text = await utils.processRichText(block.paragraph.rich_text);
 
-      // Process any child blocks (for nested content)
-      const children = block.children
-        ? await utils.processChildren(block.children)
-        : '';
+      // If block has no content, return empty string
+      if (!text) return '';
 
-      return text ? `${text}${children ? `\n${children}` : ''}\n` : '\n';
+      //@ts-ignore Add a newline only for top-level paragraphs
+      const needsNewline = block.parent.type === 'page_id';
+      return text + (needsNewline ? '\n' : '');
     },
   },
 
   heading_1: {
     transform: async ({ block, utils }) => {
+      // Get the heading text content
       // @ts-ignore
-      const text = await utils.processRichText(block.heading_1.rich_text);
-      // @ts-ignore
-      const isToggle = block.heading_1.is_toggleable;
+      const headingBlock = block.heading_1;
+      const text = await utils.processRichText(headingBlock.rich_text);
+      const isToggle = headingBlock.is_toggleable;
 
+      // For regular headings, return simple markdown
       if (!isToggle) {
         return `# ${text}\n\n`;
       }
 
-      // Handle toggle heading with children
-      const children = block.children
-        ? await utils.processChildren(block.children)
-        : '';
+      // For toggleable headings, we process children directly
+      // This ensures proper content building from bottom up
+      const childrenContent = block.children?.length
+        ? await Promise.all(
+            block.children.map((child) => utils.processBlock(child)),
+          )
+        : [];
 
+      // Build the complete toggle structure with the heading
       return `<details>
-<summary><h1>${text}</h1></summary>
+  <summary><h1>${text}</h1></summary>
 
-${children}
-</details>\n\n`;
+  ${childrenContent.join('\n')}
+  </details>\n`;
     },
   },
 
   heading_2: {
     transform: async ({ block, utils }) => {
+      // Process heading content
       // @ts-ignore
-      const text = await utils.processRichText(block.heading_2.rich_text);
-      // @ts-ignore
-      const isToggle = block.heading_2.is_toggleable;
+      const headingBlock = block.heading_2;
+      const text = await utils.processRichText(headingBlock.rich_text);
+      const isToggle = headingBlock.is_toggleable;
 
+      // Regular heading case
       if (!isToggle) {
         return `## ${text}\n\n`;
       }
 
-      const children = block.children
-        ? await utils.processChildren(block.children)
-        : '';
+      // Handle toggleable heading with children
+      const childrenContent = block.children?.length
+        ? await Promise.all(
+            block.children.map((child) => utils.processBlock(child)),
+          )
+        : [];
 
+      // Create toggle structure with h2
       return `<details>
-<summary><h2>${text}</h2></summary>
+  <summary><h2>${text}</h2></summary>
 
-${children}
-</details>\n\n`;
+  ${childrenContent.join('\n')}
+  </details>\n`;
     },
   },
 
   heading_3: {
     transform: async ({ block, utils }) => {
+      // Get heading content
       // @ts-ignore
-      const text = await utils.processRichText(block.heading_3.rich_text);
-      // @ts-ignore
-      const isToggle = block.heading_3.is_toggleable;
+      const headingBlock = block.heading_3;
+      const text = await utils.processRichText(headingBlock.rich_text);
+      const isToggle = headingBlock.is_toggleable;
 
+      // Simple heading case
       if (!isToggle) {
         return `### ${text}\n\n`;
       }
 
-      const children = block.children
-        ? await utils.processChildren(block.children)
-        : '';
+      // Process children for toggleable heading
+      const childrenContent = block.children?.length
+        ? await Promise.all(
+            block.children.map((child) => utils.processBlock(child)),
+          )
+        : [];
 
+      // Build toggle with h3
       return `<details>
-<summary><h3>${text}</h3></summary>
+  <summary><h3>${text}</h3></summary>
 
-${children}
-</details>\n\n`;
+  ${childrenContent.join('\n')}
+  </details>\n`;
     },
   },
 
   bulleted_list_item: {
-    transform: async ({ block, utils, metadata }) => {
+    transform: async ({ block, utils, metadata = {} }) => {
+      // First, handle this block's own content
       const text = await utils.processRichText(
         // @ts-ignore
         block.bulleted_list_item.rich_text,
       );
+      const currentLevel = metadata.listLevel || 0;
+      const indent = '  '.repeat(currentLevel);
 
-      // Process nested items with increased indentation
-      const children = block.children
-        ? await utils.processChildren(block.children, { indent: '  ' })
-        : '';
+      // If no children, just return formatted content
+      if (!block.children?.length) {
+        return `${indent}- ${text}`;
+      }
 
-      // Apply indentation from parent context if it exists
-      const indent = metadata?.indent || '';
-      return `${indent}- ${text}${children ? `\n${children}` : ''}\n`;
+      // For blocks with children, we'll recursively handle them
+      const childMetadata = {
+        ...metadata,
+        listLevel: currentLevel + 1, // can be anything as per your use case
+      };
+
+      // Process each child block directly through processBlock
+      const childrenContent = await Promise.all(
+        block.children.map((childBlock) =>
+          utils.processBlock(childBlock, childMetadata),
+        ),
+      );
+
+      // Combine everything with proper formatting
+      return `${indent}- ${text}\n${childrenContent.join('\n')}\n`;
     },
   },
 
   numbered_list_item: {
-    transform: async ({ block, utils, metadata }) => {
+    transform: async ({ block, utils, metadata = {} }) => {
+      // Get the current nesting level
+      const currentLevel = metadata.listLevel || 0;
+
+      // The parent passes down the current number to its children
+      const currentNumber = metadata.currentNumber || 1;
+
+      // Create indentation based on level
+      const indent = '   '.repeat(currentLevel);
+
+      // Process the item's text content
       const text = await utils.processRichText(
         // @ts-ignore
         block.numbered_list_item.rich_text,
       );
 
-      // Get current nesting level and number
-      const level = metadata?.level || 0;
-      const numbers = metadata?.numbers || [0];
+      // Format this item with proper number
+      const formattedItem = `${indent}${currentNumber}. ${text}`;
 
-      // Increment number for current level
-      numbers[level] = (numbers[level] || 0) + 1;
+      // If no children, just return this item
+      if (!block.children?.length) {
+        return formattedItem;
+      }
 
-      // Process children with incremented level
-      const children = block.children
-        ? await utils.processChildren(block.children, {
-            level: level + 1,
-            numbers: [...numbers],
-            indent: '   '.repeat(level + 1),
-          })
-        : '';
+      // For items with children, process each child sequentially
+      // Each child starts with number 1 at its level
+      const childrenContent = [];
+      for (let i = 0; i < block.children.length; i++) {
+        const childContent = await utils.processBlock(block.children[i], {
+          ...metadata,
+          listLevel: currentLevel + 1,
+          currentNumber: i + 1, // Pass sequential numbers to siblings
+        });
+        childrenContent.push(childContent);
+      }
 
-      const indent = '   '.repeat(level);
-      return `${indent}${numbers[level]}. ${text}${children ? `\n${children}` : ''}\n`;
+      // Combine this item with its children
+      return `${formattedItem}\n${childrenContent.join('\n')}\n`;
     },
   },
 
   callout: {
-    transform: async ({ block, utils }) => {
+    transform: async ({ block, utils, metadata }) => {
       // @ts-ignore
       const text = await utils.processRichText(block.callout.rich_text);
       // @ts-ignore
       const icon = block.callout.icon?.emoji || '';
 
-      // Process any child blocks
-      const children = block.children
-        ? await utils.processChildren(block.children)
-        : '';
+      // Process children directly if they exist
+      const childrenContent = block.children?.length
+        ? await Promise.all(
+            block.children.map((child) => utils.processBlock(child, metadata)),
+          )
+        : [];
 
-      // Split into lines and format each as a quote
+      // Format the callout with its children
       const lines = text
         .split('\n')
         .map((line) => `> ${line}`)
         .join('\n');
+      const formattedChildren = childrenContent.length
+        ? '\n' +
+          childrenContent
+            .join('\n')
+            .split('\n')
+            .map((line) => `> ${line}`)
+            .join('\n')
+        : '';
 
-      return `> ${icon} ${lines}${
-        children
-          ? `\n${children
-              .split('\n')
-              .map((line) => `> ${line}`)
-              .join('\n')}`
-          : ''
-      }\n\n`;
+      return `> ${icon} ${lines}${formattedChildren}\n\n`;
     },
   },
 
   toggle: {
     transform: async ({ block, utils }) => {
-      // @ts-ignore
+      // @ts-ignore Process the toggle text
       const text = await utils.processRichText(block.toggle.rich_text);
 
-      const children = block.children
-        ? await utils.processChildren(block.children)
-        : '';
+      // If no children, return just a basic toggle
+      if (!block.children?.length) {
+        return `<details>\n<summary>${text}</summary>\n</details>\n\n`;
+      }
+
+      // Process children and include them in the toggle
+      const childrenContent = await Promise.all(
+        block.children.map((child) => utils.processBlock(child)),
+      );
 
       return `<details>
-<summary>${text}</summary>
+  <summary>${text}</summary>
 
-${children}
-</details>\n\n`;
+  ${childrenContent.join('\n')}
+  </details>\n\n`;
     },
   },
 
@@ -192,17 +248,29 @@ ${children}
       // @ts-ignore
       const text = await utils.processRichText(block.quote.rich_text);
 
-      // Handle multiline quotes
+      // Format main quote text
       const lines = text
         .split('\n')
         .map((line) => `> ${line}`)
         .join('\n');
 
-      const children = block.children
-        ? await utils.processChildren(block.children)
-        : '';
+      // If no children, return just the quote
+      if (!block.children?.length) {
+        return `${lines}\n\n`;
+      }
 
-      return `${lines}${children ? `\n${children}` : ''}\n\n`;
+      // Process and format children as part of the quote
+      const childrenContent = await Promise.all(
+        block.children.map((child) => utils.processBlock(child)),
+      );
+
+      const formattedChildren = childrenContent
+        .join('\n')
+        .split('\n')
+        .map((line) => `> ${line}`)
+        .join('\n');
+
+      return `${lines}\n${formattedChildren}\n\n`;
     },
   },
 
@@ -214,7 +282,7 @@ ${children}
         imageBlock.type === 'external'
           ? imageBlock.external.url
           : imageBlock.file.url;
-      // @ts-ignore
+
       const caption = imageBlock.caption
         ? await utils.processRichText(imageBlock.caption)
         : 'Image';
@@ -301,52 +369,58 @@ ${children}
 
   table: {
     transform: async ({ block, utils }) => {
-      // Early return if not a table block
-      if (!('table' in block)) return '';
+      if (!block.children?.length) return '';
 
-      // Check if we have header configuration
-      const hasColumnHeader = block.table?.has_column_header || false;
-      const hasRowHeader = block.table?.has_row_header || false;
-
-      // Early return if no children
-      if (!block.children || block.children.length === 0) return '';
-
-      // Process each row's cells
-      const rows = await Promise.all(
+      // First, process all rows to get their cell content
+      const processedRows = await Promise.all(
         block.children.map(async (row) => {
           // Ensure it's a table_row block
           if (!('table_row' in row)) return [];
 
           // Process each cell's rich text content
-          const cells = await Promise.all(
+          return Promise.all(
             row.table_row.cells.map(async (cell) => {
-              // Each cell is an array of rich text objects
-              const cellContent = await utils.processRichText(cell);
-              return cellContent.trim() || ' '; // Use space for empty cells
+              const content = await utils.processRichText(cell);
+              // Ensure empty cells have a space to maintain table structure
+              return content.trim() || ' ';
             }),
           );
-
-          return cells;
         }),
       );
 
-      // Build markdown table
+      // Start building the table
       let markdown = '';
 
-      // Handle header row
-      if (hasColumnHeader && rows.length > 0) {
-        const headerRow = rows[0];
+      // For column tables (first column is header) or tables with column headers
+      // We'll always create a header row
+      // @ts-ignore
+      if (block.table?.has_column_header || block.table?.has_row_header) {
+        // Use first row as header
+        const headerRow = processedRows[0];
         markdown += `| ${headerRow.join(' | ')} |\n`;
-        // Add separator row with correct number of columns
+        // Add separator row with the correct number of columns
         markdown += `| ${headerRow.map(() => '---').join(' | ')} |\n`;
-        // Remove header from data rows
-        rows.shift();
+        // Add remaining rows
+        processedRows.slice(1).forEach((row) => {
+          markdown += `| ${row.join(' | ')} |\n`;
+        });
+      } else {
+        // For tables without explicit headers, we'll create a generic header
+        // Get the number of columns from the first row
+        const columnCount = processedRows[0]?.length || 0;
+        // Create generic headers (Column 1, Column 2, etc.)
+        const headers = Array(columnCount)
+          .fill('')
+          .map((_, i) => `Column ${i + 1}`);
+        // Add header row
+        markdown += `| ${headers.join(' | ')} |\n`;
+        // Add separator row
+        markdown += `| ${headers.map(() => '---').join(' | ')} |\n`;
+        // Add all data rows
+        processedRows.forEach((row) => {
+          markdown += `| ${row.join(' | ')} |\n`;
+        });
       }
-
-      // Add data rows
-      rows.forEach((row) => {
-        markdown += `| ${row.join(' | ')} |\n`;
-      });
 
       return markdown + '\n';
     },
@@ -354,13 +428,31 @@ ${children}
 
   column_list: {
     transform: async ({ block, utils }) => {
-      return block.children ? await utils.processChildren(block.children) : '';
+      // Column lists are containers - they need their children processed
+      // but don't add any formatting themselves
+      if (!block.children?.length) return '';
+
+      const columnContent = await Promise.all(
+        block.children.map((child) => utils.processBlock(child)),
+      );
+
+      // Join columns with newlines to keep content separated
+      return columnContent.join('\n');
     },
   },
 
   column: {
     transform: async ({ block, utils }) => {
-      return block.children ? await utils.processChildren(block.children) : '';
+      // Similar to column_list, columns just process their children
+      // The main difference is these are individual columns
+      if (!block.children?.length) return '';
+
+      const content = await Promise.all(
+        block.children.map((child) => utils.processBlock(child)),
+      );
+
+      // Join column content, preserving block separation
+      return content.join('\n');
     },
   },
 
@@ -396,7 +488,27 @@ ${children}
 
   synced_block: {
     transform: async ({ block, utils }) => {
-      return block.children ? await utils.processChildren(block.children) : '';
+      // Synced blocks are interesting because they reference content
+      // that might appear elsewhere. We process their children directly.
+      if (!block.children?.length) return '';
+
+      // If this is a synced_from block (original content),
+      // process its children normally
+      // @ts-ignore
+      if (!block.synced_block.synced_from) {
+        const content = await Promise.all(
+          block.children.map((child) => utils.processBlock(child)),
+        );
+        return content.join('\n');
+      }
+
+      // For duplicate blocks (those synced to original),
+      // we could potentially handle them differently
+      // but for markdown output, we'll process them the same way
+      const content = await Promise.all(
+        block.children.map((child) => utils.processBlock(child)),
+      );
+      return content.join('\n');
     },
   },
 

@@ -1,27 +1,23 @@
 import { BaseRendererPlugin } from '../../index';
 import { blockTransformers } from './transformers/blocks';
 import { annotationTransformers } from './transformers/annotations';
-import { createDefaultResolvers } from './resolvers';
+import { createDefaultVariableResolvers } from './resolvers';
 
-interface FrontmatterConfig {
-  properties?: {
-    include?: string[];
-    exclude?: string[];
-    rename?: Record<string, string>;
-    defaults?: Record<string, any>;
-  };
+export interface FrontmatterConfig {
+  include?: string[];
+  exclude?: string[];
+  rename?: Record<string, string>;
+  defaults?: Record<string, any>;
 }
 
-interface MDXRendererConfig {
-  frontmatter?: FrontmatterConfig;
+export type FrontmatterOptions = boolean | FrontmatterConfig;
+
+export interface MDXRendererConfig {
+  frontmatter?: FrontmatterOptions;
 }
 
 export class MDXRenderer extends BaseRendererPlugin {
-  protected template = `{{{frontmatter}}}
-
-{{{imports}}}
-
-{{{content}}}`;
+  protected template = `{{{frontmatter}}}{{{imports}}}{{{content}}}`;
 
   constructor(config: MDXRendererConfig = {}) {
     super();
@@ -34,7 +30,7 @@ export class MDXRenderer extends BaseRendererPlugin {
     this.createAnnotationTransformers(annotationTransformers);
 
     // Initialize resolvers
-    const resolvers = createDefaultResolvers();
+    const resolvers = createDefaultVariableResolvers();
     Object.entries(resolvers).forEach(([name, resolver]) => {
       this.addVariable(name, resolver);
     });

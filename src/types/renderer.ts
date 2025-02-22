@@ -46,8 +46,8 @@ export interface RendererContext {
       metadata?: ContextMetadata,
     ) => Promise<string>;
 
-    processChildren: (
-      blocks: ListBlockChildrenResponseResults,
+    processBlock: (
+      block: ListBlockChildrenResponseResult,
       metadata?: ContextMetadata,
     ) => Promise<string>;
   };

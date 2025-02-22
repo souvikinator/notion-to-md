@@ -13,6 +13,7 @@ import {
   RendererContext,
   VariableCollector,
   VariableResolvers,
+  AnnotationType,
 } from '../../types';
 
 /**
@@ -46,11 +47,11 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
       variableData: this.variableDataCollector,
       transformers: {
         blocks: {} as Record<BlockType, BlockTransformer>,
-        annotations: {} as Record<string, AnnotationTransformer>,
+        annotations: {} as Record<AnnotationType, AnnotationTransformer>,
       },
       utils: {
         processRichText: this.processRichText.bind(this),
-        processChildren: this.processChildren.bind(this),
+        processBlock: this.processBlock.bind(this),
       },
     };
     console.debug('[BaseRendererPlugin] Context initialized');
@@ -251,8 +252,18 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
           }
         }
 
-        // Apply link transformation last if exists
-        if (item.href) {
+        // @ts-ignore
+        let equation = item.equation;
+        if (equation) {
+          text = await this.context.transformers.annotations.equation.transform(
+            {
+              text,
+            },
+          );
+        }
+
+        if (link) {
+          // Apply link transformation last if exists
           text = await this.context.transformers.annotations.link.transform({
             text,
             link: link ? { url: link } : undefined,
@@ -267,22 +278,25 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
   }
 
   /**
-   * Processes a block's child blocks recursively.
-   */
-  protected async processChildren(
-    blocks: ListBlockChildrenResponseResults,
-    metadata?: ContextMetadata,
-  ): Promise<string> {
-    const results = await Promise.all(
-      blocks.map((block) => this.processBlock(block, metadata)),
-    );
-
-    return results.filter(Boolean).join('\n');
-  }
-
-  /**
-   * Processes an individual block using registered transformers.
-   * Handles import collection and variable targeting.
+   * Processes a single Notion block by applying the appropriate transformer and managing its content.
+   *
+   * This method serves as a critical junction in the rendering pipeline, handling two key responsibilities:
+   * 1. Block Transformation: Converts a Notion block into the target format using registered transformers
+   * 2. Content Collection: Manages how transformed content enters the final output
+   *
+   * The method follows an important principle about content hierarchy:
+   * - Top-level blocks (those with parent.type === "page_id") are added to the variable collector
+   * - Nested blocks (those with parent.type === "block_id") return their content but don't add to collector
+   *
+   * This design ensures that nested content (like list items within a list) can be:
+   * - Transformed individually using their specific transformers
+   * - Assembled into larger structures by their parent blocks
+   * - Added to the final output only when the complete structure is ready
+   *
+   * For example, in a nested list:
+   * - Child items are transformed but not collected
+   * - The parent list assembles all children into the complete list structure
+   * - Only the complete list is added to the collector
    */
   protected async processBlock(
     block: ListBlockChildrenResponseResult,
@@ -334,7 +348,14 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
         this.addVariable(targetVariable);
       }
 
-      this.addToCollector(targetVariable, output);
+      // Only collect if this isn't a child block
+      // Note: Even top-level blocks are technically children of the page
+      // So we might want to handle this collection at a higher level
+      // @ts-ignore
+      if (block.parent.type === 'page_id') {
+        this.addToCollector(targetVariable, output);
+      }
+
       return output;
     } catch (error) {
       console.debug(

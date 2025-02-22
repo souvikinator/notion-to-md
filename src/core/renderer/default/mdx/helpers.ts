@@ -113,3 +113,9 @@ export function formatYamlValue(value: any): string {
   }
   return String(value);
 }
+
+export function formatFrontmatter(obj: Record<string, any>): string {
+  return `---\n${Object.entries(obj)
+    .map(([key, value]) => `${key}: ${formatYamlValue(value)}`)
+    .join('\n')}\n---\n\n`;
+}

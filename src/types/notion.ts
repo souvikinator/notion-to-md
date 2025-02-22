@@ -37,6 +37,16 @@ export type BlockType =
   | 'callout'
   | (string & {});
 
+export type AnnotationType =
+  | 'bold'
+  | 'italic'
+  | 'strikethrough'
+  | 'code'
+  | 'underline'
+  | 'link'
+  | 'equation'
+  | (string & {});
+
 export type BlockAttributes = {
   numbered_list_item?: {
     number?: number;
