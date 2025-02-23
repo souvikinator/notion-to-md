@@ -20,8 +20,12 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
       // Get the heading text content
       // @ts-ignore
       const headingBlock = block.heading_1;
-      const text = await utils.processRichText(headingBlock.rich_text);
       const isToggle = headingBlock.is_toggleable;
+      // since markdown doesn't get renderer in HTML, on toggle enabled
+      // we parse annotations as HTML
+      const text = await utils.processRichText(headingBlock.rich_text, {
+        html: isToggle,
+      });
 
       // For regular headings, return simple markdown
       if (!isToggle) {
@@ -37,11 +41,17 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
         : [];
 
       // Build the complete toggle structure with the heading
+      // we need to add a newline after the summary tag for the markdown to render
+      // cant' do the same for content inside summary tag since it adds a newline
+      // and the toggle looks ugly
       return `<details>
-  <summary><h1>${text}</h1></summary>
+  <summary>
+  <h1>${text}</h1>
+  </summary>
 
   ${childrenContent.join('\n')}
-  </details>\n`;
+
+</details>\n`;
     },
   },
 
@@ -50,8 +60,12 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
       // Process heading content
       // @ts-ignore
       const headingBlock = block.heading_2;
-      const text = await utils.processRichText(headingBlock.rich_text);
       const isToggle = headingBlock.is_toggleable;
+      // since markdown doesn't get renderer in HTML, on toggle enabled
+      // we parse annotations as HTML
+      const text = await utils.processRichText(headingBlock.rich_text, {
+        html: isToggle,
+      });
 
       // Regular heading case
       if (!isToggle) {
@@ -67,10 +81,13 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
 
       // Create toggle structure with h2
       return `<details>
-  <summary><h2>${text}</h2></summary>
+  <summary>
+  <h2>${text}</h2>
+  </summary>
 
   ${childrenContent.join('\n')}
-  </details>\n`;
+
+</details>\n`;
     },
   },
 
@@ -79,8 +96,12 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
       // Get heading content
       // @ts-ignore
       const headingBlock = block.heading_3;
-      const text = await utils.processRichText(headingBlock.rich_text);
       const isToggle = headingBlock.is_toggleable;
+      // since markdown doesn't get renderer in HTML, on toggle enabled
+      // we parse annotations as HTML
+      const text = await utils.processRichText(headingBlock.rich_text, {
+        html: isToggle,
+      });
 
       // Simple heading case
       if (!isToggle) {
@@ -96,10 +117,13 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
 
       // Build toggle with h3
       return `<details>
-  <summary><h3>${text}</h3></summary>
+  <summary>
+  <h3>${text}</h3>
+  </summary>
 
   ${childrenContent.join('\n')}
-  </details>\n`;
+
+</details>\n`;
     },
   },
 
@@ -250,11 +274,17 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
   toggle: {
     transform: async ({ block, utils }) => {
       // @ts-ignore Process the toggle text
-      const text = await utils.processRichText(block.toggle.rich_text);
+      const text = await utils.processRichText(block.toggle.rich_text, {
+        html: true, // since markdown doesn't get's renderer
+      });
 
       // If no children, return just a basic toggle
       if (!block.children?.length) {
-        return `<details>\n<summary>${text}</summary>\n</details>\n\n`;
+        return `<details>
+  <summary>
+  ${text}
+  </summary>
+</details>\n\n`;
       }
 
       // Process children and include them in the toggle
@@ -262,7 +292,14 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
         block.children.map((child) => utils.processBlock(child)),
       );
 
-      return `<details>\n<summary>${text}</summary>\n\n${childrenContent.join('\n')}\n\n</details>\n\n`;
+      return `<details>
+  <summary>
+  ${text}
+  </summary>
+
+  ${childrenContent.join('\n')}
+
+</details>\n\n`;
     },
   },
 
