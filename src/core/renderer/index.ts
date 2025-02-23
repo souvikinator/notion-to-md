@@ -258,6 +258,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
           text = await this.context.transformers.annotations.equation.transform(
             {
               text,
+              metadata,
             },
           );
         }
@@ -267,6 +268,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
           text = await this.context.transformers.annotations.link.transform({
             text,
             link: link ? { url: link } : undefined,
+            metadata,
           });
         }
 
