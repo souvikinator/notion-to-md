@@ -132,7 +132,6 @@ export class PageReferenceHandler implements ProcessorChainNode {
       }
 
       const transformedUrl = this.transformUrl(entry.url);
-      console.log({ transformedUrl });
       this.updateBlockContent(block, transformedUrl);
       this.processedRefs.add(pageId);
     } catch (error) {
@@ -204,7 +203,6 @@ export class PageReferenceHandler implements ProcessorChainNode {
       if (!('type' in block)) {
         throw new PageReferenceHandlerError('Invalid block structure');
       }
-      console.log('@@@@ ', block.type);
       // Handle direct page references
       if (
         block.type === 'link_to_page' &&
@@ -220,13 +218,11 @@ export class PageReferenceHandler implements ProcessorChainNode {
         const blockContent = block[block.type as keyof typeof block];
         // @ts-ignore
         if (blockContent && 'rich_text' in blockContent) {
-          console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
           for (const text of blockContent.rich_text) {
             if (text.type === 'mention' && text.mention?.type === 'page') {
               text.href = url;
             }
           }
-          console.log(JSON.stringify(blockContent, null, 2));
         }
       }
     } catch (error) {
