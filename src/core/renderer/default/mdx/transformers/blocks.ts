@@ -353,9 +353,10 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
           ? imageBlock.external.url
           : imageBlock.file.url;
 
-      const caption = imageBlock.caption
-        ? await utils.processRichText(imageBlock.caption)
-        : 'Image';
+      const caption =
+        imageBlock.caption.length > 0
+          ? await utils.processRichText(imageBlock.caption)
+          : 'Image';
 
       return `![${caption}](${url})\n\n`;
     },
@@ -370,11 +371,12 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
           ? videoBlock.external.url
           : videoBlock.file.url;
 
-      const caption = videoBlock.caption
-        ? await utils.processRichText(videoBlock.caption)
-        : 'Video';
+      const caption =
+        videoBlock.caption.length > 0
+          ? await utils.processRichText(videoBlock.caption)
+          : 'Video';
 
-      return `[📺 ${caption}](${url})\n\n`;
+      return `[${caption}](${url})\n\n`;
     },
   },
 
@@ -387,11 +389,12 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
           ? fileBlock.external.url
           : fileBlock.file.url;
 
-      const caption = fileBlock.caption
-        ? await utils.processRichText(fileBlock.caption)
-        : fileBlock.name || 'File';
+      const caption =
+        fileBlock.caption.length > 0
+          ? await utils.processRichText(fileBlock.caption)
+          : fileBlock.name || 'File';
 
-      return `[📎 ${caption}](${url})\n\n`;
+      return `[${caption}](${url})\n\n`;
     },
   },
 
@@ -404,11 +407,12 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
           ? pdfBlock.external.url
           : pdfBlock.file.url;
 
-      const caption = pdfBlock.caption
-        ? await utils.processRichText(pdfBlock.caption)
-        : 'PDF Document';
+      const caption =
+        pdfBlock.caption.length > 0
+          ? await utils.processRichText(pdfBlock.caption)
+          : 'PDF Document';
 
-      return `[📄 ${caption}](${url})\n\n`;
+      return `[${caption}](${url})\n\n`;
     },
   },
 
@@ -417,11 +421,26 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
       // @ts-ignore
       const bookmarkBlock = block.bookmark;
       const url = bookmarkBlock.url;
-      const caption = bookmarkBlock.caption
-        ? await utils.processRichText(bookmarkBlock.caption)
-        : url;
+      const caption =
+        bookmarkBlock.caption.length > 0
+          ? await utils.processRichText(bookmarkBlock.caption)
+          : url;
+      return `[${caption}](${url})\n\n`;
+    },
+  },
 
-      return `[🔖 ${caption}](${url})\n\n`;
+  embed: {
+    transform: async ({ block, utils }) => {
+      // @ts-ignore
+      const embedBlock = block.embed;
+      const url = embedBlock.url;
+
+      const caption =
+        embedBlock.caption.length > 0
+          ? await utils.processRichText(embedBlock.caption)
+          : url;
+
+      return `[${caption}](${url})\n\n`;
     },
   },
 
@@ -551,8 +570,8 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
   child_database: {
     transform: async ({ block }) => {
       // @ts-ignore
-      const title = block.child_database.title;
-      return `[🗄️ ${title}](${block.id})\n\n`;
+      const title = block.child_database.title | 'child database';
+      return `[${title}](${block.id})\n\n`;
     },
   },
 
@@ -579,14 +598,6 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
         block.children.map((child) => utils.processBlock(child)),
       );
       return content.join('\n');
-    },
-  },
-
-  template: {
-    transform: async ({ block, utils }) => {
-      // @ts-ignore
-      const text = await utils.processRichText(block.template.rich_text);
-      return `${text}\n\n`;
     },
   },
 
