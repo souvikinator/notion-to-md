@@ -215,34 +215,35 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
   },
 
   callout: {
-    transform: async ({ block, utils, metadata }) => {
+    transform: async ({ block, utils }) => {
       // @ts-ignore
-      const text = await utils.processRichText(block.callout.rich_text);
-      // @ts-ignore
-      const icon = block.callout.icon?.emoji || '';
+      const calloutBlock = block.callout;
+      const text = await utils.processRichText(calloutBlock.rich_text);
+      const icon = calloutBlock.icon?.emoji || '';
 
-      // Process children directly if they exist
+      // Process any children
       const childrenContent = block.children?.length
         ? await Promise.all(
-            block.children.map((child) => utils.processBlock(child, metadata)),
+            block.children.map((child) => utils.processBlock(child)),
           )
         : [];
 
-      // Format the callout with its children
+      // Format the main content
       const lines = text
         .split('\n')
         .map((line) => `> ${line}`)
         .join('\n');
+
+      // Format children content
       const formattedChildren = childrenContent.length
-        ? '\n' +
-          childrenContent
+        ? childrenContent
             .join('\n')
             .split('\n')
             .map((line) => `> ${line}`)
             .join('\n')
         : '';
 
-      return `> ${icon} ${lines}${formattedChildren}\n\n`;
+      return `> ${icon} ${text}${formattedChildren ? `\n${formattedChildren}` : ''}\n\n`;
     },
   },
 
@@ -261,11 +262,7 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
         block.children.map((child) => utils.processBlock(child)),
       );
 
-      return `<details>
-  <summary>${text}</summary>
-
-  ${childrenContent.join('\n')}
-  </details>\n\n`;
+      return `<details>\n<summary>${text}</summary>\n\n${childrenContent.join('\n')}\n\n</details>\n\n`;
     },
   },
 
