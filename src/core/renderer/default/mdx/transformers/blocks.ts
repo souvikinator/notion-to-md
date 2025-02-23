@@ -178,6 +178,42 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
     },
   },
 
+  to_do: {
+    transform: async ({ block, utils, metadata = {} }) => {
+      // Get current nesting level for indentation
+      const currentLevel = metadata.listLevel || 0;
+      const indent = '  '.repeat(currentLevel);
+      // @ts-ignore
+      const todoBlock = block.to_do;
+
+      const text = await utils.processRichText(todoBlock.rich_text);
+
+      // Determine checkbox state - checked or unchecked
+      const checkbox = todoBlock.checked ? 'x' : ' ';
+
+      // Format the todo item with proper indentation and checkbox
+      const formattedItem = `${indent}- [${checkbox}] ${text}`;
+
+      // If this todo item has no children, return just the item
+      if (!block.children?.length) {
+        return formattedItem;
+      }
+
+      // For todo items with children, process each child
+      // maintaining the proper hierarchy
+      const childrenContent = await Promise.all(
+        block.children.map((child) =>
+          utils.processBlock(child, {
+            ...metadata,
+            listLevel: currentLevel + 1,
+          }),
+        ),
+      );
+
+      return `${formattedItem}\n${childrenContent.join('\n')}\n`;
+    },
+  },
+
   callout: {
     transform: async ({ block, utils, metadata }) => {
       // @ts-ignore
