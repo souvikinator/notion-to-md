@@ -1,4 +1,4 @@
-import { ExtendedFetcherOutput } from "./notion";
+import { ExtendedFetcherOutput } from './notion';
 
 export interface ChainData {
   pageId: string;
@@ -14,6 +14,11 @@ export interface ProcessorChainNode {
   process(data: ChainData): Promise<ChainData>;
 }
 
+// The interface that all exporters must implement
+export interface NotionExporter<TConfig = unknown> {
+  export(data: ChainData): Promise<void>;
+}
+
 /**
  * Types for exporters
  */
@@ -26,11 +31,6 @@ export class ExporterError extends Error {
     public readonly details?: unknown,
   ) {
     super(message);
-    this.name = "ExporterError";
+    this.name = 'ExporterError';
   }
-}
-
-// The interface that all exporters must implement
-export interface NotionExporter<TConfig = unknown> {
-  export(data: ChainData): Promise<void>;
 }
