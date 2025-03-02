@@ -1,4 +1,4 @@
-baseURL: https://notionconvert.com/
+baseURL: https://notionconvert.com/notion-to-md
 languageCode: en-us
 title: Notion To MD
 module:
@@ -20,10 +20,10 @@ params:
     displayTitle: true
     displayLogo: true
     logo:
-      path: images/logo.svg
-      dark: images/logo-dark.svg
-      # width: 40
-      # height: 20
+      path: logo/notion-to-md-logo.png
+      dark: logo/notion-to-md-logo.png
+      width: 20
+      height: 20
       # link: /
     width: wide
 
