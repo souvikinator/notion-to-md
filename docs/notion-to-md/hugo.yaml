@@ -1,6 +1,8 @@
-baseURL: https://notiontomd.notionconvert.com/
+baseURL: https://notionconvert.com/notion-to-md/
 languageCode: en-us
 title: Notion To MD
+relativeURLs: true
+canonifyURLs: false
 module:
   imports:
     - path: github.com/imfing/hextra
