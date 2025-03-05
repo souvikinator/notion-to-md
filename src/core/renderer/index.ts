@@ -24,13 +24,13 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
   next?: ProcessorChainNode;
 
   // Class-level constants for required variables
-  private static readonly DEFAULT_VARIABLES = ['content'] as const;
+  private static readonly DEFAULT_VARIABLES = ['content', 'imports'] as const;
 
   /**
    * Defines the document structure using variables in {{{variableName}}} format.
    * Must include at least 'content' and 'imports' variables.
    */
-  protected template: string = `{{{content}}}`;
+  protected template: string = `{{{imports}}}\n{{{content}}}`;
 
   // Internal state
   private variableDataCollector: VariableCollector = new Map();
