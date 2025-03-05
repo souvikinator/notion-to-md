@@ -23,11 +23,14 @@ import {
 export abstract class BaseRendererPlugin implements ProcessorChainNode {
   next?: ProcessorChainNode;
 
+  // Class-level constants for required variables
+  private static readonly DEFAULT_VARIABLES = ['content'] as const;
+
   /**
    * Defines the document structure using variables in {{{variableName}}} format.
    * Must include at least 'content' and 'imports' variables.
    */
-  protected template: string = `{{{imports}}}\n{{{content}}}`;
+  protected template: string = `{{{content}}}`;
 
   // Internal state
   private variableDataCollector: VariableCollector = new Map();
@@ -376,8 +379,9 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
    */
   private initializeDefaultVariables(): void {
     console.debug('[BaseRendererPlugin] Initializing default variables');
-    this.addVariable('imports', this.defaultResolver);
-    this.addVariable('content', this.defaultResolver);
+    BaseRendererPlugin.DEFAULT_VARIABLES.forEach((variable) => {
+      this.addVariable(variable, this.defaultResolver);
+    });
     console.debug('[BaseRendererPlugin] Default variables initialized');
   }
 
@@ -399,8 +403,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
   }
 
   private validateTemplate(template: string): void {
-    const required = ['content', 'imports'];
-    required.forEach((name) => {
+    BaseRendererPlugin.DEFAULT_VARIABLES.forEach((name) => {
       if (!template.includes(`{{{${name}}}}`)) {
         throw new Error(`Template must contain ${name} variable`);
       }
@@ -451,10 +454,9 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
    * Called at the start of each processing cycle.
    */
   private resetCollectors(): void {
-    // Preserve imports when resetting collectors
+    // Reset all collectors while preserving imports
     const imports = this.variableDataCollector.get('imports') || [];
 
-    // Reset all collectors
     for (const [name] of this.variableDataCollector) {
       this.variableDataCollector.set(name, name === 'imports' ? imports : []);
     }
