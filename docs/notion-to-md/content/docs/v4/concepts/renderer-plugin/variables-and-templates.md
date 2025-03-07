@@ -1,7 +1,7 @@
 ---
 title: "Variables and Templates"
 description: "Understanding the variables and templates and how they go together to enable to go beyond markdown"
-weight: 1
+weight: 2
 ---
 
 ### 1. Template
@@ -139,7 +139,7 @@ Variables collect content throughout the rendering process, but before being use
 
 ##### What is a Variable Resolver?
 - It's a function that takes collected content and formats it for final output
-- It receives the full rendering context and returns a formatted string
+- It receives the full [rendering context](/notion-to-md/docs/v4/concepts/context) and returns a formatted string
 
 Variables can work in two ways:
 1. As collectors that gather content during rendering and then the resolver formats it for final output in the template.

@@ -113,7 +113,7 @@ This architecture provides a consistent interface while allowing for complete cu
 
 ## Data Context
 
-Throughout the rendering process, components have access to a comprehensive context object:
+Throughout the rendering process, components have access to a comprehensive [context object](/notion-to-md/docs/v4/concepts/context):
 
 ```typescript
 interface RendererContext {

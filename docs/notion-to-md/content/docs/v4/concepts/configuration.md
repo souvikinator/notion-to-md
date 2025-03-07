@@ -149,7 +149,7 @@ The Page Reference handler manages links between Notion pages, ensuring they wor
 You are required to provide URL where the page will be live once published. That will be used as reference for page links.
 
 {{< callout type="info" >}}
-Read more about [how to use page reference utility](/docs/v4/guides/create-custom-renderers).
+Read more about [how to use page reference builder utility](/notion-to-md/docs/v4/concepts/page-reference-handler).
 {{< /callout >}}
 
 ```typescript
@@ -184,7 +184,7 @@ const n2m = new NotionConverter(notionClient)
 Renderers determine the output format of the conversion. notion-to-md v4 includes a default MDX renderer, but you can create custom renderers for any format.
 
 {{< callout type="info" >}}
-Read more about [how to create custom renderers](/docs/v4/guides/create-custom-renderers).
+Read more about [how to create custom renderer from scratch](/notion-to-md/docs/v4/guides/how-to-create-renderer-from-scratch).
 {{< /callout >}}
 
 ### MDX Renderer Configuration
@@ -326,12 +326,3 @@ interface PageReferenceEntry {
   lastUpdated: string;         // When the reference was last updated
 }
 ```
-
-For more detailed information about these configuration options, see the specific guides for each component:
-
-- [Block Fetcher](/docs/concepts/block-fetcher)
-- [Media Handling](/docs/concepts/media-handler)
-- [Page Reference Handler](/docs/concepts/page-reference-handler)
-- [Plugins](/docs/concepts/plugins)
-- [Renderer plugin](/docs/concepts/renderers-plugin)
-- [Exporter plugin](/docs/concepts/exporters-plugin)

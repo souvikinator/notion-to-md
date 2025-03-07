@@ -1,7 +1,7 @@
 ---
 title: "Block Transformers"
 description: "Understanding the block transformer and the possibilities it offers"
-weight: 2
+weight: 3
 ---
 
 Block transformers handle the conversion of specific Notion block types into your target format. Each transformer should focus on a single block type and returns corresponding output in string.
@@ -109,7 +109,7 @@ protected blockTransformers = {
 
 ##### Complex Block with Multiple Variables
 
-Sometimes a block might need to contribute to multiple variables. You can handle this by using the context's utility methods:
+Sometimes a block might need to contribute to multiple variables. You can handle this by using the [context's utility methods](/notion-to-md/docs/v4/concepts/context):
 
 ```typescript
 protected blockTransformers = {

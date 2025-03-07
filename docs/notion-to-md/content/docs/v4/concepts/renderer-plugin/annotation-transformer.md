@@ -1,7 +1,7 @@
 ---
 title: "Annotation Transformers"
 description: "Understanding the annotation transformer and the possibilities it offers"
-weight: 3
+weight: 4
 ---
 
 Annotation transformers handle text styling and formatting within blocks. They work at the character level, handling things like bold, italic, code, etc.

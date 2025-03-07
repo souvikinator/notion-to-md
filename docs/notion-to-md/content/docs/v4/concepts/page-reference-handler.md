@@ -73,7 +73,7 @@ await n2m.convert('your-page-id');
 
 If you have a large Notion workspace with many interconnected pages, you should pre-build the entire manifest first:
 
-**Using the Page Reference Manifest Utility**
+##### Page reference builder
 
 notion-to-md provides a utility specifically designed for building a complete reference manifest at a go provided each page has the specified property:
 
@@ -83,7 +83,6 @@ import { PageReferenceManifestBuilder } from 'notion-to-md/utils';
 // Create a builder instance
 const builder = new PageReferenceManifestBuilder(notionClient, {
   urlPropertyNameNotion: 'slug',  // The name of your Notion property
-  recursive: true,                // Process all linked pages
   baseUrl: 'https://example.com'  // Your site's base URL
 });
 
@@ -128,7 +127,6 @@ import { PageReferenceManifestBuilder } from 'notion-to-md/utils';
 // First, build a comprehensive page reference manifest
 const builder = new PageReferenceManifestBuilder(notionClient, {
   urlPropertyNameNotion: 'slug',
-  recursive: true,  // Process all linked pages
   baseUrl: 'https://example.com/docs'
 });
 

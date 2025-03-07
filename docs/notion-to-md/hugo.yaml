@@ -68,8 +68,8 @@ menu:
     - name: Blog
       pageRef: /blog
       weight: 2
-    - name: Plugins
-      pageRef: /plugins
+    - name: Catalogue
+      pageRef: /catalogue
       weight: 3
     - name: Search
       weight: 4
