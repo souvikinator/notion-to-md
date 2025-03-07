@@ -1,4 +1,4 @@
-import { BlockTransformer, BlockType } from '../../../../../types';
+import { BlockTransformer, BlockType } from '../../../../types';
 
 export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
   paragraph: {

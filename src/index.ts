@@ -20,7 +20,7 @@ import {
   PageReferenceManifestManager,
 } from './utils/manifest-manager';
 import { BaseRendererPlugin } from './core/renderer';
-import { MDXRenderer } from './core/renderer/default/mdx';
+import { MDXRenderer } from './plugins/renderer/mdx';
 
 /**
  * Configuration interface for NotionConverter that is built up

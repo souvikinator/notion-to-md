@@ -1,5 +1,5 @@
 import { FrontmatterConfig } from '.';
-import { VariableResolver } from '../../../../types';
+import { VariableResolver } from '../../../types';
 import {
   extractPropertyValue,
   formatFrontmatter,

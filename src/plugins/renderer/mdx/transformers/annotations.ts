@@ -1,4 +1,4 @@
-import { AnnotationTransformer, AnnotationType } from '../../../../../types';
+import { AnnotationTransformer, AnnotationType } from '../../../../types';
 
 export const annotationTransformers: Record<
   AnnotationType,

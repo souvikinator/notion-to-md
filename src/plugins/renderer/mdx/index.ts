@@ -1,4 +1,4 @@
-import { BaseRendererPlugin } from '../../index';
+import { BaseRendererPlugin } from '../../../core/renderer/index';
 import { blockTransformers } from './transformers/blocks';
 import { annotationTransformers } from './transformers/annotations';
 import { createDefaultVariableResolvers } from './resolvers';
