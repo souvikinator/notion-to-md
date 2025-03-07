@@ -1,4 +1,3 @@
-import { ListBlockChildrenResponseResult } from "notion-to-md/build/types";
 import {
   MediaStrategy,
   UploadStrategyConfig,
@@ -6,18 +5,19 @@ import {
   MediaStrategyType,
   MediaManifestEntry,
   MediaProcessingError,
-} from "../../../types";
-import { isExternalUrl } from "../../../utils/url";
+  ListBlockChildrenResponseResult,
+} from '../../../types';
+import { isExternalUrl } from '../../../utils/url';
 
 export class UploadStrategy implements MediaStrategy {
   constructor(private config: UploadStrategyConfig) {
     // Constructor validation always throws as it's a configuration error
     if (!config.uploadHandler) {
       throw new MediaProcessingError(
-        "Configuration Error",
-        "constructor",
-        "initialization",
-        new Error("uploadHandler is required for UploadStrategy"),
+        'Configuration Error',
+        'constructor',
+        'initialization',
+        new Error('uploadHandler is required for UploadStrategy'),
       );
     }
 
@@ -31,10 +31,10 @@ export class UploadStrategy implements MediaStrategy {
     // Handle missing URL
     if (!url) {
       const error = new MediaProcessingError(
-        "No media URL found in block",
+        'No media URL found in block',
         block.id,
-        "process",
-        new Error("URL extraction failed"),
+        'process',
+        new Error('URL extraction failed'),
       );
 
       if (!this.config.failForward) {
@@ -44,8 +44,8 @@ export class UploadStrategy implements MediaStrategy {
       console.error(error);
       return {
         type: MediaStrategyType.DIRECT,
-        originalUrl: "",
-        transformedUrl: "",
+        originalUrl: '',
+        transformedUrl: '',
       };
     }
 
@@ -65,10 +65,10 @@ export class UploadStrategy implements MediaStrategy {
       // Handle failed upload (handler returns falsy value)
       if (!uploadedUrl) {
         const error = new MediaProcessingError(
-          "Upload handler returned invalid URL",
+          'Upload handler returned invalid URL',
           block.id,
-          "process",
-          new Error("Upload failed"),
+          'process',
+          new Error('Upload failed'),
         );
 
         if (!this.config.failForward) {
@@ -98,9 +98,9 @@ export class UploadStrategy implements MediaStrategy {
       return mediaInfo;
     } catch (error) {
       const processingError = new MediaProcessingError(
-        "Failed to upload media",
+        'Failed to upload media',
         block.id,
-        "process",
+        'process',
         error,
       );
 
@@ -126,10 +126,10 @@ export class UploadStrategy implements MediaStrategy {
     // Validate uploaded URL
     if (!mediaInfo.uploadedUrl) {
       const error = new MediaProcessingError(
-        "Missing uploaded URL",
-        "unknown",
-        "transform",
-        new Error("Uploaded URL required for transformation"),
+        'Missing uploaded URL',
+        'unknown',
+        'transform',
+        new Error('Uploaded URL required for transformation'),
       );
 
       if (!this.config.failForward) {
@@ -149,9 +149,9 @@ export class UploadStrategy implements MediaStrategy {
       return mediaInfo.uploadedUrl;
     } catch (error) {
       const processingError = new MediaProcessingError(
-        "Failed to transform URL",
-        "unknown",
-        "transform",
+        'Failed to transform URL',
+        'unknown',
+        'transform',
         error,
       );
 
@@ -175,9 +175,9 @@ export class UploadStrategy implements MediaStrategy {
         await this.config.cleanupHandler(entry);
       } catch (error) {
         const processingError = new MediaProcessingError(
-          "Failed to cleanup uploaded file",
+          'Failed to cleanup uploaded file',
           entry.mediaInfo.originalUrl,
-          "cleanup",
+          'cleanup',
           error,
         );
         console.error(processingError);
@@ -189,12 +189,12 @@ export class UploadStrategy implements MediaStrategy {
     block: ListBlockChildrenResponseResult,
   ): string | null {
     try {
-      if (!block || !("type" in block)) {
+      if (!block || !('type' in block)) {
         return null;
       }
 
       // @ts-ignore
-      if (!["image", "video", "file", "pdf"].includes(block.type)) {
+      if (!['image', 'video', 'file', 'pdf'].includes(block.type)) {
         return null;
       }
 
@@ -205,7 +205,7 @@ export class UploadStrategy implements MediaStrategy {
         return null;
       }
 
-      return mediaBlock.type === "external"
+      return mediaBlock.type === 'external'
         ? mediaBlock.external?.url
         : mediaBlock.file?.url;
     } catch {

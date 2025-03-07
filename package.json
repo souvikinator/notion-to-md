@@ -1,6 +1,6 @@
 {
   "name": "notion-to-md",
-  "version": "4.0.0-alpha.1",
+  "version": "4.0.0-alpha.2",
   "engines": {
     "node": ">=12"
   },
@@ -65,7 +65,6 @@
   "dependencies": {
     "@notionhq/client": "^2.2.15",
     "mime": "^3.0.0",
-    "node-fetch": "^2.7.0",
-    "notion-to-md": "^3.1.4"
+    "node-fetch": "^2.7.0"
   }
 }
