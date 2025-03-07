@@ -34,7 +34,8 @@ export const link = (text: string, href: string) => {
 export const codeBlock = (text: string, language?: string) => {
   if (!text) return "";
   // Ensure a valid language, default to "plaintext" if missing
-  const lang = language && language.trim() ? language.toLowerCase() : "plaintext";
+  const lang =
+    language && language.trim() ? language.toLowerCase() : "plaintext";
   return `\`\`\`${lang}
 ${text.trim()}
 \`\`\``;
@@ -120,7 +121,7 @@ export const image = async (
 };
 
 export const addTabSpace = (text: string, n = 0) => {
-  const tab = "	";
+  const tab = "    ";
   for (let i = 0; i < n; i++) {
     if (text.includes("\n")) {
       const multiLineText = text.split(/(?:^|\n)/).join(`\n${tab}`);
