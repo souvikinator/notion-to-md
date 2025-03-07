@@ -1,11 +1,10 @@
-import { Client } from "@notionhq/client";
-import { PageReferenceManifestManager } from "../../utils/manifest-manager";
-import { PageReferenceEntryType } from "../../types";
-import { PageReferenceHandlerError } from "../../core/errors";
+import { Client } from '@notionhq/client';
+import { PageReferenceManifestManager } from '../../utils/manifest-manager';
+import { PageReferenceEntryType } from '../../types';
+import { PageReferenceHandlerError } from '../../core/errors';
 
 interface PageRefBuilderConfig {
   urlPropertyNameNotion: string;
-  recursive: boolean;
   concurrency?: number;
   baseUrl?: string;
 }
@@ -40,13 +39,13 @@ export class PageReferenceManifestBuilder {
       }
 
       await this.manifestManager.save();
-      console.info("Manifest build completed successfully");
+      console.info('Manifest build completed successfully');
     } catch (error) {
       console.error(
         `Build failed: ${error instanceof Error ? error.message : String(error)}`,
       );
       throw new PageReferenceHandlerError(
-        "Failed to build manifest",
+        'Failed to build manifest',
         error instanceof Error ? error : undefined,
       );
     }
@@ -97,7 +96,7 @@ export class PageReferenceManifestBuilder {
 
         const databaseBlocks = response.results.filter(
           // @ts-ignore
-          (block) => block.type === "child_database",
+          (block) => block.type === 'child_database',
         );
 
         console.debug(
@@ -153,17 +152,17 @@ export class PageReferenceManifestBuilder {
 
     let url: string | null = null;
 
-    if ("url" in urlProperty) {
+    if ('url' in urlProperty) {
       url = urlProperty.url;
     } else if (
-      "rich_text" in urlProperty &&
+      'rich_text' in urlProperty &&
       Array.isArray(urlProperty.rich_text) &&
       urlProperty.rich_text.length > 0
     ) {
       url = urlProperty.rich_text[0]?.plain_text;
     }
 
-    if (!url?.startsWith("http") && this.config.baseUrl) {
+    if (!url?.startsWith('http') && this.config.baseUrl) {
       url = `${this.config.baseUrl}${url}`;
     }
     return url;
