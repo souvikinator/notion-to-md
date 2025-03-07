@@ -91,6 +91,13 @@ export class PageReferenceHandler implements ProcessorChainNode {
         this.pageProperties[this.config.UrlPropertyNameNotion];
       let url: string | null = null;
 
+      if (!urlProperty) {
+        console.debug(
+          '[PageRefHandler] Skipping property handling - no url property',
+        );
+        return;
+      }
+
       if ('url' in urlProperty) {
         url = urlProperty.url;
       } else if (

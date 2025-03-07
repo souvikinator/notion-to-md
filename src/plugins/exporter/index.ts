@@ -63,6 +63,15 @@ export class DefaultExporter implements NotionExporter<DefaultExporterConfig> {
       throw new Error('outputPath is required for file output type');
     }
 
+    // Get the directory path from the full file path
+    const dirPath = path.dirname(this.config.outputPath);
+
+    // Create all parent directories if they don't exist
+    await fs.mkdir(dirPath, { recursive: true });
+
+    // Write the file
+    await fs.writeFile(this.config.outputPath, content, 'utf-8');
+
     try {
       await fs.writeFile(this.config.outputPath, content, 'utf-8');
     } catch (error) {
