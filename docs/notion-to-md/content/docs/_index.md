@@ -1,6 +1,6 @@
 ---
 title: Documentation
-url: /docs/v4
+url: /docs
 cascade:
   type: docs
 ---
