@@ -1,5 +1,7 @@
 import { BlockTransformer, BlockType } from '../../../../types';
 
+const INDENT = '    '; // 4 whitespace = tab space (keeping it consistent)
+
 export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
   paragraph: {
     transform: async ({ block, utils }) => {
@@ -135,7 +137,7 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
         block.bulleted_list_item.rich_text,
       );
       const currentLevel = metadata.listLevel || 0;
-      const indent = '  '.repeat(currentLevel);
+      const indent = INDENT.repeat(currentLevel);
 
       // If no children, just return formatted content
       if (!block.children?.length) {
@@ -169,7 +171,7 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
       const currentNumber = metadata.currentNumber || 1;
 
       // Create indentation based on level
-      const indent = '   '.repeat(currentLevel);
+      const indent = INDENT.repeat(currentLevel);
 
       // Process the item's text content
       const text = await utils.processRichText(
@@ -206,7 +208,7 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
     transform: async ({ block, utils, metadata = {} }) => {
       // Get current nesting level for indentation
       const currentLevel = metadata.listLevel || 0;
-      const indent = '  '.repeat(currentLevel);
+      const indent = INDENT.repeat(currentLevel);
       // @ts-ignore
       const todoBlock = block.to_do;
 
