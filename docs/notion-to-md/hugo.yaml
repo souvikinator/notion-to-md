@@ -60,6 +60,22 @@ params:
       # https://github.com/nextapps-de/flexsearch/#tokenizer-prefix-search
       tokenize: forward
 
+  comments:
+    enable: false
+    type: giscus
+
+    giscus:
+      repo: souvikinator/notion-to-md
+      repoId: R_kgDOGeweLw
+      category: Ideas
+      categoryId: DIC_kwDOGeweL84CkSIK
+      mapping: title
+      reactions-enabled: 1
+      input-position: top
+      lang: en
+      loading: lazy
+      crossorigin: anonymous
+
 menu:
   main:
     - name: Documentation

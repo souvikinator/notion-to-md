@@ -1,8 +1,13 @@
 ---
 title: Exporter plugin catalogue
+comments: true
 cascade:
   type: docs
 ---
+
+> [!TIP]
+> **Got suggestions? Feel free to drop your thoughts below in the comments 👇**
+
 
 | Plugin Name | Description | Documentation Link |
 | --- | --- | --- |

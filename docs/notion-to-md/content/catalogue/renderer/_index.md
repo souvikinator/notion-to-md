@@ -1,8 +1,13 @@
 ---
 title: Renderer plugin catalogue
+comments: true
 cascade:
   type: docs
 ---
+
+> [!TIP]
+> **Got suggestions? Feel free to drop your thoughts below in the comments 👇**
+
 
 | Plugin Name | Description | Documentation link |
 | --- | --- | --- |
@@ -18,5 +23,6 @@ Have you created a useful plugin for Notion to MD? Share it with the community b
 
 
 Want to build a custom plugin? Check out our comprehensive guides:
-
-- [Creating a Renderer Plugin](../docs/v4/guides/how-to-create-renderer-from-scratch)
+{{< cards >}}
+{{< card icon="document" title="Creating a Renderer Plugin" link="../../v4/guides/how-to-create-renderer-from-scratch" >}}
+{{< /cards >}}
