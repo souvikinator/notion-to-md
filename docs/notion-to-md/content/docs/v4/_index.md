@@ -4,6 +4,8 @@ cascade:
   type: docs
 ---
 
+![notion to md v4 banner image](/v4-banner.png)
+
 Welcome to the comprehensive documentation for Notion-to-MD version 4. This major release represents a complete architectural overhaul designed to provide maximum flexibility, extensibility, and performance.
 
 Whether you're looking to convert Notion pages to standard Markdown, create custom output formats, or integrate the conversion pipeline into your existing workflow, this documentation will guide you through the process.

@@ -4,8 +4,41 @@ description: "Learn how to create custom exporters for notion-to-md v4"
 weight: 5
 ---
 
-Exporter plugins control where your converted content goes after processing. Enabling you to save files, integrate with CMS platforms, or publish content across various channels.
-This guide will walk you through the process of creating your own exporter plugin. It's super easy!
+Exporter plugins control where your converted content goes after processing. notion-to-md comes with a built-in `DefaultExporter` and allows you to create custom exporters to save files, integrate with CMS platforms, or publish content across various channels.
+
+## Default Exporter
+
+notion-to-md provides a DefaultExporter that handles common output scenarios:
+
+```typescript
+import { NotionToMarkdown, DefaultExporter } from 'notion-to-md';
+
+// Save to file
+const fileExporter = new DefaultExporter({
+  outputType: 'file',
+  outputPath: './content/output.md'
+});
+
+// Print to console
+const stdoutExporter = new DefaultExporter({
+  outputType: 'stdout'
+});
+
+// Store in memory buffer
+const buffer = {};
+const bufferExporter = new DefaultExporter({
+  outputType: 'buffer',
+  buffer: buffer
+});
+
+// Use the exporter
+const converter = NotionToMarkdown.builder()
+  .setNotionClient(notion)
+  .setExporter(fileExporter)
+  .build();
+```
+
+You can find the DefaultExporter implementation in the [GitHub repository](https://github.com/souvikinator/notion-to-md/blob/v4.0.0-alpha.1/src/plugins/exporter/index.ts).
 
 {{< callout emoji="🌐" >}}
 **Share Your Exporters With The Community!**

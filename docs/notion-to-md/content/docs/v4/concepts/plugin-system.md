@@ -119,101 +119,11 @@ During conversion:
 3. Each plugin processes the data according to its responsibility
 4. The enriched `ChainData` is passed to the next plugin
 
-### Cleanup
-
-After conversion:
-
-1. Resources like file handles or network connections are closed
-2. Manifests are saved for future use
-3. Temporary resources are cleaned up
-
 ## Interfaces and Extension Points
 
 notion-to-md v4 provides clear interfaces for creating custom plugins.
 
-
-### Renderer Plugin Interface
-
-To create a custom renderer, extend the `BaseRendererPlugin` class:
-
-```typescript
-import { BaseRendererPlugin } from 'notion-to-md';
-
-class CustomRenderer extends BaseRendererPlugin {
-  // Define the output template
-  protected template = `{{{frontmatter}}}
-{{{imports}}}
-{{{content}}}`;
-
-  // Configure variables to populate the template
-  protected variables = {
-    frontmatter: (context) => `---
-title: ${context.pageProperties?.title || 'Untitled'}
----`,
-    imports: () => `import { Component } from '@/components';`,
-    content: (context) => context.content
-  };
-
-  // Define block transformers
-  protected blockTransformers = {
-    heading_1: {
-      transform: async ({ block, utils }) => {
-        const text = await utils.processRichText(block.heading_1.rich_text);
-        return `<h1>${text}</h1>`;
-      }
-    },
-    // Define transformers for other block types...
-  };
-
-  // Define annotation transformers
-  protected annotationTransformers = {
-    bold: {
-      transform: async ({ text }) => `<strong>${text}</strong>`
-    },
-    // Define transformers for other annotations...
-  };
-}
-```
-
-### Exporter Plugin Interface
-
-To create a custom exporter, implement the `NotionExporter` interface:
-
-```typescript
-import { NotionExporter, ChainData } from 'notion-to-md';
-
-class CustomExporter implements NotionExporter {
-  constructor(private config: any) {}
-
-  async export(data: ChainData): Promise<void> {
-    // Access the converted content
-    const content = data.content;
-
-    // Access the original blocks if needed
-    const blocks = data.blockTree.blocks;
-
-    // Access page properties
-    const properties = data.blockTree.properties;
-
-    // Implement your custom export logic
-    // For example: save to a file, send to an API, etc.
-  }
-}
-```
-
-### Extension Points
-
-notion-to-md v4 offers several extension points:
-
-1. **Block Transformers** - Define how specific Notion block types are converted
-2. **Annotation Transformers** - Define how text styles and formatting are processed
-3. **Template Variables** - Define custom variables for document templates
-4. **Export Handlers** - Define custom handling for the converted content
-
-## Creating Your First Plugin
-
-Ready to create your own plugin? Check out these detailed guides:
-
-- [Creating Custom Renderers](/docs/guides/creating-renderers)
-- [Creating Custom Exporters](/docs/guides/creating-exporters)
-- [Customizing Existing Plugins](/docs/guides/customizing-plugins)
+{{< cards >}}
+  {{< card link="../renderer-plugin" title="Renderer plugin" icon="document" >}}
+  {{< card link="../exporter-plugin" title="Exporter plugin" icon="export" >}}
+{{< /cards >}}
