@@ -80,3 +80,7 @@ menu:
       url: 'https://github.com/souvikinator/notion-to-md'
       params:
         icon: github
+
+services:
+  googleAnalytics:
+    ID: G-ZNJ224X2BJ
