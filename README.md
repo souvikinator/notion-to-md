@@ -1,6 +1,6 @@
 <h1 align="center">
   <br>
-  <img src="https://raw.githubusercontent.com/souvikinator/notion-to-md/refs/heads/v4.0.0-alpha.1/docs/notion-to-md/static/v4-banner.png" alt="notion-to-md banner" width="750" />
+  <img src="https://raw.githubusercontent.com/souvikinator/notion-to-md/refs/heads/v4.0.0-alpha/docs/notion-to-md/static/v4-banner.png" alt="notion-to-md banner" width="750" />
   <br>
   <b>Notion-to-MD v4 <sup>α</sup></b>
   <br>

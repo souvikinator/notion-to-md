@@ -38,7 +38,7 @@ const converter = NotionToMarkdown.builder()
   .build();
 ```
 
-You can find the DefaultExporter implementation in the [GitHub repository](https://github.com/souvikinator/notion-to-md/blob/v4.0.0-alpha.1/src/plugins/exporter/index.ts).
+You can find the DefaultExporter implementation in the [GitHub repository](https://github.com/souvikinator/notion-to-md/blob/v4.0.0-alpha/src/plugins/exporter/index.ts).
 
 {{< callout emoji="🌐" >}}
 **Share Your Exporters With The Community!**
