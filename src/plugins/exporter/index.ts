@@ -69,9 +69,6 @@ export class DefaultExporter implements NotionExporter<DefaultExporterConfig> {
     // Create all parent directories if they don't exist
     await fs.mkdir(dirPath, { recursive: true });
 
-    // Write the file
-    await fs.writeFile(this.config.outputPath, content, 'utf-8');
-
     try {
       await fs.writeFile(this.config.outputPath, content, 'utf-8');
     } catch (error) {
