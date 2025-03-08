@@ -14,8 +14,8 @@
 </h1>
 
 <div align="center">
-  <a href="https://github.com/souvikinator/notion-to-md/discussions/112">
-    <img src="https://i.ibb.co/Tmyf805/Group-167.png" />
+  <a href="https://notionconvert.com/notion-to-md/docs/v4/">
+    <img src="https://i.ibb.co/4Zv3dzRd/Group-52-1.png" />
   </a>
 </div>
 
