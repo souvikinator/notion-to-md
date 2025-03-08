@@ -14,7 +14,7 @@
 </h1>
 
 <div align="center">
-  <a href="https://notionconvert.com/notion-to-md/docs/v4/">
+  <a href="https://notionconvert.com/notion-to-md/docs/v4/getting-started/">
     <img src="https://i.ibb.co/4Zv3dzRd/Group-52-1.png" />
   </a>
 </div>
