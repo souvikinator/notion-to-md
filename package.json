@@ -1,6 +1,6 @@
 {
   "name": "notion-to-md",
-  "version": "4.0.0-alpha.2",
+  "version": "4.0.0-alpha.3",
   "engines": {
     "node": ">=12"
   },
@@ -16,6 +16,13 @@
     "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write ."
   },
+  "peerDependencies": {
+    "@notionhq/client": "^2.0.0"
+  },
+  "exports": {
+    ".": "./build/index.js",
+    "./*": "./build/*/index.js"
+  },
   "lint-staged": {
     "*.ts": [
       "eslint --fix",
@@ -29,9 +36,13 @@
     "notion",
     "notion-api",
     "notion-to-md",
-    "notion2md"
+    "notion2md",
+    "notion-export",
+    "notion-exporter",
+    "notion-convert",
+    "export"
   ],
-  "author": "Souvik Kar Mahapatra <souvikat001+chitchat@gmail.com>",
+  "author": "Souvik Kar Mahapatra <souvikat001@gmail.com>",
   "license": "ISC",
   "files": [
     "build/**"
@@ -44,8 +55,9 @@
     "url": "https://github.com/souvikinator/notion-to-md/issues"
   },
   "homepage": "https://github.com/souvikinator/notion-to-md#readme",
-  "description": "convert notion pages, block and list of blocks to markdown (supports nesting)",
+  "description": "Convert notion pages, block and list of blocks to markdown, html, jsx, latex, pdf and literally anything and export anywhere, compatible with any content workflow",
   "devDependencies": {
+    "@notionhq/client": "^2.0.0",
     "@types/download": "^8.0.5",
     "@types/jest": "^27.4.1",
     "@types/mime": "^3.0.0",
@@ -63,7 +75,6 @@
     "typescript": "^4.5.4"
   },
   "dependencies": {
-    "@notionhq/client": "^2.2.15",
     "mime": "^3.0.0",
     "node-fetch": "^2.7.0"
   }
