@@ -1,4 +1,4 @@
-import { Client } from '@notionhq/client';
+import type { Client } from '@notionhq/client';
 import { PageReferenceManifestManager } from '../../utils/manifest-manager';
 import { PageReferenceEntryType } from '../../types';
 import { PageReferenceHandlerError } from '../../core/errors';

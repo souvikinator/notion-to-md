@@ -1,4 +1,4 @@
-import { Client } from '@notionhq/client';
+import type { Client } from '@notionhq/client';
 import {
   ListBlockChildrenResponseResult,
   PageObjectProperties,

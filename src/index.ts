@@ -1,4 +1,4 @@
-import { Client } from '@notionhq/client';
+import type { Client } from '@notionhq/client';
 import { BlockFetcher, BlockFetcherConfig } from './core/block-fetcher';
 import { Exporter } from './core/exporter';
 import { MediaHandler } from './core/media-handler';
