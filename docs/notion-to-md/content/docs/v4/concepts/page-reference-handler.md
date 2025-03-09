@@ -78,7 +78,7 @@ If you have a large Notion workspace with many interconnected pages, you should 
 notion-to-md provides a utility specifically designed for building a complete reference manifest at a go provided each page has the specified property:
 
 ```javascript
-import { PageReferenceManifestBuilder } from 'notion-to-md/utils';
+import { PageReferenceManifestBuilder } from 'notion-to-md/utils/page-ref-builder';
 
 // Create a builder instance
 const builder = new PageReferenceManifestBuilder(notionClient, {
@@ -122,7 +122,7 @@ You can use the Page Reference Handler to create a site map or navigation struct
 
 ```javascript
 import { NotionConverter } from 'notion-to-md';
-import { PageReferenceManifestBuilder } from 'notion-to-md/utils';
+import { PageReferenceManifestBuilder } from 'notion-to-md/utils/page-ref-builder';
 
 // First, build a comprehensive page reference manifest
 const builder = new PageReferenceManifestBuilder(notionClient, {
