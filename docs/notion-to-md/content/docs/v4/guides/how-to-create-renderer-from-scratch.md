@@ -11,7 +11,7 @@ This guide walks you through creating a custom JSX renderer plugin. We'll build 
 First, we need to create our renderer class that extends the base plugin and then we define the template for the renderer:
 
 ```typescript {linenos=table,filename="index.ts"}
-import { BaseRendererPlugin } from 'notion-to-md';
+import { BaseRendererPlugin } from "notion-to-md/core/renderer";
 
 export class JSXRenderer extends BaseRendererPlugin {
   protected template = `{{{imports}}}
@@ -39,7 +39,7 @@ Let's understand what's happening:
 To allow customization, we’ll introduce a configuration option in the plugin's metadata. In this example, users can specify a custom name for the component.
 
 ```typescript {linenos=table,hl_lines=[3,4,5,10,18,19,20,21],file="index.ts"}
-import { BaseRendererPlugin } from 'notion-to-md';
+import { BaseRendererPlugin } from "notion-to-md/core/renderer";
 
 export interface JSXRendererConfig {
   componentName?: string;
@@ -222,21 +222,28 @@ constructor(config: JSXRendererConfig = {}) {
 Now that we have our JSX renderer complete, here's how to use it:
 
 ```typescript
-import { NotionToMarkdown } from 'notion-to-md';
+import { NotionConverter } from 'notion-to-md';
+import { Client } from '@notionhq/client';
 import { JSXRenderer } from './jsx-renderer';
 
-const n2m = new NotionToMarkdown({ notionClient });
-
-// Create instance of JSX renderer with custom config
-const jsxRenderer = new JSXRenderer({
-  componentName: 'MyNotionContent'
+// Create Notion client
+const notionClient = new Client({
+  auth: 'your-notion-api-key'
 });
 
-// Use the renderer
-n2m.setRenderer(jsxRenderer);
+// Initialize converter with builder pattern
+const n2m = new NotionConverter(notionClient)
+  .withRenderer(new JSXRenderer({
+    componentName: 'MyNotionContent'
+  }))
+  .withExporter({
+    // Your exporter configuration
+    outputType: 'file',
+    outputPath: './output/my-page.jsx'
+  });
 
-// Convert blocks to JSX
-const jsx = await n2m.convert(blocks);
+// Convert notion page to JSX
+await n2m.convert('your-notion-page-id');
 ```
 
 This will output JSX code that looks like:

@@ -28,7 +28,7 @@ Here's a simple example demonstrating how to convert a Notion page to Markdown:
 
 ```javascript
 import { Client } from '@notionhq/client';
-import { NotionToMarkdown } from 'notion-to-md';
+import { NotionConverter } from 'notion-to-md';
 import { DefaultExporter } from 'notion-to-md/plugins/exporter';
 
 // Initialize the Notion client with your integration token

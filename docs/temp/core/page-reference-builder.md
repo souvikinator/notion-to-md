@@ -12,7 +12,7 @@ npm install @notionhq/client notion-to-md@latest
 
 ```typescript
 import { Client } from "@notionhq/client";
-import { PageReferenceManifestBuilder } from "notion-to-md";
+import { PageReferenceManifestBuilder } from "notion-to-md/utils/page-ref-builder";
 
 const notion = new Client({
   auth: "your-notion-api-key"

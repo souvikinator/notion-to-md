@@ -11,8 +11,16 @@ Exporter plugins control where your converted content goes after processing. not
 notion-to-md provides a DefaultExporter that handles common output scenarios:
 
 ```typescript
-import { NotionToMarkdown, DefaultExporter } from 'notion-to-md';
+import { NotionConverter } from 'notion-to-md';
+import { DefaultExporter } from 'notion-to-md/plugins/exporter';
+import { Client } from '@notionhq/client';
 
+// Create Notion client
+const notion = new Client({
+  auth: 'your-notion-api-key'
+});
+
+// Create exporters with different configurations
 // Save to file
 const fileExporter = new DefaultExporter({
   outputType: 'file',
@@ -31,11 +39,19 @@ const bufferExporter = new DefaultExporter({
   buffer: buffer
 });
 
-// Use the exporter
-const converter = NotionToMarkdown.builder()
-  .setNotionClient(notion)
-  .setExporter(fileExporter)
-  .build();
+// Use a single exporter
+const singleExporterConverter = new NotionConverter(notion)
+  .withExporter(fileExporter);
+
+// Or use multiple exporters at once
+const multiExporterConverter = new NotionConverter(notion)
+  .withExporter([fileExporter, stdoutExporter, bufferExporter]);
+
+// Convert a page
+await singleExporterConverter.convert('your-notion-page-id');
+
+// Later, access the buffered content if using the buffer exporter
+const pageContent = buffer['your-notion-page-id'];
 ```
 
 You can find the DefaultExporter implementation in the [GitHub repository](https://github.com/souvikinator/notion-to-md/blob/v4.0.0-alpha/src/plugins/exporter/index.ts).

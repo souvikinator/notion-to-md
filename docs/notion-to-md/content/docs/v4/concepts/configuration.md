@@ -222,7 +222,7 @@ interface MDXRendererConfig {
 ### Example
 
 ```javascript
-import { MDXRenderer } from 'notion-to-md';
+import { MDXRenderer } from 'notion-to-md/plugins/renderer/mdx';
 
 const renderer = new MDXRenderer({
   frontmatter: {
