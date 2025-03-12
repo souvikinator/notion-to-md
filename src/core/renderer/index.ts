@@ -4,8 +4,6 @@ import {
   ChainData,
   BlockType,
   ListBlockChildrenResponseResult,
-  ListBlockChildrenResponseResults,
-  PageProperties,
   AnnotationTransformer,
   BlockTransformer,
   ContextMetadata,

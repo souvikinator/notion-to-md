@@ -1,5 +1,5 @@
-import { MediaInfo, MediaManifestEntry } from "./manifest-manager";
-import { ListBlockChildrenResponseResult } from "./notion";
+import { MediaInfo, MediaManifestEntry } from './manifest-manager';
+import { ListBlockChildrenResponseResult } from './notion';
 
 export interface MediaStrategy {
   /**
@@ -25,23 +25,6 @@ export interface MediaStrategy {
   cleanup(entry: MediaManifestEntry): Promise<void>;
 }
 
-// download media strategy
-export interface DownloadStrategyConfig {
-  outputDir: string;
-  transformPath?: (localPath: string) => string;
-  preserveExternalUrls?: boolean;
-  failForward?: boolean;
-}
-
-// upload media strategy
-export interface UploadStrategyConfig {
-  uploadHandler(url: string, blockId: string): Promise<string>;
-  cleanupHandler?(entry: MediaManifestEntry): Promise<void>;
-  transformPath?(uploadedUrl: string): string;
-  preserveExternalUrls?: boolean;
-  failForward?: boolean;
-}
-
 // error handling
 
 export class MediaProcessingError extends Error {
@@ -52,6 +35,6 @@ export class MediaProcessingError extends Error {
     public details: unknown,
   ) {
     super(message);
-    this.name = "MediaProcessingError";
+    this.name = 'MediaProcessingError';
   }
 }
