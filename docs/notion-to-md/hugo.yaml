@@ -16,6 +16,8 @@ markup:
 params:
   description: Convert Notion pages to Markdown and any other format programmatically.
 
+  enableGitInfo: true
+
   navbar:
     displayTitle: true
     displayLogo: true
@@ -46,6 +48,26 @@ params:
   # Display the last modification date
   displayUpdatedDate: true
   dateFormat: 'January 2, 2006'
+
+  editURL:
+    enable: true
+    base: 'https://github.com/imfing/hextra/edit/main/exampleSite/content'
+
+  blog:
+    list:
+      displayTags: true
+      # date | lastmod | publishDate | title | weight
+      sortBy: date
+      sortOrder: desc # or "asc"
+
+    article:
+      displayPagination: true
+
+  highlight:
+    copy:
+      enable: true
+      # hover | always
+      display: hover
 
   # Search
   # flexsearch is enabled by default
