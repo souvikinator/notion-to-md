@@ -1,29 +1,22 @@
 {
   "compilerOptions": {
     "target": "ES2019",
-    "lib": [
-      "ES2019"
-    ],
-    "module": "commonjs",
+    "lib": ["ES2019", "dom"],
+    "module": "node16",
+    "moduleResolution": "node16",
+    "esModuleInterop": true,
+    "isolatedModules": true,
     "resolveJsonModule": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./build",
     "inlineSources": true,
-    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "types": [
-      "jest"
-    ]
+    "types": ["node", "jest"]
   },
-  "exclude": [
-    "node_modules",
-    "*.spec.ts"
-  ],
-  "include": [
-    "./src/**/*.ts"
-  ]
+  "exclude": ["node_modules", "*.spec.ts", "build"],
+  "include": ["./src/**/*.ts"]
 }
