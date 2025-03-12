@@ -28,4 +28,10 @@ We aim to build more than a Markdown converter; our goal is to develop a compreh
 
 For installation instructions, complete API references, and detailed examples, please visit our comprehensive documentation:
 
-[https://notionconvert.com/notion-to-md/](https://notionconvert.com/notion-to-md/)
+[https://docs.joinescape.org/notion-to-md/](https://docs.joinescape.org/notion-to-md/)
+
+
+
+---
+
+Part of [Escape Org](https://github.com/join-escape).
