@@ -69,8 +69,8 @@
       "types": [
         "./build/types/index.d.ts"
       ],
-      "utils/page-ref-builder": [
-        "./build/utils/page-ref-builder/index.d.ts"
+      "utils": [
+        "./build/utils/index.d.ts"
       ],
       "core": [
         "./build/core/index.d.ts"
