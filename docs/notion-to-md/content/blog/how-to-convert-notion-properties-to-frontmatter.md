@@ -14,6 +14,7 @@ tags:
   - renderer plugin
   - frontmatter
 excludeSearch: true
+comments: true
 ---
 
 
@@ -93,7 +94,7 @@ comments: "true"
 ---
 ```
 
-## Fine-Tuning with a Custom Variable Resolver
+### Fine-Tuning with a Custom Variable Resolver (Advance)
 
 > [!TIP]
 > A prerequisite going further would be having understanding of [how one can modify any existing renderer plugin](../../docs/v4/guides/how-to-modify-renderer-plugin/).
@@ -157,7 +158,7 @@ The [plugin system](../../docs/v4/concepts/plugin-system) in notion-to-md v4 mak
 For more advanced customization, check out the guide on [creating a renderer plugin from scratch](../../docs/v4/guides/how-to-create-renderer-from-scratch).
 
 > [!TIP]
-> ### Share Your Use Case
+> ## Share Your Use Case
 >
 > Have you created an interesting frontmatter customization or workflow with notion-to-md? > We'd love to hear about it! Consider sharing your experience by:
 >

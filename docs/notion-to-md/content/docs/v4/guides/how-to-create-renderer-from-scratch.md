@@ -9,6 +9,7 @@ tags:
   - notion-to-md
   - transformers
   - renderer plugin
+comments: true
 ---
 
 This guide walks you through creating a custom JSX renderer plugin. We'll build it step by step, starting with the basics.
