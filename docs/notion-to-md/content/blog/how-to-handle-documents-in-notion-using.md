@@ -229,7 +229,7 @@ Whether you require **improved searchability through content extraction** or **a
 Best of all, you're not restricted to simply HTML,JSX,TSX,etc; you may also use **shortcodes** provided by your static site generator for even more personalization.
 
 > [!NOTE]
-> ## Share Your Use Case
+> ## Share Your Use Case and Work
 >
 > Have you created an interesting customization or workflow with notion-to-md?
 > We'd love to hear about it! Consider sharing your experience by:

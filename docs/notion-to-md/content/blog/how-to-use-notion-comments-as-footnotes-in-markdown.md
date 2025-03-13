@@ -340,6 +340,16 @@ renderer.createBlockTransformer('toggle', {
 
 With notion-to-md v4's flexible plugin system, you can easily transform Notion comments into useful footnotes in your Markdown output. This approach preserves important context and additional information from your collaborative work in Notion when publishing or sharing content.
 
-For more ways to customize your Notion-to-Markdown conversion, check out the [official documentation on how to modify renderer plugins](/docs/v4/guides/how-to-modify-renderer-plugin/). You can also explore other [block transformers](/docs/v4/concepts/renderer-plugin/block-transformer/) to customize how different Notion blocks are rendered.
+For more ways to customize your Notion-to-Markdown conversion, check out the [official documentation on how to modify renderer plugins](../../docs/v4/guides/how-to-modify-renderer-plugin/). You can also explore other [block transformers](../../docs/v4/concepts/renderer-plugin/block-transformer/) to customize how different Notion blocks are rendered.
 
-If you've created a useful modifier or plugin, consider sharing it in the [notion-to-md plugin catalogue](/catalogue/) to help others in the community!
+> [!NOTE]
+> ## Share Your Use Case and Work
+>
+> Have you created an interesting customization or workflow with notion-to-md?
+> We'd love to hear about it! Consider sharing your experience by:
+>
+> 1. Creating a blog post in the [notion-to-md blog](/notion-to-md/blog/) section
+> 2. Adding an entry to our [plugin catalog](/notion-to-md/catalogue/) if you've built a > reusable plugin
+> 3. Joining our community discussions on GitHub
+>
+> Your real-world examples can help others unlock the full potential of using Notion as a content source!
