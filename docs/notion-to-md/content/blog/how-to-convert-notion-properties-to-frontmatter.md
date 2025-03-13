@@ -163,7 +163,7 @@ For more advanced customization, check out the guide on [creating a renderer plu
 > Have you created an interesting frontmatter customization or workflow with notion-to-md? > We'd love to hear about it! Consider sharing your experience by:
 >
 > 1. Creating a blog post in the [notion-to-md blog](/notion-to-md/blog/) section
-> 2. Adding an entry to our [plugin catalog](/notion-to-md/catalogue/) if you've built a > reusable plugin
+> 2. Adding an entry to our [plugin catalog](/notion-to-md/catalogue/) if you've built a reusable plugin
 > 3. Joining our community discussions on GitHub
 >
-> Your real-world examples can help others unlock the full potential of using Notion as a > content source!
+> Your real-world examples can help others unlock the full potential of using Notion as a content source!
