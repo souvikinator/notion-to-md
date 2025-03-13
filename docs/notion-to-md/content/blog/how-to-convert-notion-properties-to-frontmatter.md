@@ -105,7 +105,7 @@ The renderer plugin uses `frontmatter` [variable to resolve frontmatter values](
 
 Assume you're creating a blog and want your Notion "Tags" property (a multi-select field) to appear as a well-formatted list in the frontmatter. The default renderer may output tags as a simple array, but you prefer a YAML-style list to work with your static site generator (e.g., Jekyll or Hugo). A custom variable resolver simplifies this process.
 
-```typescript
+```typescript {hl_lines=[5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]}
 import { MDXRenderer } from 'notion-to-md/plugins/renderer';
 
 const renderer = new MDXRenderer();
@@ -157,7 +157,7 @@ The [plugin system](../../docs/v4/concepts/plugin-system) in notion-to-md v4 mak
 
 For more advanced customization, check out the guide on [creating a renderer plugin from scratch](../../docs/v4/guides/how-to-create-renderer-from-scratch).
 
-> [!TIP]
+> [!NOTE]
 > ## Share Your Use Case
 >
 > Have you created an interesting frontmatter customization or workflow with notion-to-md? > We'd love to hear about it! Consider sharing your experience by:

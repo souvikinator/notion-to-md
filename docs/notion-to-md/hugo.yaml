@@ -41,7 +41,6 @@ params:
   footer:
     enable: true
     displayCopyright: true
-    copyright: '© 2025 Notion Convert'
     displayPoweredBy: true
     width: normal
 
@@ -117,4 +116,4 @@ menu:
 
 services:
   googleAnalytics:
-    ID: G-ZNJ224X2BJ
+    ID: G-CV7TF55KBV
