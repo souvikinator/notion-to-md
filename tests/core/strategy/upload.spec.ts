@@ -4,10 +4,10 @@ import {
   MediaInfoType,
   MediaInfo,
   MediaManifestEntry,
-} from "../../../src/types";
-import { UploadStrategy } from "../../../src/core/media-handler/strategies/upload";
+} from '../../../src/types';
+import { UploadStrategy } from '../../../src/core/media-handler/strategies/upload';
 
-describe("UploadStrategy", () => {
+describe('UploadStrategy', () => {
   // Mock functions for config
   const mockUploadHandler = jest.fn();
   const mockCleanupHandler = jest.fn();
@@ -23,11 +23,11 @@ describe("UploadStrategy", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(console, "error").mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  describe("Configuration", () => {
-    test("requires uploadHandler", () => {
+  describe('Configuration', () => {
+    test('requires uploadHandler', () => {
       expect(() => new UploadStrategy({} as any)).toThrow(MediaProcessingError);
 
       expect(() => new UploadStrategy({ uploadHandler: null } as any)).toThrow(
@@ -35,33 +35,33 @@ describe("UploadStrategy", () => {
       );
     });
 
-    test("defaults failForward to true", () => {
+    test('defaults failForward to true', () => {
       const strategy = new UploadStrategy({
         uploadHandler: mockUploadHandler,
       });
-      expect(strategy["config"].failForward).toBe(true);
+      expect(strategy['config'].failForward).toBe(true);
     });
 
-    test("accepts custom failForward setting", () => {
+    test('accepts custom failForward setting', () => {
       const strategy = new UploadStrategy({
         uploadHandler: mockUploadHandler,
         failForward: false,
       });
-      expect(strategy["config"].failForward).toBe(false);
+      expect(strategy['config'].failForward).toBe(false);
     });
   });
 
-  describe("Error Handling Modes", () => {
-    test("throws errors in strict mode", async () => {
+  describe('Error Handling Modes', () => {
+    test('throws errors in strict mode', async () => {
       const strategy = new UploadStrategy({
         ...mockConfig,
         failForward: false,
       });
 
       const invalidBlocks = [
-        { id: "block1" }, // Missing type
-        { id: "block2", type: "unknown" }, // Invalid type
-        { id: "block3", type: "image", image: {} }, // Invalid structure
+        { id: 'block1' }, // Missing type
+        { id: 'block2', type: 'unknown' }, // Invalid type
+        { id: 'block3', type: 'image', image: {} }, // Invalid structure
       ];
 
       for (const block of invalidBlocks) {
@@ -71,20 +71,20 @@ describe("UploadStrategy", () => {
       }
     });
 
-    test("throws upload errors in strict mode", async () => {
+    test('throws upload errors in strict mode', async () => {
       const strategy = new UploadStrategy({
         ...mockConfig,
         failForward: false,
       });
 
-      mockUploadHandler.mockRejectedValueOnce(new Error("Upload failed"));
+      mockUploadHandler.mockRejectedValueOnce(new Error('Upload failed'));
 
       const block = {
-        id: "block1",
-        type: "image",
+        id: 'block1',
+        type: 'image',
         image: {
-          type: "file",
-          file: { url: "https://notion.so/image.png" },
+          type: 'file',
+          file: { url: 'https://notion.so/image.png' },
         },
       };
 
@@ -93,7 +93,7 @@ describe("UploadStrategy", () => {
       );
     });
 
-    test("fails forward in lenient mode", async () => {
+    test('fails forward in lenient mode', async () => {
       const strategy = new UploadStrategy({
         ...mockConfig,
         failForward: true,
@@ -101,28 +101,28 @@ describe("UploadStrategy", () => {
 
       const testCases = [
         {
-          block: { id: "block1" }, // Missing type
-          expectedUrl: "",
+          block: { id: 'block1' }, // Missing type
+          expectedUrl: '',
         },
         {
           block: {
-            id: "block2",
-            type: "image",
+            id: 'block2',
+            type: 'image',
             image: {}, // Invalid structure
           },
-          expectedUrl: "",
+          expectedUrl: '',
         },
         {
           block: {
-            id: "block3",
-            type: "image",
+            id: 'block3',
+            type: 'image',
             image: {
-              type: "file",
-              file: { url: "https://notion.so/image.png" },
+              type: 'file',
+              file: { url: 'https://notion.so/image.png' },
             },
           },
-          expectedUrl: "https://notion.so/image.png",
-          mockError: new Error("Upload failed"),
+          expectedUrl: 'https://notion.so/image.png',
+          mockError: new Error('Upload failed'),
         },
       ];
 
@@ -135,7 +135,7 @@ describe("UploadStrategy", () => {
         expect(result).toEqual({
           type: MediaInfoType.DIRECT,
           originalUrl: testCase.expectedUrl,
-          transformedUrl: testCase.expectedUrl,
+          transformedPath: testCase.expectedUrl,
         });
         expect(console.error).toHaveBeenCalledWith(
           expect.any(MediaProcessingError),
@@ -144,43 +144,43 @@ describe("UploadStrategy", () => {
     });
   });
 
-  describe("Media Processing", () => {
-    test("processes all media block types", async () => {
+  describe('Media Processing', () => {
+    test('processes all media block types', async () => {
       const strategy = new UploadStrategy(mockConfig);
-      const uploadedUrl = "https://cdn.example.com/uploaded.png";
+      const uploadedUrl = 'https://cdn.example.com/uploaded.png';
       mockUploadHandler.mockResolvedValue(uploadedUrl);
 
       const blocks = [
         {
-          id: "block1",
-          type: "image",
+          id: 'block1',
+          type: 'image',
           image: {
-            type: "file",
-            file: { url: "https://notion.so/image.png" },
+            type: 'file',
+            file: { url: 'https://notion.so/image.png' },
           },
         },
         {
-          id: "block2",
-          type: "video",
+          id: 'block2',
+          type: 'video',
           video: {
-            type: "file",
-            file: { url: "https://notion.so/video.mp4" },
+            type: 'file',
+            file: { url: 'https://notion.so/video.mp4' },
           },
         },
         {
-          id: "block3",
-          type: "file",
+          id: 'block3',
+          type: 'file',
           file: {
-            type: "file",
-            file: { url: "https://notion.so/document.pdf" },
+            type: 'file',
+            file: { url: 'https://notion.so/document.pdf' },
           },
         },
         {
-          id: "block4",
-          type: "pdf",
+          id: 'block4',
+          type: 'pdf',
           pdf: {
-            type: "file",
-            file: { url: "https://notion.so/document.pdf" },
+            type: 'file',
+            file: { url: 'https://notion.so/document.pdf' },
           },
         },
       ];
@@ -197,14 +197,14 @@ describe("UploadStrategy", () => {
       }
     });
 
-    test("handles failed uploads gracefully", async () => {
+    test('handles failed uploads gracefully', async () => {
       const strategy = new UploadStrategy(mockConfig);
       const block = {
-        id: "block1",
-        type: "image",
+        id: 'block1',
+        type: 'image',
         image: {
-          type: "file",
-          file: { url: "https://notion.so/image.png" },
+          type: 'file',
+          file: { url: 'https://notion.so/image.png' },
         },
       };
 
@@ -212,32 +212,32 @@ describe("UploadStrategy", () => {
 
       const result = await strategy.process(block as any);
       expect(result.type).toBe(MediaInfoType.DIRECT);
-      expect(result.originalUrl).toBe("https://notion.so/image.png");
-      expect(result.transformedUrl).toBe("https://notion.so/image.png");
+      expect(result.originalUrl).toBe('https://notion.so/image.png');
+      expect(result.transformedPath).toBe('https://notion.so/image.png');
       expect(console.error).toHaveBeenCalledWith(
         expect.any(MediaProcessingError),
       );
     });
   });
 
-  describe("External URL Preservation", () => {
-    test("preserves external URLs when configured", async () => {
+  describe('External URL Preservation', () => {
+    test('preserves external URLs when configured', async () => {
       const strategy = new UploadStrategy({
         ...mockConfig,
         preserveExternalUrls: true,
       });
 
       const externalUrls = [
-        "https://example.com/image.png",
-        "https://othersite.com/video.mp4",
+        'https://example.com/image.png',
+        'https://othersite.com/video.mp4',
       ];
 
       for (const url of externalUrls) {
         const block = {
           id: `block-${url}`,
-          type: "image",
+          type: 'image',
           image: {
-            type: "external",
+            type: 'external',
             external: { url },
           },
         };
@@ -245,31 +245,31 @@ describe("UploadStrategy", () => {
         const result = await strategy.process(block as any);
         expect(result.type).toBe(MediaInfoType.DIRECT);
         expect(result.originalUrl).toBe(url);
-        expect(result.transformedUrl).toBe(url);
+        expect(result.transformedPath).toBe(url);
         expect(mockUploadHandler).not.toHaveBeenCalled();
       }
     });
 
-    test("uploads Notion URLs even with preserveExternalUrls", async () => {
+    test('uploads Notion URLs even with preserveExternalUrls', async () => {
       const strategy = new UploadStrategy({
         ...mockConfig,
         preserveExternalUrls: true,
       });
 
-      const uploadedUrl = "https://cdn.example.com/uploaded.png";
+      const uploadedUrl = 'https://cdn.example.com/uploaded.png';
       mockUploadHandler.mockResolvedValue(uploadedUrl);
 
       const notionUrls = [
-        "https://prod-files.notion-static.com/image.png",
-        "https://s3.us-west-2.amazonaws.com/secure.notion-static.com/doc.pdf",
+        'https://prod-files.notion-static.com/image.png',
+        'https://s3.us-west-2.amazonaws.com/secure.notion-static.com/doc.pdf',
       ];
 
       for (const url of notionUrls) {
         const block = {
           id: `block-${url}`,
-          type: "image",
+          type: 'image',
           image: {
-            type: "external",
+            type: 'external',
             external: { url },
           },
         };
@@ -281,37 +281,37 @@ describe("UploadStrategy", () => {
     });
   });
 
-  describe("URL Transformation", () => {
-    test("applies custom transformations", () => {
+  describe('URL Transformation', () => {
+    test('applies custom transformations', () => {
       const strategy = new UploadStrategy(mockConfig);
-      const uploadedUrl = "https://cdn.example.com/image.png";
-      const transformedUrl = "https://transformed.com/image.png";
+      const uploadedUrl = 'https://cdn.example.com/image.png';
+      const transformedPath = 'https://transformed.com/image.png';
 
-      mockTransformPath.mockReturnValue(transformedUrl);
+      mockTransformPath.mockReturnValue(transformedPath);
 
       const mediaInfo: MediaInfo = {
         type: MediaInfoType.UPLOAD,
-        originalUrl: "original.png",
+        originalUrl: 'original.png',
         uploadedUrl,
       };
 
       const result = strategy.transform(mediaInfo);
-      expect(result).toBe(transformedUrl);
+      expect(result).toBe(transformedPath);
       expect(mockTransformPath).toHaveBeenCalledWith(uploadedUrl);
     });
 
-    test("handles transformation errors", () => {
+    test('handles transformation errors', () => {
       const strategy = new UploadStrategy({
         ...mockConfig,
         transformPath: () => {
-          throw new Error("Transform failed");
+          throw new Error('Transform failed');
         },
       });
 
       const mediaInfo: MediaInfo = {
         type: MediaInfoType.UPLOAD,
-        originalUrl: "original.png",
-        uploadedUrl: "uploaded.png",
+        originalUrl: 'original.png',
+        uploadedUrl: 'uploaded.png',
       };
 
       const result = strategy.transform(mediaInfo);
@@ -321,12 +321,12 @@ describe("UploadStrategy", () => {
       );
     });
 
-    test("returns original URL for DIRECT type", () => {
+    test('returns original URL for DIRECT type', () => {
       const strategy = new UploadStrategy(mockConfig);
       const mediaInfo: MediaInfo = {
         type: MediaInfoType.DIRECT,
-        originalUrl: "https://example.com/image.png",
-        transformedUrl: "https://example.com/image.png",
+        originalUrl: 'https://example.com/image.png',
+        transformedPath: 'https://example.com/image.png',
       };
 
       const result = strategy.transform(mediaInfo);
@@ -335,40 +335,40 @@ describe("UploadStrategy", () => {
     });
   });
 
-  describe("Cleanup", () => {
-    test("calls cleanup handler for uploaded files", async () => {
+  describe('Cleanup', () => {
+    test('calls cleanup handler for uploaded files', async () => {
       const strategy = new UploadStrategy(mockConfig);
       const entry: MediaManifestEntry = {
         mediaInfo: {
           type: MediaInfoType.UPLOAD,
-          originalUrl: "https://notion.so/image.png",
-          uploadedUrl: "https://cdn.example.com/image.png",
-          transformedUrl: "https://cdn.example.com/image.png",
+          originalUrl: 'https://notion.so/image.png',
+          uploadedUrl: 'https://cdn.example.com/image.png',
+          transformedPath: 'https://cdn.example.com/image.png',
         },
-        lastEdited: "2024-01-19",
-        createdAt: "2024-01-19",
-        updatedAt: "2024-01-19",
+        lastEdited: '2024-01-19',
+        createdAt: '2024-01-19',
+        updatedAt: '2024-01-19',
       };
 
       await strategy.cleanup(entry);
       expect(mockCleanupHandler).toHaveBeenCalledWith(entry);
     });
 
-    test("handles cleanup errors gracefully", async () => {
+    test('handles cleanup errors gracefully', async () => {
       const strategy = new UploadStrategy(mockConfig);
       const entry: MediaManifestEntry = {
         mediaInfo: {
           type: MediaInfoType.UPLOAD,
-          originalUrl: "https://notion.so/image.png",
-          uploadedUrl: "https://cdn.example.com/image.png",
-          transformedUrl: "https://cdn.example.com/image.png",
+          originalUrl: 'https://notion.so/image.png',
+          uploadedUrl: 'https://cdn.example.com/image.png',
+          transformedPath: 'https://cdn.example.com/image.png',
         },
-        lastEdited: "2024-01-19",
-        createdAt: "2024-01-19",
-        updatedAt: "2024-01-19",
+        lastEdited: '2024-01-19',
+        createdAt: '2024-01-19',
+        updatedAt: '2024-01-19',
       };
 
-      mockCleanupHandler.mockRejectedValueOnce(new Error("Cleanup failed"));
+      mockCleanupHandler.mockRejectedValueOnce(new Error('Cleanup failed'));
 
       await strategy.cleanup(entry);
       expect(console.error).toHaveBeenCalledWith(
@@ -376,17 +376,17 @@ describe("UploadStrategy", () => {
       );
     });
 
-    test("skips cleanup for DIRECT type", async () => {
+    test('skips cleanup for DIRECT type', async () => {
       const strategy = new UploadStrategy(mockConfig);
       const entry: MediaManifestEntry = {
         mediaInfo: {
           type: MediaInfoType.DIRECT,
-          originalUrl: "https://example.com/image.png",
-          transformedUrl: "https://example.com/image.png",
+          originalUrl: 'https://example.com/image.png',
+          transformedPath: 'https://example.com/image.png',
         },
-        lastEdited: "2024-01-19",
-        createdAt: "2024-01-19",
-        updatedAt: "2024-01-19",
+        lastEdited: '2024-01-19',
+        createdAt: '2024-01-19',
+        updatedAt: '2024-01-19',
       };
 
       await strategy.cleanup(entry);
@@ -394,23 +394,23 @@ describe("UploadStrategy", () => {
     });
   });
 
-  describe("Edge Cases", () => {
-    test("handles empty or null URLs", async () => {
+  describe('Edge Cases', () => {
+    test('handles empty or null URLs', async () => {
       const strategy = new UploadStrategy(mockConfig);
       const blocks = [
         {
-          id: "block1",
-          type: "image",
+          id: 'block1',
+          type: 'image',
           image: {
-            type: "external",
-            external: { url: "" },
+            type: 'external',
+            external: { url: '' },
           },
         },
         {
-          id: "block2",
-          type: "image",
+          id: 'block2',
+          type: 'image',
           image: {
-            type: "external",
+            type: 'external',
             external: { url: null },
           },
         },
@@ -419,24 +419,24 @@ describe("UploadStrategy", () => {
       for (const block of blocks) {
         const result = await strategy.process(block as any);
         expect(result.type).toBe(MediaInfoType.DIRECT);
-        expect(result.originalUrl).toBe("");
-        expect(result.transformedUrl).toBe("");
+        expect(result.originalUrl).toBe('');
+        expect(result.transformedPath).toBe('');
       }
     });
 
-    test("handles malformed blocks gracefully", async () => {
+    test('handles malformed blocks gracefully', async () => {
       const strategy = new UploadStrategy(mockConfig);
       const blocks = [
-        { type: "image" }, // Missing ID
-        { id: "block1", type: "image", image: null }, // Null media object
-        { id: "block2", type: "video", video: undefined }, // Undefined media object
+        { type: 'image' }, // Missing ID
+        { id: 'block1', type: 'image', image: null }, // Null media object
+        { id: 'block2', type: 'video', video: undefined }, // Undefined media object
       ];
 
       for (const block of blocks) {
         const result = await strategy.process(block as any);
         expect(result.type).toBe(MediaInfoType.DIRECT);
-        expect(result.originalUrl).toBe("");
-        expect(result.transformedUrl).toBe("");
+        expect(result.originalUrl).toBe('');
+        expect(result.transformedPath).toBe('');
       }
     });
   });

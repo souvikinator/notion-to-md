@@ -1,72 +1,72 @@
-import fetch from "node-fetch";
-import * as fs from "fs/promises";
-import * as path from "path";
-import mime from "mime-types";
+import fetch from 'node-fetch';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import mime from 'mime-types';
 import {
   DownloadStrategyConfig,
   MediaInfo,
   MediaInfoType,
   MediaManifestEntry,
   MediaProcessingError,
-} from "../../../src/types";
-import { DownloadStrategy } from "../../../src/core/media-handler/strategies/download";
+} from '../../../src/types';
+import { DownloadStrategy } from '../../../src/core/media-handler/strategies/download';
 
-jest.mock("node-fetch");
-jest.mock("fs/promises");
-jest.mock("mime-types");
+jest.mock('node-fetch');
+jest.mock('fs/promises');
+jest.mock('mime-types');
 
-describe("DownloadStrategy", () => {
+describe('DownloadStrategy', () => {
   // Base configuration used across tests
   const mockConfig: DownloadStrategyConfig = {
-    outputDir: "./public/media",
-    transformPath: (path: string) => `/media/${path.split("/").pop()}`,
+    outputDir: './public/media',
+    transformPath: (path: string) => `/media/${path.split('/').pop()}`,
     failForward: true,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(console, "error").mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   // Configuration Tests
-  describe("Configuration", () => {
-    test("requires outputDir", () => {
+  describe('Configuration', () => {
+    test('requires outputDir', () => {
       expect(() => new DownloadStrategy({} as any)).toThrow(
         MediaProcessingError,
       );
-      expect(() => new DownloadStrategy({ outputDir: "" } as any)).toThrow(
+      expect(() => new DownloadStrategy({ outputDir: '' } as any)).toThrow(
         MediaProcessingError,
       );
     });
 
-    test("defaults failForward to true when not provided", () => {
+    test('defaults failForward to true when not provided', () => {
       const strategy = new DownloadStrategy({
-        outputDir: "./media",
+        outputDir: './media',
       });
-      expect(strategy["config"].failForward).toBe(true);
+      expect(strategy['config'].failForward).toBe(true);
     });
 
-    test("accepts custom failForward setting", () => {
+    test('accepts custom failForward setting', () => {
       const strategy = new DownloadStrategy({
-        outputDir: "./media",
+        outputDir: './media',
         failForward: false,
       });
-      expect(strategy["config"].failForward).toBe(false);
+      expect(strategy['config'].failForward).toBe(false);
     });
   });
 
   // Error Handling Mode Tests
-  describe("Error Handling Modes", () => {
-    test("throws errors in strict mode for invalid blocks", async () => {
+  describe('Error Handling Modes', () => {
+    test('throws errors in strict mode for invalid blocks', async () => {
       const strategy = new DownloadStrategy({
         ...mockConfig,
         failForward: false,
       });
 
       const invalidBlocks = [
-        { id: "block1" }, // Missing type
-        { id: "block2", type: "unknown" }, // Invalid type
-        { id: "block3", type: "image", image: {} }, // Invalid structure
+        { id: 'block1' }, // Missing type
+        { id: 'block2', type: 'unknown' }, // Invalid type
+        { id: 'block3', type: 'image', image: {} }, // Invalid structure
       ];
 
       for (const block of invalidBlocks) {
@@ -76,23 +76,23 @@ describe("DownloadStrategy", () => {
       }
     });
 
-    test("throws errors in strict mode for download failures", async () => {
+    test('throws errors in strict mode for download failures', async () => {
       const strategy = new DownloadStrategy({
         ...mockConfig,
         failForward: false,
       });
 
       const block = {
-        id: "block1",
-        type: "image",
+        id: 'block1',
+        type: 'image',
         image: {
-          type: "file",
-          file: { url: "https://notion.so/image.png" },
+          type: 'file',
+          file: { url: 'https://notion.so/image.png' },
         },
       };
 
       (fetch as unknown as jest.Mock).mockRejectedValueOnce(
-        new Error("Network error"),
+        new Error('Network error'),
       );
 
       await expect(strategy.process(block as any)).rejects.toThrow(
@@ -100,7 +100,7 @@ describe("DownloadStrategy", () => {
       );
     });
 
-    test("fails forward in lenient mode for various errors", async () => {
+    test('fails forward in lenient mode for various errors', async () => {
       const strategy = new DownloadStrategy({
         ...mockConfig,
         failForward: true,
@@ -109,28 +109,28 @@ describe("DownloadStrategy", () => {
       // Test cases for different error scenarios
       const testCases = [
         {
-          block: { id: "block1" }, // Missing type
-          expectedUrl: "",
+          block: { id: 'block1' }, // Missing type
+          expectedUrl: '',
         },
         {
           block: {
-            id: "block2",
-            type: "image",
+            id: 'block2',
+            type: 'image',
             image: {}, // Invalid structure
           },
-          expectedUrl: "",
+          expectedUrl: '',
         },
         {
           block: {
-            id: "block3",
-            type: "image",
+            id: 'block3',
+            type: 'image',
             image: {
-              type: "file",
-              file: { url: "https://notion.so/image.png" },
+              type: 'file',
+              file: { url: 'https://notion.so/image.png' },
             },
           },
-          expectedUrl: "https://notion.so/image.png",
-          mockError: new Error("Download failed"),
+          expectedUrl: 'https://notion.so/image.png',
+          mockError: new Error('Download failed'),
         },
       ];
 
@@ -145,7 +145,7 @@ describe("DownloadStrategy", () => {
         expect(result).toEqual({
           type: MediaInfoType.DIRECT,
           originalUrl: testCase.expectedUrl,
-          transformedUrl: testCase.expectedUrl,
+          transformedPath: testCase.expectedUrl,
         });
         expect(console.error).toHaveBeenCalledWith(
           expect.any(MediaProcessingError),
@@ -155,40 +155,40 @@ describe("DownloadStrategy", () => {
   });
 
   // Media URL Extraction Tests
-  describe("Media URL Extraction", () => {
-    test("extracts external URLs from all media block types", async () => {
+  describe('Media URL Extraction', () => {
+    test('extracts external URLs from all media block types', async () => {
       const strategy = new DownloadStrategy(mockConfig);
       const blocks = [
         {
-          id: "block1",
-          type: "image",
+          id: 'block1',
+          type: 'image',
           image: {
-            type: "external",
-            external: { url: "https://example.com/image.png" },
+            type: 'external',
+            external: { url: 'https://example.com/image.png' },
           },
         },
         {
-          id: "block2",
-          type: "video",
+          id: 'block2',
+          type: 'video',
           video: {
-            type: "external",
-            external: { url: "https://example.com/video.mp4" },
+            type: 'external',
+            external: { url: 'https://example.com/video.mp4' },
           },
         },
         {
-          id: "block3",
-          type: "file",
+          id: 'block3',
+          type: 'file',
           file: {
-            type: "external",
-            external: { url: "https://example.com/document.pdf" },
+            type: 'external',
+            external: { url: 'https://example.com/document.pdf' },
           },
         },
         {
-          id: "block4",
-          type: "pdf",
+          id: 'block4',
+          type: 'pdf',
           pdf: {
-            type: "external",
-            external: { url: "https://example.com/document.pdf" },
+            type: 'external',
+            external: { url: 'https://example.com/document.pdf' },
           },
         },
       ];
@@ -197,43 +197,43 @@ describe("DownloadStrategy", () => {
         const result = await strategy.process(block as any);
         // @ts-ignore
         expect(result.originalUrl).toBe(block[block.type].external.url);
-        expect(result.transformedUrl).toBeDefined();
+        expect(result.transformedPath).toBeDefined();
       }
     });
 
-    test("extracts Notion file URLs from all media block types", async () => {
+    test('extracts Notion file URLs from all media block types', async () => {
       const strategy = new DownloadStrategy(mockConfig);
       const blocks = [
         {
-          id: "block1",
-          type: "image",
+          id: 'block1',
+          type: 'image',
           image: {
-            type: "file",
-            file: { url: "https://notion.so/image.png" },
+            type: 'file',
+            file: { url: 'https://notion.so/image.png' },
           },
         },
         {
-          id: "block2",
-          type: "video",
+          id: 'block2',
+          type: 'video',
           video: {
-            type: "file",
-            file: { url: "https://notion.so/video.mp4" },
+            type: 'file',
+            file: { url: 'https://notion.so/video.mp4' },
           },
         },
         {
-          id: "block3",
-          type: "file",
+          id: 'block3',
+          type: 'file',
           file: {
-            type: "file",
-            file: { url: "https://notion.so/document.pdf" },
+            type: 'file',
+            file: { url: 'https://notion.so/document.pdf' },
           },
         },
         {
-          id: "block4",
-          type: "pdf",
+          id: 'block4',
+          type: 'pdf',
           pdf: {
-            type: "file",
-            file: { url: "https://notion.so/document.pdf" },
+            type: 'file',
+            file: { url: 'https://notion.so/document.pdf' },
           },
         },
       ];
@@ -241,10 +241,10 @@ describe("DownloadStrategy", () => {
       // Mock successful download for all cases
       (fetch as unknown as jest.Mock).mockResolvedValue({
         ok: true,
-        headers: { get: () => "application/octet-stream" },
-        buffer: () => Promise.resolve(Buffer.from("test")),
+        headers: { get: () => 'application/octet-stream' },
+        buffer: () => Promise.resolve(Buffer.from('test')),
       });
-      (mime.extension as jest.Mock).mockReturnValue("bin");
+      (mime.extension as jest.Mock).mockReturnValue('bin');
 
       for (const block of blocks) {
         const result = await strategy.process(block as any);
@@ -253,33 +253,33 @@ describe("DownloadStrategy", () => {
       }
     });
 
-    test("handles malformed media blocks gracefully", async () => {
+    test('handles malformed media blocks gracefully', async () => {
       const strategy = new DownloadStrategy(mockConfig);
       const malformedBlocks = [
         {
-          id: "block1",
-          type: "image",
+          id: 'block1',
+          type: 'image',
           image: {}, // Missing type and URL
         },
         {
-          id: "block2",
-          type: "video",
+          id: 'block2',
+          type: 'video',
           video: {
-            type: "external",
+            type: 'external',
             // Missing external.url
           },
         },
         {
-          id: "block3",
-          type: "file",
+          id: 'block3',
+          type: 'file',
           file: {
-            type: "file",
+            type: 'file',
             // Missing file.url
           },
         },
         {
-          id: "block4",
-          type: "pdf",
+          id: 'block4',
+          type: 'pdf',
           // Missing pdf object entirely
         },
       ];
@@ -287,8 +287,8 @@ describe("DownloadStrategy", () => {
       for (const block of malformedBlocks) {
         const result = await strategy.process(block as any);
         expect(result.type).toBe(MediaInfoType.DIRECT);
-        expect(result.originalUrl).toBe("");
-        expect(result.transformedUrl).toBe("");
+        expect(result.originalUrl).toBe('');
+        expect(result.transformedPath).toBe('');
         expect(console.error).toHaveBeenCalledWith(
           expect.any(MediaProcessingError),
         );
@@ -297,45 +297,45 @@ describe("DownloadStrategy", () => {
   });
 
   // Download and Storage Tests
-  describe("Download and Storage", () => {
-    test("successfully downloads and stores all media types", async () => {
+  describe('Download and Storage', () => {
+    test('successfully downloads and stores all media types', async () => {
       const strategy = new DownloadStrategy(mockConfig);
       const testCases = [
         {
           block: {
-            id: "block1",
-            type: "image",
+            id: 'block1',
+            type: 'image',
             image: {
-              type: "file",
-              file: { url: "https://notion.so/image.png" },
+              type: 'file',
+              file: { url: 'https://notion.so/image.png' },
             },
           },
-          mimeType: "image/png",
-          extension: "png",
+          mimeType: 'image/png',
+          extension: 'png',
         },
         {
           block: {
-            id: "block2",
-            type: "video",
+            id: 'block2',
+            type: 'video',
             video: {
-              type: "file",
-              file: { url: "https://notion.so/video.mp4" },
+              type: 'file',
+              file: { url: 'https://notion.so/video.mp4' },
             },
           },
-          mimeType: "video/mp4",
-          extension: "mp4",
+          mimeType: 'video/mp4',
+          extension: 'mp4',
         },
         {
           block: {
-            id: "block3",
-            type: "pdf",
+            id: 'block3',
+            type: 'pdf',
             pdf: {
-              type: "file",
-              file: { url: "https://notion.so/document.pdf" },
+              type: 'file',
+              file: { url: 'https://notion.so/document.pdf' },
             },
           },
-          mimeType: "application/pdf",
-          extension: "pdf",
+          mimeType: 'application/pdf',
+          extension: 'pdf',
         },
       ];
 
@@ -343,7 +343,7 @@ describe("DownloadStrategy", () => {
         (fetch as unknown as jest.Mock).mockResolvedValueOnce({
           ok: true,
           headers: { get: () => testCase.mimeType },
-          buffer: () => Promise.resolve(Buffer.from("test")),
+          buffer: () => Promise.resolve(Buffer.from('test')),
         });
         (mime.extension as jest.Mock).mockReturnValueOnce(testCase.extension);
 
@@ -353,7 +353,7 @@ describe("DownloadStrategy", () => {
         expect(result.localPath).toContain(testCase.block.id);
         expect(result.localPath).toContain(testCase.extension);
         expect(result.mimeType).toBe(testCase.mimeType);
-        expect(result.transformedUrl).toMatch(/^\/media\//);
+        expect(result.transformedPath).toMatch(/^\/media\//);
 
         expect(fs.mkdir).toHaveBeenCalledWith(
           mockConfig.outputDir,
@@ -363,39 +363,39 @@ describe("DownloadStrategy", () => {
       }
     });
 
-    test("handles various download failures gracefully", async () => {
+    test('handles various download failures gracefully', async () => {
       const strategy = new DownloadStrategy(mockConfig);
       const block = {
-        id: "block1",
-        type: "image",
+        id: 'block1',
+        type: 'image',
         image: {
-          type: "file",
-          file: { url: "https://notion.so/image.png" },
+          type: 'file',
+          file: { url: 'https://notion.so/image.png' },
         },
       };
 
       const errorCases = [
         {
-          error: new Error("Network error"),
-          errorType: "network",
+          error: new Error('Network error'),
+          errorType: 'network',
         },
         {
-          error: { ok: false, statusText: "Not Found" },
-          errorType: "http",
+          error: { ok: false, statusText: 'Not Found' },
+          errorType: 'http',
         },
         {
           mock: {
             ok: true,
-            headers: { get: () => "invalid/type" },
-            buffer: () => Promise.resolve(Buffer.from("test")),
+            headers: { get: () => 'invalid/type' },
+            buffer: () => Promise.resolve(Buffer.from('test')),
           },
-          errorType: "mime",
+          errorType: 'mime',
         },
       ];
 
       for (const errorCase of errorCases) {
         if (errorCase.error) {
-          if (errorCase.errorType === "network") {
+          if (errorCase.errorType === 'network') {
             (fetch as unknown as jest.Mock).mockRejectedValueOnce(
               errorCase.error,
             );
@@ -411,8 +411,8 @@ describe("DownloadStrategy", () => {
 
         const result = await strategy.process(block as any);
         expect(result.type).toBe(MediaInfoType.DIRECT);
-        expect(result.originalUrl).toBe("https://notion.so/image.png");
-        expect(result.transformedUrl).toBe("https://notion.so/image.png");
+        expect(result.originalUrl).toBe('https://notion.so/image.png');
+        expect(result.transformedPath).toBe('https://notion.so/image.png');
         expect(console.error).toHaveBeenCalledWith(
           expect.any(MediaProcessingError),
         );
@@ -421,25 +421,25 @@ describe("DownloadStrategy", () => {
   });
 
   // External URL Preservation Tests
-  describe("External URL Preservation", () => {
-    test("preserves external URLs when configured", async () => {
+  describe('External URL Preservation', () => {
+    test('preserves external URLs when configured', async () => {
       const strategy = new DownloadStrategy({
         ...mockConfig,
         preserveExternalUrls: true,
       });
 
       const externalUrls = [
-        "https://example.com/image.png",
-        "https://somecdn.com/video.mp4",
-        "https://storage.com/document.pdf",
+        'https://example.com/image.png',
+        'https://somecdn.com/video.mp4',
+        'https://storage.com/document.pdf',
       ];
 
       for (const url of externalUrls) {
         const block = {
           id: `block-${url}`,
-          type: "image",
+          type: 'image',
           image: {
-            type: "external",
+            type: 'external',
             external: { url },
           },
         };
@@ -447,38 +447,38 @@ describe("DownloadStrategy", () => {
         const result = await strategy.process(block as any);
         expect(result.type).toBe(MediaInfoType.DIRECT);
         expect(result.originalUrl).toBe(url);
-        expect(result.transformedUrl).toBe(url);
+        expect(result.transformedPath).toBe(url);
         expect(fetch).not.toHaveBeenCalled();
       }
     });
 
-    test("downloads Notion URLs even with preserveExternalUrls", async () => {
+    test('downloads Notion URLs even with preserveExternalUrls', async () => {
       const strategy = new DownloadStrategy({
         ...mockConfig,
         preserveExternalUrls: true,
       });
 
       const notionUrls = [
-        "https://prod-files.notion-static.com/image.png",
-        "https://s3.us-west-2.amazonaws.com/secure.notion-static.com/video.mp4",
+        'https://prod-files.notion-static.com/image.png',
+        'https://s3.us-west-2.amazonaws.com/secure.notion-static.com/video.mp4',
       ];
 
       for (const url of notionUrls) {
         const block = {
           id: `block-${url}`,
-          type: "image",
+          type: 'image',
           image: {
-            type: "external",
+            type: 'external',
             external: { url },
           },
         };
 
         (fetch as unknown as jest.Mock).mockResolvedValueOnce({
           ok: true,
-          headers: { get: () => "image/png" },
-          buffer: () => Promise.resolve(Buffer.from("test")),
+          headers: { get: () => 'image/png' },
+          buffer: () => Promise.resolve(Buffer.from('test')),
         });
-        (mime.extension as jest.Mock).mockReturnValue("png");
+        (mime.extension as jest.Mock).mockReturnValue('png');
 
         const result = await strategy.process(block as any);
         expect(result.type).toBe(MediaInfoType.DOWNLOAD);
@@ -488,10 +488,10 @@ describe("DownloadStrategy", () => {
   });
 
   // Path Transformation Tests
-  describe("Path Transformation", () => {
-    test("applies custom path transformation", async () => {
+  describe('Path Transformation', () => {
+    test('applies custom path transformation', async () => {
       const customTransform = (path: string) =>
-        `/custom/${path.split("/").pop()}`;
+        `/custom/${path.split('/').pop()}`;
       const strategy = new DownloadStrategy({
         ...mockConfig,
         transformPath: customTransform,
@@ -499,38 +499,38 @@ describe("DownloadStrategy", () => {
 
       const mediaInfo = {
         type: MediaInfoType.DOWNLOAD as const,
-        originalUrl: "https://notion.so/image.png",
-        localPath: "/local/path/image.png",
+        originalUrl: 'https://notion.so/image.png',
+        localPath: '/local/path/image.png',
       };
 
       const transformed = strategy.transform(mediaInfo);
       expect(transformed).toMatch(/^\/custom\//);
     });
 
-    test("provides default path transformation", async () => {
+    test('provides default path transformation', async () => {
       const strategy = new DownloadStrategy({
-        outputDir: "/output/dir",
+        outputDir: '/output/dir',
       });
       const mediaInfo = {
         type: MediaInfoType.DOWNLOAD as const,
-        originalUrl: "https://notion.so/image.png",
-        localPath: "/output/dir/image.png",
+        originalUrl: 'https://notion.so/image.png',
+        localPath: '/output/dir/image.png',
       };
 
       const transformed = strategy.transform(mediaInfo);
-      expect(transformed).toBe("image.png");
+      expect(transformed).toBe('image.png');
     });
 
-    test("returns original URL for DIRECT type", async () => {
+    test('returns original URL for DIRECT type', async () => {
       const strategy = new DownloadStrategy(mockConfig);
       const testCases = [
         {
           type: MediaInfoType.DIRECT as const,
-          originalUrl: "https://example.com/image.png",
+          originalUrl: 'https://example.com/image.png',
         },
         {
           type: MediaInfoType.DIRECT as const,
-          originalUrl: "https://example.com/video.mp4",
+          originalUrl: 'https://example.com/video.mp4',
         },
       ];
 
@@ -540,9 +540,9 @@ describe("DownloadStrategy", () => {
       }
     });
 
-    test("handles transformation errors gracefully", async () => {
+    test('handles transformation errors gracefully', async () => {
       const erroringTransform = () => {
-        throw new Error("Transform failed");
+        throw new Error('Transform failed');
       };
 
       const strategy = new DownloadStrategy({
@@ -553,8 +553,8 @@ describe("DownloadStrategy", () => {
 
       const mediaInfo = {
         type: MediaInfoType.DOWNLOAD as const,
-        originalUrl: "https://notion.so/image.png",
-        localPath: "/local/path/image.png",
+        originalUrl: 'https://notion.so/image.png',
+        localPath: '/local/path/image.png',
       };
 
       const result = strategy.transform(mediaInfo);
@@ -564,9 +564,9 @@ describe("DownloadStrategy", () => {
       );
     });
 
-    test("throws transformation errors in strict mode", async () => {
+    test('throws transformation errors in strict mode', async () => {
       const erroringTransform = () => {
-        throw new Error("Transform failed");
+        throw new Error('Transform failed');
       };
 
       const strategy = new DownloadStrategy({
@@ -577,8 +577,8 @@ describe("DownloadStrategy", () => {
 
       const mediaInfo = {
         type: MediaInfoType.DOWNLOAD as const,
-        originalUrl: "https://notion.so/image.png",
-        localPath: "/local/path/image.png",
+        originalUrl: 'https://notion.so/image.png',
+        localPath: '/local/path/image.png',
       };
 
       expect(() => strategy.transform(mediaInfo)).toThrow(MediaProcessingError);
@@ -586,33 +586,33 @@ describe("DownloadStrategy", () => {
   });
 
   // Cleanup Tests
-  describe("Cleanup", () => {
-    test("cleans up downloaded files successfully", async () => {
+  describe('Cleanup', () => {
+    test('cleans up downloaded files successfully', async () => {
       const strategy = new DownloadStrategy(mockConfig);
       const entries: MediaManifestEntry[] = [
         {
           mediaInfo: {
             type: MediaInfoType.DOWNLOAD,
-            originalUrl: "https://notion.so/image1.png",
-            localPath: "/output/dir/image1.png",
-            mimeType: "image/png",
-            transformedUrl: "/media/image1.png",
+            originalUrl: 'https://notion.so/image1.png',
+            localPath: '/output/dir/image1.png',
+            mimeType: 'image/png',
+            transformedPath: '/media/image1.png',
           },
-          lastEdited: "2024-01-19",
-          createdAt: "2024-01-19",
-          updatedAt: "2024-01-19",
+          lastEdited: '2024-01-19',
+          createdAt: '2024-01-19',
+          updatedAt: '2024-01-19',
         },
         {
           mediaInfo: {
             type: MediaInfoType.DOWNLOAD,
-            originalUrl: "https://notion.so/image2.png",
-            localPath: "/output/dir/image2.png",
-            mimeType: "image/png",
-            transformedUrl: "/media/image2.png",
+            originalUrl: 'https://notion.so/image2.png',
+            localPath: '/output/dir/image2.png',
+            mimeType: 'image/png',
+            transformedPath: '/media/image2.png',
           },
-          lastEdited: "2024-01-19",
-          createdAt: "2024-01-19",
-          updatedAt: "2024-01-19",
+          lastEdited: '2024-01-19',
+          createdAt: '2024-01-19',
+          updatedAt: '2024-01-19',
         },
       ];
 
@@ -622,41 +622,41 @@ describe("DownloadStrategy", () => {
       }
     });
 
-    test("handles missing files during cleanup", async () => {
+    test('handles missing files during cleanup', async () => {
       const strategy = new DownloadStrategy(mockConfig);
       const entry: MediaManifestEntry = {
         mediaInfo: {
           type: MediaInfoType.DOWNLOAD,
-          originalUrl: "https://notion.so/image.png",
-          localPath: "/output/dir/image.png",
-          mimeType: "image/png",
-          transformedUrl: "/media/image.png",
+          originalUrl: 'https://notion.so/image.png',
+          localPath: '/output/dir/image.png',
+          mimeType: 'image/png',
+          transformedPath: '/media/image.png',
         },
-        lastEdited: "2024-01-19",
-        createdAt: "2024-01-19",
-        updatedAt: "2024-01-19",
+        lastEdited: '2024-01-19',
+        createdAt: '2024-01-19',
+        updatedAt: '2024-01-19',
       };
 
       // Simulate ENOENT error
-      (fs.unlink as jest.Mock).mockRejectedValueOnce({ code: "ENOENT" });
+      (fs.unlink as jest.Mock).mockRejectedValueOnce({ code: 'ENOENT' });
 
       await expect(strategy.cleanup(entry)).resolves.toBeUndefined();
       expect(console.error).toHaveBeenCalled();
     });
 
-    test("handles invalid local paths during cleanup", async () => {
+    test('handles invalid local paths during cleanup', async () => {
       const strategy = new DownloadStrategy(mockConfig);
       const entry: MediaManifestEntry = {
         mediaInfo: {
           type: MediaInfoType.DOWNLOAD,
-          originalUrl: "https://notion.so/image.png",
-          localPath: "", // Invalid local path
-          mimeType: "image/png",
-          transformedUrl: "/media/image.png",
+          originalUrl: 'https://notion.so/image.png',
+          localPath: '', // Invalid local path
+          mimeType: 'image/png',
+          transformedPath: '/media/image.png',
         },
-        lastEdited: "2024-01-19",
-        createdAt: "2024-01-19",
-        updatedAt: "2024-01-19",
+        lastEdited: '2024-01-19',
+        createdAt: '2024-01-19',
+        updatedAt: '2024-01-19',
       };
 
       // Since invalid path is an error case that should be logged
@@ -666,24 +666,24 @@ describe("DownloadStrategy", () => {
       expect(fs.unlink).not.toHaveBeenCalled();
     });
 
-    test("handles permission errors gracefully", async () => {
+    test('handles permission errors gracefully', async () => {
       const strategy = new DownloadStrategy(mockConfig);
       const entry: MediaManifestEntry = {
         mediaInfo: {
           type: MediaInfoType.DOWNLOAD,
-          originalUrl: "https://notion.so/image.png",
-          localPath: "/output/dir/image.png",
-          mimeType: "image/png",
-          transformedUrl: "/media/image.png",
+          originalUrl: 'https://notion.so/image.png',
+          localPath: '/output/dir/image.png',
+          mimeType: 'image/png',
+          transformedPath: '/media/image.png',
         },
-        lastEdited: "2024-01-19",
-        createdAt: "2024-01-19",
-        updatedAt: "2024-01-19",
+        lastEdited: '2024-01-19',
+        createdAt: '2024-01-19',
+        updatedAt: '2024-01-19',
       };
 
       // Simulate permission error
-      const error = new Error("Permission denied");
-      (error as any).code = "EACCES";
+      const error = new Error('Permission denied');
+      (error as any).code = 'EACCES';
       (fs.unlink as jest.Mock).mockRejectedValueOnce(error);
 
       await expect(strategy.cleanup(entry)).resolves.not.toThrow();
@@ -692,17 +692,17 @@ describe("DownloadStrategy", () => {
       );
     });
 
-    test("skips cleanup for DIRECT type entries", async () => {
+    test('skips cleanup for DIRECT type entries', async () => {
       const strategy = new DownloadStrategy(mockConfig);
       const entry: MediaManifestEntry = {
         mediaInfo: {
           type: MediaInfoType.DIRECT,
-          originalUrl: "https://example.com/image.png",
-          transformedUrl: "https://example.com/image.png",
+          originalUrl: 'https://example.com/image.png',
+          transformedPath: 'https://example.com/image.png',
         },
-        lastEdited: "2024-01-19",
-        createdAt: "2024-01-19",
-        updatedAt: "2024-01-19",
+        lastEdited: '2024-01-19',
+        createdAt: '2024-01-19',
+        updatedAt: '2024-01-19',
       };
 
       await strategy.cleanup(entry);
@@ -711,23 +711,23 @@ describe("DownloadStrategy", () => {
   });
 
   // Edge Cases and Special Scenarios
-  describe("Edge Cases", () => {
-    test("handles empty or null URLs", async () => {
+  describe('Edge Cases', () => {
+    test('handles empty or null URLs', async () => {
       const strategy = new DownloadStrategy(mockConfig);
       const blocks = [
         {
-          id: "block1",
-          type: "image",
+          id: 'block1',
+          type: 'image',
           image: {
-            type: "external",
-            external: { url: "" },
+            type: 'external',
+            external: { url: '' },
           },
         },
         {
-          id: "block2",
-          type: "image",
+          id: 'block2',
+          type: 'image',
           image: {
-            type: "external",
+            type: 'external',
             external: { url: null },
           },
         },
@@ -736,32 +736,32 @@ describe("DownloadStrategy", () => {
       for (const block of blocks) {
         const result = await strategy.process(block as any);
         expect(result.type).toBe(MediaInfoType.DIRECT);
-        expect(result.originalUrl).toBe("");
-        expect(result.transformedUrl).toBe("");
+        expect(result.originalUrl).toBe('');
+        expect(result.transformedPath).toBe('');
       }
     });
 
-    test("handles unusual mime types", async () => {
+    test('handles unusual mime types', async () => {
       const strategy = new DownloadStrategy(mockConfig);
       const block = {
-        id: "block1",
-        type: "file",
+        id: 'block1',
+        type: 'file',
         file: {
-          type: "file",
-          file: { url: "https://notion.so/file.xyz" },
+          type: 'file',
+          file: { url: 'https://notion.so/file.xyz' },
         },
       };
 
       (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        headers: { get: () => "application/x-custom" },
-        buffer: () => Promise.resolve(Buffer.from("test")),
+        headers: { get: () => 'application/x-custom' },
+        buffer: () => Promise.resolve(Buffer.from('test')),
       });
-      (mime.extension as jest.Mock).mockReturnValue("bin"); // Fallback extension
+      (mime.extension as jest.Mock).mockReturnValue('bin'); // Fallback extension
 
       const result = await strategy.process(block as any);
       expect(result.type).toBe(MediaInfoType.DOWNLOAD);
-      expect(result.localPath).toContain(".bin");
+      expect(result.localPath).toContain('.bin');
     });
   });
 });
