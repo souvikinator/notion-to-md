@@ -154,6 +154,7 @@ export class NotionConverter {
         pageId,
         blockTree: {} as ExtendedFetcherOutput,
         content: '',
+        manifests: {},
       };
 
       // Process through the chain
@@ -241,13 +242,16 @@ export class NotionConverter {
     current.next = this.config.renderer;
     current = this.config.renderer;
 
-    // Add exporter node if exporters are configured
-    if (this.config.exporters?.length) {
-      console.debug('[NotionConverter] Adding Exporter to chain');
-      const exporterNode = new Exporter(this.config.exporters);
-      current.next = exporterNode;
-      // No need to update current since exporter is last as of now
+    if (!this.config.exporters?.length) {
+      throw new Error(
+        'No exporter configured. Please configure at least one exporter using withExporter() and DefaultExporter.',
+      );
     }
+
+    console.debug('[NotionConverter] Adding Exporter to chain');
+    const exporterNode = new Exporter(this.config.exporters);
+    current.next = exporterNode;
+    // No need to update current since exporter is last as of now
 
     this.processorChain = head;
     console.debug('[NotionConverter] Processor chain initialization complete');

@@ -1,4 +1,8 @@
 import {
+  MediaManifestManager,
+  PageReferenceManifestManager,
+} from '../utils/index';
+import {
   PageProperties,
   ListBlockChildrenResponseResult,
   ListBlockChildrenResponseResults,
@@ -23,6 +27,10 @@ interface AnnotationContext {
     url: string;
   };
   metadata?: ContextMetadata;
+  manifest: {
+    media?: MediaManifestManager;
+    pageRef?: PageReferenceManifestManager;
+  };
 }
 
 export interface RendererContext {
@@ -32,6 +40,11 @@ export interface RendererContext {
   block: ListBlockChildrenResponseResult;
   blockTree: ListBlockChildrenResponseResults;
   variableData: VariableCollector;
+
+  manifest: {
+    media?: MediaManifestManager;
+    pageRef?: PageReferenceManifestManager;
+  };
 
   // Access to all transformers
   transformers: {

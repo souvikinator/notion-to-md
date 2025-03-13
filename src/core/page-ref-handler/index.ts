@@ -47,6 +47,12 @@ export class PageReferenceHandler implements ProcessorChainNode {
       );
     }
     console.debug('[PageRefHandler] Process complete');
+
+    if (!data.manifests) {
+      data.manifests = {};
+    }
+
+    data.manifests.pageRef = this.manifestManager;
     return this.next ? this.next.process(data) : data;
   }
 

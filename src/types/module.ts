@@ -1,3 +1,7 @@
+import {
+  MediaManifestManager,
+  PageReferenceManifestManager,
+} from '../utils/index';
 import { ExtendedFetcherOutput } from './notion';
 
 export interface ChainData {
@@ -5,6 +9,10 @@ export interface ChainData {
   blockTree: ExtendedFetcherOutput;
   metadata?: Record<string, any>;
   content: string;
+  manifests: {
+    media?: MediaManifestManager;
+    pageRef?: PageReferenceManifestManager;
+  };
 }
 
 export interface ProcessorChainNode {

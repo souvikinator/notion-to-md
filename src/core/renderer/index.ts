@@ -54,6 +54,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
         processRichText: this.processRichText.bind(this),
         processBlock: this.processBlock.bind(this),
       },
+      manifest: {},
     };
     console.debug('[BaseRendererPlugin] Context initialized');
 
@@ -249,6 +250,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
               text,
               annotations: item.annotations,
               metadata,
+              manifest: this.context.manifest,
             });
           }
         }
@@ -260,6 +262,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
             {
               text,
               metadata,
+              manifest: this.context.manifest,
             },
           );
         }
@@ -270,6 +273,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
             text,
             link: link ? { url: link } : undefined,
             metadata,
+            manifest: this.context.manifest,
           });
         }
 
@@ -470,6 +474,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
         ...this.context.metadata,
         ...data.metadata,
       },
+      manifest: data.manifests,
     };
   }
 }
