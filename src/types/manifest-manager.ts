@@ -11,9 +11,9 @@ export interface MediaManifest {
 }
 
 export enum MediaStrategyType {
-  DOWNLOAD = "DOWNLOAD",
-  UPLOAD = "UPLOAD",
-  DIRECT = "DIRECT",
+  DOWNLOAD = 'DOWNLOAD',
+  UPLOAD = 'UPLOAD',
+  DIRECT = 'DIRECT',
 }
 
 export interface MediaManifestInput {
@@ -31,7 +31,7 @@ export interface MediaInfo {
   originalUrl: string;
   localPath?: string;
   uploadedUrl?: string;
-  transformedUrl?: string;
+  transformedPath?: string;
   mimeType?: string;
 }
 
@@ -40,8 +40,8 @@ export interface MediaInfo {
  */
 
 export enum PageReferenceEntryType {
-  PROPERTY = "PROPERTY",
-  MANIFEST = "MANIFEST",
+  PROPERTY = 'PROPERTY',
+  MANIFEST = 'MANIFEST',
 }
 
 export interface PageManifest {

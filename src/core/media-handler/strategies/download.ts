@@ -64,7 +64,7 @@ export class DownloadStrategy implements MediaStrategy {
       return {
         type: MediaStrategyType.DIRECT,
         originalUrl: '',
-        transformedUrl: '',
+        transformedPath: '',
       };
     }
 
@@ -76,7 +76,7 @@ export class DownloadStrategy implements MediaStrategy {
       return {
         type: MediaStrategyType.DIRECT,
         originalUrl: url,
-        transformedUrl: url,
+        transformedPath: url,
       };
     }
 
@@ -95,7 +95,7 @@ export class DownloadStrategy implements MediaStrategy {
         originalUrl: url,
         localPath,
         mimeType,
-        transformedUrl: this.transform({
+        transformedPath: this.transform({
           type: MediaStrategyType.DOWNLOAD,
           originalUrl: url,
           localPath,
@@ -122,7 +122,7 @@ export class DownloadStrategy implements MediaStrategy {
       return {
         type: MediaStrategyType.DIRECT,
         originalUrl: url,
-        transformedUrl: url,
+        transformedPath: url,
       };
     }
   }
@@ -156,13 +156,11 @@ export class DownloadStrategy implements MediaStrategy {
       let transformedPath: string;
       if (this.config.transformPath) {
         console.debug('[DownloadStrategy] Applying custom path transformation');
-        transformedPath = this.config.transformPath(mediaInfo.localPath);
-      } else {
-        console.debug('[DownloadStrategy] Using default path');
-        transformedPath = mediaInfo.localPath;
+        return this.config.transformPath(mediaInfo.localPath);
       }
-      console.debug('[DownloadStrategy] Transformed path:', transformedPath);
-      return transformedPath;
+
+      console.debug('[DownloadStrategy] Using default path');
+      return mediaInfo.localPath;
     } catch (error) {
       console.debug(
         '[DownloadStrategy] Error during path transformation:',

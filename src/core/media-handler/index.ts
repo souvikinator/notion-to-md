@@ -109,12 +109,24 @@ export class MediaHandler implements ProcessorChainNode {
     console.debug('[MediaHandler] Processing media block:', block.id);
     let existingEntry = this.manifestManager.getEntry(block.id);
 
-    // @ts-ignore - If block hasn't changed, just mark as processed and return
+    // @ts-ignore - If block hasn't changed, trigger transforming path and just mark as processed
     if (existingEntry && existingEntry.lastEdited === block.last_edited_time) {
       console.debug(
         '[MediaHandler] Block unchanged, skipping processing:',
         block.id,
       );
+
+      // Even though block is unchanged, we still apply the current transform function
+      if (existingEntry.mediaInfo.localPath) {
+        const transformedPath = this.strategy.transform(
+          existingEntry.mediaInfo,
+        );
+        this.updateBlockMedia(block, {
+          ...existingEntry.mediaInfo,
+          transformedPath,
+        });
+      }
+
       this.processedBlockIds.add(block.id);
       return;
     }
@@ -224,10 +236,10 @@ export class MediaHandler implements ProcessorChainNode {
     );
 
     // @ts-ignore
-    block[blockType][urlType].url = mediaInfo.transformedUrl;
+    block[blockType][urlType].url = mediaInfo.transformedPath;
     console.debug(
       '[MediaHandler] Updated block media URL to:',
-      mediaInfo.transformedUrl,
+      mediaInfo.transformedPath,
     );
   }
 }

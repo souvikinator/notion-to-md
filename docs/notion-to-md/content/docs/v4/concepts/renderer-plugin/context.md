@@ -36,6 +36,12 @@ interface RendererContext {
     processRichText: (richText: RichText[], metadata?: any) => Promise<string>;
     processBlock: (block: Block, metadata?: any) => Promise<string>;
   };
+
+    // Manifest managers for media and page references
+    manifest: {
+      media?: MediaManifestManager;
+      pageRef?: PageReferenceManifestManager;
+    };
 }
 ```
 
@@ -54,6 +60,10 @@ interface AnnotationContext {
   annotations?: RichTextAnnotation;    // This is from the notion API
   link?: { url: string };      // For linked text
   metadata?: Record<string, any>; // Additional info
+  manifest: {                        // Access to manifest managers
+    media?: MediaManifestManager;
+    pageRef?: PageReferenceManifestManager;
+  };
 }
 ```
 

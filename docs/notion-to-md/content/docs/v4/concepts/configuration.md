@@ -303,7 +303,7 @@ interface MediaInfo {
   originalUrl: string;          // The original Notion URL
   localPath?: string;           // Path on local filesystem (for DOWNLOAD)
   uploadedUrl?: string;         // URL after upload (for UPLOAD)
-  transformedUrl?: string;      // Final URL used in output
+  transformedPath?: string;      // Final URL/filepath used in output
   mimeType?: string;            // Media content type
 }
 
