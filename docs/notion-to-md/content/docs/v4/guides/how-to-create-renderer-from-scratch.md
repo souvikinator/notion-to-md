@@ -2,6 +2,13 @@
 title: "How to create renderer plugin from scratch"
 description: "Guide on how to create a renderer plugin from scratch in notion-to-md v4"
 weight: 3
+tags:
+  - tutorial
+  - markdown
+  - v4
+  - notion-to-md
+  - transformers
+  - renderer plugin
 ---
 
 This guide walks you through creating a custom JSX renderer plugin. We'll build it step by step, starting with the basics.
@@ -11,7 +18,7 @@ This guide walks you through creating a custom JSX renderer plugin. We'll build 
 First, we need to create our renderer class that extends the base plugin and then we define the template for the renderer:
 
 ```typescript {linenos=table,filename="index.ts"}
-import { BaseRendererPlugin } from "notion-to-md/core/renderer";
+import { BaseRendererPlugin } from "notion-to-md/core";
 
 export class JSXRenderer extends BaseRendererPlugin {
   protected template = `{{{imports}}}
@@ -39,7 +46,7 @@ Let's understand what's happening:
 To allow customization, we’ll introduce a configuration option in the plugin's metadata. In this example, users can specify a custom name for the component.
 
 ```typescript {linenos=table,hl_lines=[3,4,5,10,18,19,20,21],file="index.ts"}
-import { BaseRendererPlugin } from "notion-to-md/core/renderer";
+import { BaseRendererPlugin } from "notion-to-md/core";
 
 export interface JSXRendererConfig {
   componentName?: string;

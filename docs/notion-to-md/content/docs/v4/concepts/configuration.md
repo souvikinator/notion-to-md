@@ -219,6 +219,9 @@ interface MDXRendererConfig {
 
 - **defaults**: Default values for properties that might be missing. These values will be used if the corresponding property doesn't exist or is empty.
 
+> [!NOTE]
+> The property names are case-sensitive. Meaning that "Title" and "title" are considered different properties.
+
 ### Example
 
 ```javascript
