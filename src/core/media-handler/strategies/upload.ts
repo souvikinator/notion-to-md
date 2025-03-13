@@ -45,7 +45,7 @@ export class UploadStrategy implements MediaStrategy {
       return {
         type: MediaStrategyType.DIRECT,
         originalUrl: '',
-        transformedUrl: '',
+        transformedPath: '',
       };
     }
 
@@ -54,7 +54,7 @@ export class UploadStrategy implements MediaStrategy {
       return {
         type: MediaStrategyType.DIRECT,
         originalUrl: url,
-        transformedUrl: url,
+        transformedPath: url,
       };
     }
 
@@ -79,7 +79,7 @@ export class UploadStrategy implements MediaStrategy {
         return {
           type: MediaStrategyType.DIRECT,
           originalUrl: url,
-          transformedUrl: url,
+          transformedPath: url,
         };
       }
 
@@ -88,7 +88,7 @@ export class UploadStrategy implements MediaStrategy {
         type: MediaStrategyType.UPLOAD,
         originalUrl: url,
         uploadedUrl,
-        transformedUrl: this.transform({
+        transformedPath: this.transform({
           type: MediaStrategyType.UPLOAD,
           originalUrl: url,
           uploadedUrl,
@@ -112,7 +112,7 @@ export class UploadStrategy implements MediaStrategy {
       return {
         type: MediaStrategyType.DIRECT,
         originalUrl: url,
-        transformedUrl: url,
+        transformedPath: url,
       };
     }
   }

@@ -82,7 +82,7 @@ export const createImportsResolver = (): VariableResolver => {
     const imports = context.variableData.get('imports') || [];
     // Deduplicate imports while preserving order
     const uniqueImports = [...new Set(imports)];
-    return uniqueImports.join('\n');
+    return uniqueImports.join('\n') + '\n\n';
   };
 };
 

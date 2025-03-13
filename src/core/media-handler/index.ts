@@ -112,7 +112,7 @@ export class MediaHandler implements ProcessorChainNode {
     // @ts-ignore - If block hasn't changed, trigger transforming path and just mark as processed
     if (existingEntry && existingEntry.lastEdited === block.last_edited_time) {
       console.debug(
-        '[MediaHandler] Block unchanged, skipping processing:',
+        '[MediaHandler] Block unchanged, skipping processing but applying transformation:',
         block.id,
       );
 

@@ -144,8 +144,8 @@ export class PageReferenceHandler implements ProcessorChainNode {
         return;
       }
 
-      const transformedUrl = this.transformUrl(entry.url);
-      this.updateBlockContent(block, transformedUrl);
+      const transformedPath = this.transformUrl(entry.url);
+      this.updateBlockContent(block, transformedPath);
       this.processedRefs.add(pageId);
     } catch (error) {
       console.error('[PageRefHandler] Reference processing failed:', error);
