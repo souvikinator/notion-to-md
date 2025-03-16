@@ -43,6 +43,12 @@
 <img src="https://komarev.com/ghpvc/?username=notion-to-md&abbreviated=true&label=REPO+VIEWS" alt="repo views" />
 </p>
 
+## 🗒️ Recent posts
+
+<!-- feed start -->
+<!-- feed end -->
+
+
 ## Looking for Support in Other Languages?
 > If you've created a specific client, please open an issue to have it added here.
 
