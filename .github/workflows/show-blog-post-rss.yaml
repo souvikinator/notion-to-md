@@ -20,7 +20,6 @@ jobs:
           max_entry: 5
           start_flag: '<!-- feed start -->'
           end_flag: '<!-- feed end -->'
-          format: '- [{title}]({link}) - {date}'
 
       - name: Commit Changes
         if: ${{ steps.feed.outputs.changed == 'true' }}
