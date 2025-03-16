@@ -1,0 +1,32 @@
+name: Update README with the latest blog posts
+
+on:
+  schedule:
+    - cron: '0 */12 * * *'  # Runs every 12 hours
+  workflow_dispatch:
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Fetch RSS Feed
+        uses: sarisia/actions-readme-feed@v1
+        with:
+          url: 'https://docs.joinescape.org/notion-to-md/blog/index.xml'
+          file: 'README.md'
+          max_entries: 5
+          start_flag: '<!-- feed start -->'
+          end_flag: '<!-- feed end -->'
+          format: '- [{title}]({link}) - {date}'
+
+      - name: Commit Changes
+        if: ${{ steps.feed.outputs.changed == 'true' }}
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add README.md
+          git commit -m 'Update README with latest blog posts'
+          git push
