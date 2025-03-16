@@ -22,10 +22,4 @@ jobs:
           end_flag: '<!-- feed end -->'
 
       - name: Commit Changes
-        if: ${{ steps.feed.outputs.changed == 'true' }}
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add README.md
-          git commit -m 'Update README with latest blog posts'
-          git push
+        uses: sarisia/actions-commit@master
