@@ -1,4 +1,8 @@
 import type { Client } from '@notionhq/client';
+import type {
+  GetDatabaseResponse,
+  PageObjectResponse,
+} from '@notionhq/client/build/src/api-endpoints';
 import {
   ListBlockChildrenResponseResult,
   PageObjectProperties,
@@ -8,21 +12,26 @@ import {
   ExtendedFetcherOutput,
   ProcessorChainNode,
   ChainData,
+  BlockFetcherConfig,
 } from '../../types';
-import { isMediaBlock, isPageRefBlock } from '../../utils/notion';
-
-export interface BlockFetcherConfig {
-  fetchPageProperties?: boolean;
-  fetchComments?: boolean;
-  maxRequestsPerSecond?: number;
-  batchSize?: number;
-  trackMediaBlocks?: boolean;
-  trackPageRefBlocks?: boolean;
-}
+import {
+  fetchAllComments,
+  fetchBlockChildren,
+  fetchDatabaseContent,
+  fetchDatabaseMetadata,
+  fetchPageProperties,
+  isMediaBlock,
+  isPageRefBlock,
+} from '../../utils/notion';
+import { RateLimiter } from '../../utils/rate-limiter/index';
 
 interface QueueTask {
-  type: 'fetch_properties' | 'fetch_comments' | 'fetch_blocks';
-  id: string;
+  type:
+    | 'fetch_properties'
+    | 'fetch_comments'
+    | 'fetch_blocks'
+    | 'fetch_database';
+  entity_id: string; // block, page, database id
   parentId?: string;
 }
 
@@ -38,10 +47,7 @@ export class BlockFetcher implements ProcessorChainNode {
   private mediaBlocks: ListBlockChildrenResponseResult[] = [];
   private pageRefBlocks: ListBlockChildrenResponseResult[] = [];
 
-  private rateLimitWindow = {
-    requests: 0,
-    startTime: Date.now(),
-  };
+  private rateLimiter: RateLimiter;
 
   constructor(
     pageId: string,
@@ -56,6 +62,7 @@ export class BlockFetcher implements ProcessorChainNode {
     const moduleType = 'BlockFetcher';
     this.config.maxRequestsPerSecond = config.maxRequestsPerSecond ?? 3;
     this.config.batchSize = config.batchSize ?? 3;
+    this.rateLimiter = new RateLimiter(this.config.maxRequestsPerSecond);
   }
 
   async process(data: ChainData): Promise<ChainData> {
@@ -78,14 +85,14 @@ export class BlockFetcher implements ProcessorChainNode {
     this.rootComments = [];
 
     // Initialize queue with root level tasks
-    this.addTask({ type: 'fetch_blocks', id: pageId });
+    this.addTask({ type: 'fetch_blocks', entity_id: pageId });
 
     if (this.config.fetchPageProperties) {
-      this.addTask({ type: 'fetch_properties', id: pageId });
+      this.addTask({ type: 'fetch_properties', entity_id: pageId });
     }
 
     if (this.config.fetchComments) {
-      this.addTask({ type: 'fetch_comments', id: pageId });
+      this.addTask({ type: 'fetch_comments', entity_id: pageId });
     }
 
     // Process queue until empty
@@ -115,19 +122,23 @@ export class BlockFetcher implements ProcessorChainNode {
   }
 
   private addTask(task: QueueTask): void {
-    const taskId = `${task.type}-${task.id}`;
+    const taskId = `${task.type}-${task.entity_id}`;
     if (!this.processedTasks.has(taskId)) {
       this.queue.push(task);
     }
   }
 
   private async processTask(task: QueueTask): Promise<void> {
-    const taskId = `${task.type}-${task.id}`;
+    const taskId = `${task.type}-${task.entity_id}`;
     if (this.processedTasks.has(taskId)) return;
 
     switch (task.type) {
       case 'fetch_blocks': {
-        const blocks = await this.fetchBlockChildren(task.id);
+        const blocks = await fetchBlockChildren(
+          this.client,
+          task.entity_id,
+          this.rateLimiter,
+        );
 
         for (const block of blocks) {
           const storedBlock = {
@@ -147,12 +158,21 @@ export class BlockFetcher implements ProcessorChainNode {
             this.pageRefBlocks.push(storedBlock);
           }
 
+          // if block is a child_database send to queue to fetch
+          if ('type' in block && block.type === 'child_database') {
+            this.addTask({
+              type: 'fetch_database',
+              entity_id: block.id,
+              parentId: task.entity_id,
+            });
+          }
+
           // If block has children, queue task to fetch them
           if ('has_children' in block && block.has_children) {
             this.addTask({
               type: 'fetch_blocks',
-              id: block.id,
-              parentId: task.id,
+              entity_id: block.id,
+              parentId: task.entity_id,
             });
           }
 
@@ -161,7 +181,7 @@ export class BlockFetcher implements ProcessorChainNode {
           if (this.config.fetchComments) {
             this.addTask({
               type: 'fetch_comments',
-              id: block.id,
+              entity_id: block.id,
             });
           }
         }
@@ -169,12 +189,17 @@ export class BlockFetcher implements ProcessorChainNode {
       }
 
       case 'fetch_comments': {
-        const comments = await this.fetchAllComments(task.id);
-        if (task.id === this.rootBlockId) {
+        const comments = await fetchAllComments(
+          this.client,
+          task.entity_id,
+          this.rateLimiter,
+        );
+
+        if (task.entity_id === this.rootBlockId) {
           // page level comments
           this.rootComments = comments;
         } else {
-          const block = this.blocks.get(task.id);
+          const block = this.blocks.get(task.entity_id);
           if (block) {
             block.comments = comments;
           }
@@ -183,101 +208,47 @@ export class BlockFetcher implements ProcessorChainNode {
       }
 
       case 'fetch_properties': {
-        const properties = await this.fetchPageProperties(task.id);
+        const properties = await fetchPageProperties(
+          this.client,
+          task.entity_id,
+          this.rateLimiter,
+        );
+
         this.pageProperties = properties;
+        break;
+      }
+
+      case 'fetch_database': {
+        // Fetch database metadata
+        const databaseMetadata = await fetchDatabaseMetadata(
+          this.client,
+          task.entity_id,
+          this.rateLimiter,
+        );
+        // Fetch database content
+        const databaseContent = await fetchDatabaseContent(
+          this.client,
+          task.entity_id,
+          this.rateLimiter,
+        );
+
+        // Add database info to the block
+        const block = this.blocks.get(task.entity_id);
+        if (block) {
+          // @ts-ignore - Adding database information to the block
+          const childDatabase = block.child_database;
+          // @ts-ignore
+          block.child_database = {
+            ...childDatabase,
+            metadata: databaseMetadata,
+            content: databaseContent,
+          };
+        }
         break;
       }
     }
 
     this.processedTasks.add(taskId);
-  }
-
-  private async rateLimitRequest<T>(request: () => Promise<T>): Promise<T> {
-    const now = Date.now();
-    const windowSize = 1000;
-
-    // Reset window if it's expired
-    if (now - this.rateLimitWindow.startTime >= windowSize) {
-      this.rateLimitWindow = {
-        requests: 0,
-        startTime: now,
-      };
-    }
-
-    // Wait if we've hit the rate limit
-    if (this.rateLimitWindow.requests >= this.config.maxRequestsPerSecond!) {
-      const waitTime = windowSize - (now - this.rateLimitWindow.startTime);
-      await new Promise((resolve) => setTimeout(resolve, waitTime));
-      this.rateLimitWindow = {
-        requests: 0,
-        startTime: Date.now(),
-      };
-    }
-
-    this.rateLimitWindow.requests++;
-    return request();
-  }
-
-  private async fetchBlockChildren(
-    blockId: string,
-  ): Promise<ListBlockChildrenResponseResults> {
-    let allBlocks: ListBlockChildrenResponseResults = [];
-    let hasMore = true;
-    let cursor: string | undefined;
-
-    while (hasMore) {
-      const response = await this.rateLimitRequest(() =>
-        this.client.blocks.children.list({
-          block_id: blockId,
-          start_cursor: cursor,
-        }),
-      );
-
-      // Filter out unsupported blocks
-      // should we leave it here or let user handle it in renderer?
-      const blocks = response.results.filter(
-        (block) => 'type' in block && block.type !== 'unsupported',
-      ) as ListBlockChildrenResponseResults;
-
-      allBlocks = [...allBlocks, ...blocks];
-      hasMore = response.has_more;
-      cursor = response.next_cursor ?? undefined;
-    }
-
-    return allBlocks;
-  }
-
-  private async fetchAllComments(
-    blockId: string,
-  ): Promise<CommentResponseResults> {
-    let allComments: CommentResponseResults = [];
-    let hasMore = true;
-    let cursor: string | undefined;
-
-    while (hasMore) {
-      const response = await this.rateLimitRequest(() =>
-        this.client.comments.list({
-          block_id: blockId,
-          start_cursor: cursor,
-        }),
-      );
-
-      allComments = [...allComments, ...response.results];
-      hasMore = response.has_more;
-      cursor = response.next_cursor ?? undefined;
-    }
-
-    return allComments;
-  }
-
-  private async fetchPageProperties(
-    pageId: string,
-  ): Promise<PageObjectProperties> {
-    const response = await this.rateLimitRequest(() =>
-      this.client.pages.retrieve({ page_id: pageId }),
-    );
-
-    return 'properties' in response ? response.properties : {};
   }
 
   private normalizeId(id: string): string {

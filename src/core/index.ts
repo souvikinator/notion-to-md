@@ -1,5 +1,4 @@
 export { BlockFetcher } from './block-fetcher';
-export type { BlockFetcherConfig } from './block-fetcher';
 
 export { Exporter } from './exporter';
 

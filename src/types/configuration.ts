@@ -16,6 +16,7 @@ export interface BlockFetcherConfig {
   batchSize?: number;
   trackMediaBlocks?: boolean;
   trackPageRefBlocks?: boolean;
+  fetchDatabases?: boolean;
 }
 
 export interface MediaHandlerConfig {
