@@ -18,16 +18,18 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: [
-                // Block only index imports and direct types imports
-                '**/types/index.ts',
-                '**/types/index.js',
-                '**/types/index',
-                // Block direct types folder import
-                '**/types$',
-              ],
+              // This pattern matches paths that end exactly with 'types'
+              group: ['*'],
+              regex: '.*/types$',
               message:
-                "Barrel imports from 'types/' are restricted to prevent cyclic dependencies. Use direct imports like 'import { Something } from 'types/specific-file'' instead.",
+                "Direct imports from 'types/' are restricted to prevent cyclic dependencies. Use direct imports like 'import { Something } from 'types/specific-file'' instead.",
+            },
+            {
+              // This pattern matches any index files under types directory
+              group: ['*'],
+              regex: '.*/types/index(\\.ts|\\.js)?$',
+              message:
+                "Imports from index files are restricted to prevent cyclic dependencies. Use direct imports like 'import { Something } from 'types/specific-file'' instead.",
             },
           ],
         },
