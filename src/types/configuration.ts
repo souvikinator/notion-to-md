@@ -2,6 +2,21 @@ import { BaseRendererPlugin } from '../core/renderer';
 import { MediaManifestEntry, MediaStrategyType } from './manifest-manager';
 import { NotionExporter } from './module';
 import { MediaStrategy } from './strategy';
+import { QueryDatabaseParameters } from '@notionhq/client/build/src/api-endpoints';
+
+type DatabaseId = string;
+
+export interface DatabaseQueryOptions {
+  filter?: QueryDatabaseParameters['filter'];
+  sorts?: QueryDatabaseParameters['sorts'];
+}
+
+export type DatabaseQueryMapping = Record<DatabaseId, DatabaseQueryOptions>;
+
+export interface NotionDatabaseConfig {
+  fetchDatabases?: boolean;
+  databaseQueries?: DatabaseQueryMapping;
+}
 
 export interface PageRefConfig {
   UrlPropertyNameNotion?: string;
@@ -16,7 +31,7 @@ export interface BlockFetcherConfig {
   batchSize?: number;
   trackMediaBlocks?: boolean;
   trackPageRefBlocks?: boolean;
-  fetchDatabases?: boolean;
+  databaseConfig?: NotionDatabaseConfig;
 }
 
 export interface MediaHandlerConfig {

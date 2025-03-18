@@ -11,7 +11,7 @@ import fetch from 'node-fetch';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import mime from 'mime/lite';
-import { isExternalUrl } from '../../../utils/url';
+import { isExternalUrl } from '../../../utils/notion';
 
 export class DownloadStrategy implements MediaStrategy {
   constructor(private config: DownloadStrategyConfig) {

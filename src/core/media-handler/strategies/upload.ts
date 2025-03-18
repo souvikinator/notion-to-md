@@ -7,7 +7,7 @@ import {
   MediaProcessingError,
   ListBlockChildrenResponseResult,
 } from '../../../types';
-import { isExternalUrl } from '../../../utils/url';
+import { isExternalUrl } from '../../../utils/notion';
 
 export class UploadStrategy implements MediaStrategy {
   constructor(private config: UploadStrategyConfig) {

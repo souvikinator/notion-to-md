@@ -17,6 +17,7 @@ import {
   PageRefConfig,
   BlockFetcherConfig,
   NotionConverterConfig,
+  NotionDatabaseConfig,
 } from './types';
 import {
   MediaManifestManager,
@@ -24,6 +25,7 @@ import {
 } from './utils/manifest-manager';
 import { BaseRendererPlugin } from './core/renderer';
 import { MDXRenderer } from './plugins/renderer';
+import { normalizeUUID } from './utils/notion/index';
 
 /**
  * Main class that orchestrates the conversion process using a chain of processors.
@@ -42,6 +44,10 @@ export class NotionConverter {
       batchSize: 3,
       trackMediaBlocks: false,
       trackPageRefBlocks: false,
+      databaseConfig: {
+        fetchDatabases: true,
+        // database queries are optional
+      },
     };
     console.debug(
       '[NotionConverter] Default block fetcher config:',
@@ -63,6 +69,61 @@ export class NotionConverter {
       '[NotionConverter] Updated block fetcher config:',
       this.config.blockFetcherConfig,
     );
+    return this;
+  }
+
+  /**
+   * Configures database filtering and sorting options
+   *
+   * This method allows specifying which records to retrieve from Notion databases
+   * encountered during the conversion process. Databases can be filtered and sorted
+   * using the same syntax as the Notion API.
+   *
+   * @param databaseConfig A mapping of database IDs to their filter/sort options
+   * @returns The NotionConverter instance for chaining
+   *
+   * @example
+   * ```
+   * const n2m = new NotionConverter(notionClient)
+   *   .configureDatabase({
+   *     'database-id-123': {
+   *       filters: {
+   *         property: 'Status',
+   *         select: { equals: 'Published' }
+   *       },
+   *       sorts: [
+   *         { property: 'PublishDate', direction: 'descending' }
+   *       ]
+   *     }
+   *   });
+   * ```
+   */
+  configureDatabase(databaseConfig: NotionDatabaseConfig): this {
+    if (!this.config.blockFetcherConfig) {
+      this.config.blockFetcherConfig = {};
+    }
+
+    // normalize the provided database id (UUID) from user to hyphenated UUID
+    // to ensure proper equality checks
+    if (databaseConfig.databaseQueries) {
+      databaseConfig.databaseQueries = Object.fromEntries(
+        Object.entries(databaseConfig.databaseQueries).map(
+          ([databaseId, value]) => [normalizeUUID(databaseId), value],
+        ),
+      );
+    }
+
+    // Set the database configuration
+    this.config.blockFetcherConfig.databaseConfig = {
+      ...this.config.blockFetcherConfig.databaseConfig,
+      ...databaseConfig,
+    };
+
+    console.debug(
+      '[NotionConverter] Updated fetcher config with database options:',
+      this.config.blockFetcherConfig,
+    );
+
     return this;
   }
 
@@ -140,6 +201,8 @@ export class NotionConverter {
    * Main conversion method that processes a Notion page through the chain.
    */
   async convert(pageId: string): Promise<void> {
+    // making sure that we are consistent with the UUID from the user input
+    pageId = normalizeUUID(pageId);
     console.debug('[NotionConverter] Starting conversion for page:', pageId);
     try {
       // Initialize the processor chain if not already done

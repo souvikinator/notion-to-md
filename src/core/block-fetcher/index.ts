@@ -1,8 +1,4 @@
 import type { Client } from '@notionhq/client';
-import type {
-  GetDatabaseResponse,
-  PageObjectResponse,
-} from '@notionhq/client/build/src/api-endpoints';
 import {
   ListBlockChildrenResponseResult,
   PageObjectProperties,
@@ -15,13 +11,14 @@ import {
   BlockFetcherConfig,
 } from '../../types';
 import {
-  fetchAllComments,
-  fetchBlockChildren,
-  fetchDatabaseContent,
-  fetchDatabaseMetadata,
-  fetchPageProperties,
+  fetchNotionAllComments,
+  fetchNotionBlockChildren,
+  fetchNotionDatabaseContent,
+  fetchNotionDatabaseMetadata,
+  fetchNotionPageProperties,
   isMediaBlock,
   isPageRefBlock,
+  normalizeUUID,
 } from '../../utils/notion';
 import { RateLimiter } from '../../utils/rate-limiter/index';
 
@@ -134,7 +131,7 @@ export class BlockFetcher implements ProcessorChainNode {
 
     switch (task.type) {
       case 'fetch_blocks': {
-        const blocks = await fetchBlockChildren(
+        const blocks = await fetchNotionBlockChildren(
           this.client,
           task.entity_id,
           this.rateLimiter,
@@ -158,12 +155,15 @@ export class BlockFetcher implements ProcessorChainNode {
             this.pageRefBlocks.push(storedBlock);
           }
 
-          // if block is a child_database send to queue to fetch
-          if ('type' in block && block.type === 'child_database') {
+          // if block is a child_database and in config it's enabled send to queue to fetch
+          if (
+            'type' in block &&
+            block.type === 'child_database' &&
+            this.config.databaseConfig?.fetchDatabases
+          ) {
             this.addTask({
               type: 'fetch_database',
               entity_id: block.id,
-              parentId: task.entity_id,
             });
           }
 
@@ -189,7 +189,7 @@ export class BlockFetcher implements ProcessorChainNode {
       }
 
       case 'fetch_comments': {
-        const comments = await fetchAllComments(
+        const comments = await fetchNotionAllComments(
           this.client,
           task.entity_id,
           this.rateLimiter,
@@ -208,7 +208,7 @@ export class BlockFetcher implements ProcessorChainNode {
       }
 
       case 'fetch_properties': {
-        const properties = await fetchPageProperties(
+        const properties = await fetchNotionPageProperties(
           this.client,
           task.entity_id,
           this.rateLimiter,
@@ -220,16 +220,21 @@ export class BlockFetcher implements ProcessorChainNode {
 
       case 'fetch_database': {
         // Fetch database metadata
-        const databaseMetadata = await fetchDatabaseMetadata(
+        const databaseMetadata = await fetchNotionDatabaseMetadata(
           this.client,
           task.entity_id,
           this.rateLimiter,
         );
+        console.log(
+          '@@@@ ',
+          this.config.databaseConfig?.databaseQueries?.[task.entity_id],
+        );
         // Fetch database content
-        const databaseContent = await fetchDatabaseContent(
+        const databaseContent = await fetchNotionDatabaseContent(
           this.client,
           task.entity_id,
           this.rateLimiter,
+          this.config.databaseConfig?.databaseQueries?.[task.entity_id],
         );
 
         // Add database info to the block
@@ -251,10 +256,6 @@ export class BlockFetcher implements ProcessorChainNode {
     this.processedTasks.add(taskId);
   }
 
-  private normalizeId(id: string): string {
-    return id.replace(/-/g, '');
-  }
-
   private buildBlockTree(rootId: string): ListBlockChildrenResponseResults {
     const childrenMap = new Map<string, ListBlockChildrenResponseResult[]>();
 
@@ -263,11 +264,11 @@ export class BlockFetcher implements ProcessorChainNode {
         // @ts-ignore
         block.parent?.type === 'block_id'
           ? // @ts-ignore
-            this.normalizeId(block.parent.block_id)
+            normalizeUUID(block.parent.block_id)
           : // @ts-ignore
             block.parent?.type === 'page_id'
             ? // @ts-ignore
-              this.normalizeId(block.parent.page_id)
+              normalizeUUID(block.parent.page_id)
             : undefined;
 
       if (parentId) {
@@ -281,7 +282,7 @@ export class BlockFetcher implements ProcessorChainNode {
     const buildChildren = (
       parentId: string,
     ): ListBlockChildrenResponseResults => {
-      const children = childrenMap.get(this.normalizeId(parentId)) || [];
+      const children = childrenMap.get(normalizeUUID(parentId)) || [];
       return children.map((block) => {
         block.children = buildChildren(block.id);
         return block;

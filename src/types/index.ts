@@ -59,4 +59,7 @@ export type {
   MediaHandlerConfig,
   NotionConverterConfig,
   PageRefConfig,
+  NotionDatabaseConfig,
+  DatabaseQueryOptions,
+  DatabaseQueryMapping,
 } from './configuration';

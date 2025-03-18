@@ -8,9 +8,9 @@ export { PageReferenceManifestBuilder } from './page-ref-builder';
 export { RateLimiter } from './rate-limiter';
 
 export {
-  fetchAllComments,
-  fetchBlockChildren,
-  fetchDatabaseContent,
-  fetchDatabaseMetadata,
-  fetchPageProperties,
+  fetchNotionAllComments,
+  fetchNotionBlockChildren,
+  fetchNotionDatabaseContent,
+  fetchNotionDatabaseMetadata,
+  fetchNotionPageProperties,
 } from './notion';

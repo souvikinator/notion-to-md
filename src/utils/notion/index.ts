@@ -4,6 +4,7 @@ import {
 } from '@notionhq/client/build/src/api-endpoints';
 import {
   CommentResponseResults,
+  DatabaseQueryOptions,
   ListBlockChildrenResponseResult,
   ListBlockChildrenResponseResults,
   PageObjectProperties,
@@ -31,11 +32,32 @@ export function isPageRefBlock(
   return block.type === 'link_to_page' || block.type === 'child_page';
 }
 
-//  notion client calls
+/**
+ * Converts UUID without hyphens to the one with hyphens. If UUID with hyphens is given then return the same.
+ *
+ * Example:
+ *  `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` to `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+ * @param uuid in hyphenated or unhyphenated form
+ * @returns UUID (with hyphens)
+ */
+export function normalizeUUID(uuid: string): string {
+  // If the UUID already contains hyphens, return it as-is
+  if (uuid.includes('-')) {
+    return uuid;
+  }
+
+  // Convert bare UUID to hyphenated format
+  return uuid.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5');
+}
+
+export function isExternalUrl(url: string): boolean {
+  return !url.includes('prod-files-secure.s3.us-west-2.amazonaws.com');
+}
+
 /**
  * Fetches all children blocks for a given block ID
  */
-export async function fetchBlockChildren(
+export async function fetchNotionBlockChildren(
   client: NotionClient,
   blockId: string,
   rateLimiter: RateLimiter,
@@ -68,7 +90,7 @@ export async function fetchBlockChildren(
 /**
  * Fetches all comments for a given block ID
  */
-export async function fetchAllComments(
+export async function fetchNotionAllComments(
   client: NotionClient,
   blockId: string,
   rateLimiter: RateLimiter,
@@ -96,7 +118,7 @@ export async function fetchAllComments(
 /**
  * Fetches properties for a given page ID
  */
-export async function fetchPageProperties(
+export async function fetchNotionPageProperties(
   client: NotionClient,
   pageId: string,
   rateLimiter: RateLimiter,
@@ -111,7 +133,7 @@ export async function fetchPageProperties(
 /**
  * Fetches database metadata
  */
-export async function fetchDatabaseMetadata(
+export async function fetchNotionDatabaseMetadata(
   client: NotionClient,
   databaseId: string,
   rateLimiter: RateLimiter,
@@ -126,22 +148,25 @@ export async function fetchDatabaseMetadata(
 /**
  * Fetches all pages in a database
  */
-export async function fetchDatabaseContent(
+export async function fetchNotionDatabaseContent(
   client: NotionClient,
   databaseId: string,
   rateLimiter: RateLimiter,
+  query?: DatabaseQueryOptions,
 ): Promise<PageObjectResponse[]> {
   let allItems: PageObjectResponse[] = [];
   let hasMore = true;
   let cursor: string | undefined;
 
   while (hasMore) {
-    const response = await rateLimiter.execute(() =>
-      client.databases.query({
+    const response = await rateLimiter.execute(() => {
+      return client.databases.query({
         database_id: databaseId,
+        filter: query?.filter,
+        sorts: query?.sorts,
         start_cursor: cursor,
-      }),
-    );
+      });
+    });
 
     allItems = [...allItems, ...(response.results as PageObjectResponse[])];
     hasMore = response.has_more;
