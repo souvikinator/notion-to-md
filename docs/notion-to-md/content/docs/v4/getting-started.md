@@ -51,7 +51,7 @@ async function convertPage() {
       .withExporter(exporter);
 
     // Convert the page
-    await converter.convert(pageId);
+    await n2m.convert(pageId);
 
     console.log('✓ Successfully converted page to markdown!');
   } catch (error) {
