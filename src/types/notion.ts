@@ -3,6 +3,7 @@ import type {
   ListCommentsResponse,
   PageObjectResponse,
   RichTextItemResponse,
+  QueryDatabaseParameters,
 } from '@notionhq/client/build/src/api-endpoints';
 
 export type BlockType =
@@ -46,6 +47,18 @@ export type AnnotationType =
   | 'link'
   | 'equation'
   | (string & {});
+
+type DatabaseId = string;
+
+export interface NotionDatabaseQueryOptions {
+  filter?: QueryDatabaseParameters['filter'];
+  sorts?: QueryDatabaseParameters['sorts'];
+}
+
+export type NotionDatabaseQueryMapping = Record<
+  DatabaseId,
+  NotionDatabaseQueryOptions
+>;
 
 export type BlockAttributes = {
   numbered_list_item?: {

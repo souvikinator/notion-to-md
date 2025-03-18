@@ -1,6 +1,10 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { NotionExporter, ChainData, ExporterError } from '../../../types';
+import {
+  NotionExporter,
+  ChainData,
+  ExporterError,
+} from '../../../types/module';
 
 /**
  * Configuration for the FileSystemExporter
@@ -20,7 +24,7 @@ export interface DefaultExporterConfig {
  * Default exporter that handles saving content to the filesystem,
  * printing to stdout, or storing in a buffer
  */
-export class DefaultExporter implements NotionExporter<DefaultExporterConfig> {
+export class DefaultExporter implements NotionExporter {
   constructor(private config: DefaultExporterConfig) {
     this.validateConfig();
   }

@@ -1,12 +1,11 @@
+import { UploadStrategyConfig } from '../../../types/configuration';
 import {
-  MediaStrategy,
-  UploadStrategyConfig,
   MediaInfo,
   MediaStrategyType,
   MediaManifestEntry,
-  MediaProcessingError,
-  ListBlockChildrenResponseResult,
-} from '../../../types';
+} from '../../../types/manifest-manager';
+import { ListBlockChildrenResponseResult } from '../../../types/notion';
+import { MediaStrategy, MediaProcessingError } from '../../../types/strategy';
 import { isExternalUrl } from '../../../utils/notion';
 
 export class UploadStrategy implements MediaStrategy {

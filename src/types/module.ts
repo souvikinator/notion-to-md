@@ -23,7 +23,7 @@ export interface ProcessorChainNode {
 }
 
 // The interface that all exporters must implement
-export interface NotionExporter<TConfig = unknown> {
+export interface NotionExporter {
   export(data: ChainData): Promise<void>;
 }
 

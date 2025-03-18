@@ -1,4 +1,4 @@
-import { PageProperties } from '../../../types';
+import { PageProperties } from '../../../types/notion';
 
 type NotionPropertyValue = PageProperties[string];
 

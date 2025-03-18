@@ -1,17 +1,16 @@
-import {
-  MediaStrategy,
-  MediaInfo,
-  MediaStrategyType,
-  MediaManifestEntry,
-  MediaProcessingError,
-  DownloadStrategyConfig,
-  ListBlockChildrenResponseResult,
-} from '../../../types';
 import fetch from 'node-fetch';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import mime from 'mime/lite';
 import { isExternalUrl } from '../../../utils/notion';
+import { DownloadStrategyConfig } from '../../../types/configuration';
+import {
+  MediaInfo,
+  MediaStrategyType,
+  MediaManifestEntry,
+} from '../../../types/manifest-manager';
+import { ListBlockChildrenResponseResult } from '../../../types/notion';
+import { MediaStrategy, MediaProcessingError } from '../../../types/strategy';
 
 export class DownloadStrategy implements MediaStrategy {
   constructor(private config: DownloadStrategyConfig) {
@@ -153,7 +152,6 @@ export class DownloadStrategy implements MediaStrategy {
     }
 
     try {
-      let transformedPath: string;
       if (this.config.transformPath) {
         console.debug('[DownloadStrategy] Applying custom path transformation');
         return this.config.transformPath(mediaInfo.localPath);
@@ -239,7 +237,7 @@ export class DownloadStrategy implements MediaStrategy {
     console.debug('[DownloadStrategy] Detected MIME type:', mimeType);
 
     // Try to determine extension using multiple methods
-    let extension = this.determineFileExtension(mimeType);
+    const extension = this.determineFileExtension(mimeType);
     console.debug('[DownloadStrategy] Determined extension:', extension);
 
     await fs.mkdir(this.config.outputDir, { recursive: true });

@@ -1,4 +1,5 @@
-import { BlockTransformer, BlockType } from '../../../../types';
+import { BlockType } from '../../../../types/notion';
+import { BlockTransformer } from '../../../../types/renderer';
 
 const INDENT = '    '; // 4 whitespace = tab space (keeping it consistent)
 
@@ -269,7 +270,7 @@ export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
             .join('\n')
         : '';
 
-      return `> ${icon} ${text}${formattedChildren ? `\n${formattedChildren}` : ''}\n\n`;
+      return `> ${icon} ${lines}${formattedChildren ? `\n${formattedChildren}` : ''}\n\n`;
     },
   },
 

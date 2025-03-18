@@ -1,10 +1,6 @@
 import { FrontmatterConfig } from '.';
-import { VariableResolver } from '../../../types';
-import {
-  extractPropertyValue,
-  formatFrontmatter,
-  formatYamlValue,
-} from './helpers';
+import { VariableResolver } from '../../../types/renderer';
+import { extractPropertyValue, formatFrontmatter } from './helpers';
 
 /**
  * Resolver for frontmatter variable that handles configuration-based

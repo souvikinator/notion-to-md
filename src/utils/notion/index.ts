@@ -4,11 +4,11 @@ import {
 } from '@notionhq/client/build/src/api-endpoints';
 import {
   CommentResponseResults,
-  DatabaseQueryOptions,
+  NotionDatabaseQueryOptions,
   ListBlockChildrenResponseResult,
   ListBlockChildrenResponseResults,
   PageObjectProperties,
-} from '../../types';
+} from '../../types/notion';
 import type { Client as NotionClient } from '@notionhq/client';
 import { RateLimiter } from '../rate-limiter/index';
 
@@ -152,7 +152,7 @@ export async function fetchNotionDatabaseContent(
   client: NotionClient,
   databaseId: string,
   rateLimiter: RateLimiter,
-  query?: DatabaseQueryOptions,
+  query?: NotionDatabaseQueryOptions,
 ): Promise<PageObjectResponse[]> {
   let allItems: PageObjectResponse[] = [];
   let hasMore = true;

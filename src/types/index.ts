@@ -16,6 +16,8 @@ export type {
   PageObjectProperties,
   RichTextItem,
   RichTextAnnotation,
+  NotionDatabaseQueryMapping,
+  NotionDatabaseQueryOptions,
 } from './notion';
 
 // Manifest manager types
@@ -60,6 +62,4 @@ export type {
   NotionConverterConfig,
   PageRefConfig,
   NotionDatabaseConfig,
-  DatabaseQueryOptions,
-  DatabaseQueryMapping,
 } from './configuration';

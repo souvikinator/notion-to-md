@@ -1,4 +1,5 @@
-import { AnnotationTransformer, AnnotationType } from '../../../../types';
+import { AnnotationType } from '../../../../types/notion';
+import { AnnotationTransformer } from '../../../../types/renderer';
 
 export const annotationTransformers: Record<
   AnnotationType,

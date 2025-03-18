@@ -1,6 +1,6 @@
 import type { Client } from '@notionhq/client';
 import { PageReferenceManifestManager } from '../../utils/manifest-manager';
-import { PageReferenceEntryType } from '../../types';
+import { PageReferenceEntryType } from '../../types/manifest-manager';
 import { PageReferenceHandlerError } from '../../core/errors';
 
 interface PageRefBuilderConfig {
@@ -32,7 +32,7 @@ export class PageReferenceManifestBuilder {
         await this.client.databases.retrieve({ database_id: rootId });
         console.info(`Processing database ${rootId}`);
         await this.processDatabase(rootId);
-      } catch (error) {
+      } catch {
         // If not database, try as page
         console.info(`Processing page ${rootId} for databases`);
         await this.findAndProcessDatabases(rootId);

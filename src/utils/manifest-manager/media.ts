@@ -1,19 +1,19 @@
-import * as path from "path";
+import * as path from 'path';
 import {
   MediaManifest,
   MediaManifestInput,
   MediaManifestEntry,
-} from "../../types";
-import { BaseManifestManager } from "./base";
+} from '../../types/manifest-manager';
+
+import { BaseManifestManager } from './base';
 import {
   MediaManifestError,
-  MediaEntryNotFoundError,
   MediaManifestStateError,
   ManifestNotFoundError,
   ManifestIOError,
-} from "./errors";
+} from './errors';
 
-const BASE_DIR = "media";
+const BASE_DIR = 'media';
 
 export class MediaManifestManager extends BaseManifestManager {
   private readonly mediaDir: string;
@@ -62,7 +62,7 @@ export class MediaManifestManager extends BaseManifestManager {
         throw error;
       }
       throw new ManifestIOError(
-        "initialize media manifest manager",
+        'initialize media manifest manager',
         this.mediaDir,
         error as Error,
       );
@@ -135,7 +135,7 @@ export class MediaManifestManager extends BaseManifestManager {
         throw error;
       }
       throw new ManifestIOError(
-        "save media manifest",
+        'save media manifest',
         this.getManifestFilename(),
         error as Error,
       );
@@ -158,7 +158,7 @@ export class MediaManifestManager extends BaseManifestManager {
   private getManifestFilename(): string {
     if (!this.currentPageId) {
       throw new MediaManifestStateError(
-        "No page ID set. Call initialize first.",
+        'No page ID set. Call initialize first.',
       );
     }
     return path.join(this.mediaDir, `${this.currentPageId}_media.json`);
@@ -171,7 +171,7 @@ export class MediaManifestManager extends BaseManifestManager {
   private ensureInitialized(): void {
     if (!this.manifest || !this.currentPageId) {
       throw new MediaManifestStateError(
-        "Manager not initialized. Call initialize first.",
+        'Manager not initialized. Call initialize first.',
       );
     }
   }

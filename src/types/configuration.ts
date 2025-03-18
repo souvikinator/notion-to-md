@@ -1,21 +1,12 @@
 import { BaseRendererPlugin } from '../core/renderer';
 import { MediaManifestEntry, MediaStrategyType } from './manifest-manager';
 import { NotionExporter } from './module';
+import { NotionDatabaseQueryMapping } from './notion';
 import { MediaStrategy } from './strategy';
-import { QueryDatabaseParameters } from '@notionhq/client/build/src/api-endpoints';
-
-type DatabaseId = string;
-
-export interface DatabaseQueryOptions {
-  filter?: QueryDatabaseParameters['filter'];
-  sorts?: QueryDatabaseParameters['sorts'];
-}
-
-export type DatabaseQueryMapping = Record<DatabaseId, DatabaseQueryOptions>;
 
 export interface NotionDatabaseConfig {
   fetchDatabases?: boolean;
-  databaseQueries?: DatabaseQueryMapping;
+  databaseQueries?: NotionDatabaseQueryMapping;
 }
 
 export interface PageRefConfig {
@@ -67,6 +58,6 @@ export interface NotionConverterConfig {
   };
   pageRefConfig?: PageRefConfig;
   renderer?: BaseRendererPlugin;
-  exporters?: Array<NotionExporter<any>>;
+  exporters?: Array<NotionExporter>;
   blockFetcherConfig?: BlockFetcherConfig;
 }

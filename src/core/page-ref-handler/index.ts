@@ -1,12 +1,11 @@
-import { PageReferenceManifestManager } from '../../utils/manifest-manager';
+import { PageReferenceEntryType } from '../../types/manifest-manager';
+import { ProcessorChainNode, ChainData } from '../../types/module';
 import {
   PageProperties,
   ListBlockChildrenResponseResults,
   ListBlockChildrenResponseResult,
-  PageReferenceEntryType,
-  ProcessorChainNode,
-  ChainData,
-} from '../../types';
+} from '../../types/notion';
+import { PageReferenceManifestManager } from '../../utils/manifest-manager';
 import { PageReferenceHandlerError } from '../errors';
 
 export interface PageRefConfig {

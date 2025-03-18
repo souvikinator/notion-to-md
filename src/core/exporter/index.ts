@@ -3,7 +3,7 @@ import {
   NotionExporter,
   ChainData,
   ExporterError,
-} from '../../types';
+} from '../../types/module';
 
 /**
  * A chain node that manages multiple exporters and runs them as the final step
@@ -12,7 +12,7 @@ import {
 export class Exporter implements ProcessorChainNode {
   next?: ProcessorChainNode;
 
-  constructor(private exporters: Array<NotionExporter<any>>) {
+  constructor(private exporters: Array<NotionExporter>) {
     console.debug('[Exporter] Initializing with exporters:', {
       count: exporters?.length || 0,
     });

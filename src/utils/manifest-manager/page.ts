@@ -1,16 +1,16 @@
-import * as path from "path";
-import { PageManifest, PageReferenceEntry } from "../../types";
-import { BaseManifestManager } from "./base";
+import * as path from 'path';
+import { PageManifest, PageReferenceEntry } from '../../types/manifest-manager';
+import { BaseManifestManager } from './base';
 import {
   PageReferenceError,
   PageReferenceNotFoundError,
   PageReferenceStateError,
   ManifestIOError,
   ManifestNotFoundError,
-} from "./errors";
+} from './errors';
 
-const BASE_DIR = "ref";
-const PAGE_REF_FILENAME = "page_ref.json";
+const BASE_DIR = 'ref';
+const PAGE_REF_FILENAME = 'page_ref.json';
 
 export class PageReferenceManifestManager extends BaseManifestManager {
   private readonly refDir: string;
@@ -53,7 +53,7 @@ export class PageReferenceManifestManager extends BaseManifestManager {
         throw error;
       }
       throw new PageReferenceError(
-        "Failed to initialize page reference manager",
+        'Failed to initialize page reference manager',
         error as Error,
       );
     }
@@ -149,7 +149,7 @@ export class PageReferenceManifestManager extends BaseManifestManager {
         throw error;
       }
       throw new ManifestIOError(
-        "save page reference manifest",
+        'save page reference manifest',
         this.getManifestFilename(),
         error as Error,
       );
@@ -173,7 +173,7 @@ export class PageReferenceManifestManager extends BaseManifestManager {
   private ensureInitialized(): void {
     if (!this.manifest) {
       throw new PageReferenceStateError(
-        "Manager not initialized. Call initialize first.",
+        'Manager not initialized. Call initialize first.',
       );
     }
   }

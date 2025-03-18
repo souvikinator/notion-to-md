@@ -4,21 +4,8 @@ import { Exporter } from './core/exporter';
 import { MediaHandler } from './core/media-handler';
 import { DownloadStrategy } from './core/media-handler/strategies/download';
 import { UploadStrategy } from './core/media-handler/strategies/upload';
-import { PageReferenceHandler } from './core/page-ref-handler';
-import {
-  NotionExporter,
-  ProcessorChainNode,
-  ChainData,
-  ExtendedFetcherOutput,
-  MediaStrategy,
-  DownloadStrategyConfig,
-  UploadStrategyConfig,
-  MediaStrategyType,
-  PageRefConfig,
-  BlockFetcherConfig,
-  NotionConverterConfig,
-  NotionDatabaseConfig,
-} from './types';
+import { PageRefConfig, PageReferenceHandler } from './core/page-ref-handler';
+
 import {
   MediaManifestManager,
   PageReferenceManifestManager,
@@ -26,6 +13,17 @@ import {
 import { BaseRendererPlugin } from './core/renderer';
 import { MDXRenderer } from './plugins/renderer';
 import { normalizeUUID } from './utils/notion/index';
+import { MediaStrategyType } from './types/manifest-manager';
+import { ProcessorChainNode, NotionExporter, ChainData } from './types/module';
+import { ExtendedFetcherOutput } from './types/notion';
+import { MediaStrategy } from './types/strategy';
+import {
+  NotionConverterConfig,
+  BlockFetcherConfig,
+  NotionDatabaseConfig,
+  DownloadStrategyConfig,
+  UploadStrategyConfig,
+} from './types/configuration';
 
 /**
  * Main class that orchestrates the conversion process using a chain of processors.
@@ -185,9 +183,7 @@ export class NotionConverter {
    * Configures one or more exporters to handle the final output.
    * Exporters receive the complete ChainData for maximum flexibility.
    */
-  withExporter(
-    exporter: NotionExporter<any> | Array<NotionExporter<any>>,
-  ): this {
+  withExporter(exporter: NotionExporter | Array<NotionExporter>): this {
     console.debug('[NotionConverter] Configuring exporters');
     this.config.exporters = Array.isArray(exporter) ? exporter : [exporter];
     console.debug(
@@ -257,7 +253,7 @@ export class NotionConverter {
       this.config.blockFetcherConfig,
     );
 
-    let head = new BlockFetcher(
+    const head = new BlockFetcher(
       pageId,
       this.notionClient,
       this.config.blockFetcherConfig,

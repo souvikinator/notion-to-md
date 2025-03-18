@@ -1,12 +1,9 @@
-import {
-  ListBlockChildrenResponseResult,
-  MediaStrategy,
-  MediaInfo,
-  ProcessorChainNode,
-  ChainData,
-} from '../../types';
 import { MediaHandlerError } from '../errors';
 import { MediaManifestManager } from '../../utils/manifest-manager/media';
+import { MediaInfo } from '../../types/manifest-manager';
+import { ProcessorChainNode, ChainData } from '../../types/module';
+import { ListBlockChildrenResponseResult } from '../../types/notion';
+import { MediaStrategy } from '../../types/strategy';
 
 export interface MediaHandlerConfig {
   strategy: MediaStrategy;
@@ -107,7 +104,7 @@ export class MediaHandler implements ProcessorChainNode {
     block: ListBlockChildrenResponseResult,
   ): Promise<void> {
     console.debug('[MediaHandler] Processing media block:', block.id);
-    let existingEntry = this.manifestManager.getEntry(block.id);
+    const existingEntry = this.manifestManager.getEntry(block.id);
 
     // @ts-ignore - If block hasn't changed, trigger transforming path and just mark as processed
     if (existingEntry && existingEntry.lastEdited === block.last_edited_time) {

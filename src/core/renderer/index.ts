@@ -1,18 +1,19 @@
 import { RichTextItemResponse } from '@notionhq/client/build/src/api-endpoints';
+import { ProcessorChainNode, ChainData } from '../../types/module';
 import {
-  ProcessorChainNode,
-  ChainData,
-  BlockType,
   ListBlockChildrenResponseResult,
-  AnnotationTransformer,
-  BlockTransformer,
-  ContextMetadata,
-  VariableResolver,
-  RendererContext,
+  BlockType,
+  AnnotationType,
+} from '../../types/notion';
+import {
   VariableCollector,
   VariableResolvers,
-  AnnotationType,
-} from '../../types';
+  RendererContext,
+  BlockTransformer,
+  AnnotationTransformer,
+  VariableResolver,
+  ContextMetadata,
+} from '../../types/renderer';
 
 /**
  * Interface for renderer plugins in the Notion-to-MD system.
@@ -242,7 +243,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
     const results = await Promise.all(
       richText.map(async (item) => {
         let text = item.plain_text;
-        let link = item.href;
+        const link = item.href;
         // Process each annotation that has a registered transformer
         for (const [name, value] of Object.entries(item.annotations)) {
           if (value && this.context.transformers.annotations[name]) {
@@ -256,7 +257,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
         }
 
         // @ts-ignore
-        let equation = item.equation;
+        const equation = item.equation;
         if (equation) {
           text = await this.context.transformers.annotations.equation.transform(
             {
@@ -434,7 +435,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
     console.debug('[BaseRendererPlugin] Starting template rendering');
     const resolvedVariables: Record<string, string> = {};
 
-    for (const [name, collector] of this.variableDataCollector.entries()) {
+    for (const [name, _collector] of this.variableDataCollector.entries()) {
       console.debug(`[BaseRendererPlugin] Resolving variable: ${name}`);
       const resolver = this.variableResolvers.get(name) || this.defaultResolver;
       resolvedVariables[name] = await resolver(name, {

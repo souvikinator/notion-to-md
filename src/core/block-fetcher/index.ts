@@ -1,4 +1,6 @@
 import type { Client } from '@notionhq/client';
+import { BlockFetcherConfig } from '../../types/configuration';
+import { ProcessorChainNode, ChainData } from '../../types/module';
 import {
   ListBlockChildrenResponseResult,
   PageObjectProperties,
@@ -6,10 +8,7 @@ import {
   FetcherOutput,
   ListBlockChildrenResponseResults,
   ExtendedFetcherOutput,
-  ProcessorChainNode,
-  ChainData,
-  BlockFetcherConfig,
-} from '../../types';
+} from '../../types/notion';
 import {
   fetchNotionAllComments,
   fetchNotionBlockChildren,
@@ -56,7 +55,6 @@ export class BlockFetcher implements ProcessorChainNode {
       batchSize: 3,
     },
   ) {
-    const moduleType = 'BlockFetcher';
     this.config.maxRequestsPerSecond = config.maxRequestsPerSecond ?? 3;
     this.config.batchSize = config.batchSize ?? 3;
     this.rateLimiter = new RateLimiter(this.config.maxRequestsPerSecond);
@@ -259,7 +257,7 @@ export class BlockFetcher implements ProcessorChainNode {
   private buildBlockTree(rootId: string): ListBlockChildrenResponseResults {
     const childrenMap = new Map<string, ListBlockChildrenResponseResult[]>();
 
-    for (const [id, block] of this.blocks.entries()) {
+    for (const [_id, block] of this.blocks.entries()) {
       const parentId =
         // @ts-ignore
         block.parent?.type === 'block_id'

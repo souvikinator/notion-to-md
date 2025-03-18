@@ -6,14 +6,17 @@ export class ManifestNotInitializedError extends Error {
     super(
       `Manifest manager not initialized for ${moduleType}. Call setManifestManager before accessing manifest.`,
     );
-    this.name = "ManifestNotInitializedError";
+    this.name = 'ManifestNotInitializedError';
   }
 }
 
 export class MediaHandlerError extends Error {
-  constructor(message: string, cause?: Error) {
+  constructor(
+    message: string,
+    public cause?: Error,
+  ) {
     super(message);
-    this.name = "MediaHandlerError";
+    this.name = 'MediaHandlerError';
   }
 }
 
@@ -21,8 +24,11 @@ export class MediaHandlerError extends Error {
  * Specific error class for page reference handling errors
  */
 export class PageReferenceHandlerError extends Error {
-  constructor(message: string, cause?: Error) {
+  constructor(
+    message: string,
+    public cause?: Error,
+  ) {
     super(message);
-    this.name = "PageReferenceHandlerError";
+    this.name = 'PageReferenceHandlerError';
   }
 }
