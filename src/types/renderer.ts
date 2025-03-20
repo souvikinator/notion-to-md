@@ -3,12 +3,13 @@ import {
   PageReferenceManifestManager,
 } from '../utils/index';
 import {
-  PageProperties,
-  ListBlockChildrenResponseResult,
-  ListBlockChildrenResponseResults,
-  BlockType,
-  RichTextAnnotation,
-  RichTextItem,
+  NotionAnnotationType,
+  NotionBlock,
+  NotionBlocks,
+  NotionBlockType,
+  NotionPageProperties,
+  NotionRichTextAnnotation,
+  NotionRichTextItem,
 } from './notion';
 
 export type ContextMetadata = Record<string, any>;
@@ -20,9 +21,9 @@ export interface VariableResolver {
   (variableName: VariableNames, context: RendererContext): Promise<string>;
 }
 
-interface AnnotationContext {
+export interface AnnotationContext {
   text: string;
-  annotations?: RichTextAnnotation;
+  annotations?: NotionRichTextAnnotation;
   link?: {
     url: string;
   };
@@ -35,10 +36,10 @@ interface AnnotationContext {
 
 export interface RendererContext {
   pageId: string;
-  pageProperties: PageProperties;
+  pageProperties: NotionPageProperties;
   metadata: ContextMetadata;
-  block: ListBlockChildrenResponseResult;
-  blockTree: ListBlockChildrenResponseResults;
+  block: NotionBlock;
+  blockTree: NotionBlocks;
   variableData: VariableCollector;
 
   manifest: {
@@ -48,19 +49,19 @@ export interface RendererContext {
 
   // Access to all transformers
   transformers: {
-    blocks: Record<BlockType, BlockTransformer>;
-    annotations: Record<string, AnnotationTransformer>;
+    blocks: Record<NotionBlockType, BlockTransformer>;
+    annotations: Record<NotionAnnotationType, AnnotationTransformer>;
   };
 
   utils: {
     // Helper functions
     processRichText: (
-      richText: RichTextItem[],
+      richText: NotionRichTextItem[],
       metadata?: ContextMetadata,
     ) => Promise<string>;
 
     processBlock: (
-      block: ListBlockChildrenResponseResult,
+      block: NotionBlocks,
       metadata?: ContextMetadata,
     ) => Promise<string>;
   };

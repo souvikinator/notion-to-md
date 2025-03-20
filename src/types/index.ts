@@ -2,20 +2,22 @@
 
 // Notion API types
 export type {
-  BlockType,
-  AnnotationType,
-  BlockAttributes,
-  FetcherOutput,
-  TrackedBlocks,
-  ExtendedFetcherOutput,
-  ListBlockChildrenResponseResults,
-  ListBlockChildrenResponseResult,
-  CommentResponseResults,
-  CommentResponseResult,
-  PageProperties,
-  PageObjectProperties,
-  RichTextItem,
-  RichTextAnnotation,
+  NotionAnnotationType,
+  NotionBlock,
+  NotionBlockType,
+  NotionBlocks,
+  NotionComment,
+  NotionComments,
+  NotionDatabaseContent,
+  NotionDatabaseId,
+  NotionDatabaseProperties,
+  NotionDatabaseProperty,
+  NotionDatabasePropertyType,
+  NotionPageProperties,
+  NotionPageProperty,
+  NotionPagePropertyType,
+  NotionRichTextAnnotation,
+  NotionRichTextItem,
   NotionDatabaseQueryMapping,
   NotionDatabaseQueryOptions,
 } from './notion';
@@ -63,3 +65,9 @@ export type {
   PageRefConfig,
   NotionDatabaseConfig,
 } from './configuration';
+
+export type {
+  ExtendedFetcherOutput,
+  FetcherOutput,
+  TrackedBlocks,
+} from './fetcher';
