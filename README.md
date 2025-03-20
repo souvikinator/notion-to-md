@@ -46,9 +46,9 @@
 ## 🗒️ Recent posts
 
 <!-- feed start -->
-- Mar 12 - [How to Convert Notion Properties to Frontmatter with notion-to-md v4](https://notionconvert.com/notion-to-md/blog/how-to-convert-notion-properties-to-frontmatter/)
-- Mar 12 - [How to Handle Documents in Notion Using notion-to-md v4](https://notionconvert.com/notion-to-md/blog/how-to-handle-documents-in-notion-using-notion-to-md-v4/)
-- Mar 11 - [How to Convert Notion Comments to Markdown Footnotes with notion-to-md v4](https://notionconvert.com/notion-to-md/blog/how-to-use-notion-comments-as-footnotes-in-markdown/)
+- Mar 12 - [How to Convert Notion Properties to Frontmatter with notion-to-md v4](https://docs.joinescape.org/notion-to-md/blog/how-to-convert-notion-properties-to-frontmatter/)
+- Mar 12 - [How to Handle Documents in Notion Using notion-to-md v4](https://docs.joinescape.org/notion-to-md/blog/how-to-handle-documents-in-notion-using-notion-to-md-v4/)
+- Mar 11 - [How to Convert Notion Comments to Markdown Footnotes with notion-to-md v4](https://docs.joinescape.org/notion-to-md/blog/how-to-use-notion-comments-as-footnotes-in-markdown/)
 <!-- feed end -->
 
 
