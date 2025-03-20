@@ -1,9 +1,8 @@
-import { AnnotationType } from '../../../../types/notion';
+import { NotionAnnotationType } from '../../../../types/notion';
 import { AnnotationTransformer } from '../../../../types/renderer';
 
-export const annotationTransformers: Record<
-  AnnotationType,
-  AnnotationTransformer
+export const annotationTransformers: Partial<
+  Record<NotionAnnotationType, AnnotationTransformer>
 > = {
   bold: {
     transform: async ({ text, metadata }) =>

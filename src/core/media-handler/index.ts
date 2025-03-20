@@ -2,8 +2,8 @@ import { MediaHandlerError } from '../errors';
 import { MediaManifestManager } from '../../utils/manifest-manager/media';
 import { MediaInfo } from '../../types/manifest-manager';
 import { ProcessorChainNode, ChainData } from '../../types/module';
-import { ListBlockChildrenResponseResult } from '../../types/notion';
 import { MediaStrategy } from '../../types/strategy';
+import { NotionBlock, NotionBlocks } from '../../types/notion';
 
 export interface MediaHandlerConfig {
   strategy: MediaStrategy;
@@ -71,9 +71,7 @@ export class MediaHandler implements ProcessorChainNode {
   /**
    * Process all media blocks
    */
-  async processBlocks(
-    mediaBlocks: ListBlockChildrenResponseResult[],
-  ): Promise<void> {
+  async processBlocks(mediaBlocks: NotionBlocks): Promise<void> {
     console.debug('[MediaHandler] Starting batch processing of media blocks');
 
     if (!this.manifestManager) {
@@ -100,13 +98,11 @@ export class MediaHandler implements ProcessorChainNode {
     console.debug('[MediaHandler] Batch processing complete');
   }
 
-  private async processMediaBlock(
-    block: ListBlockChildrenResponseResult,
-  ): Promise<void> {
+  private async processMediaBlock(block: NotionBlock): Promise<void> {
     console.debug('[MediaHandler] Processing media block:', block.id);
     const existingEntry = this.manifestManager.getEntry(block.id);
 
-    // @ts-ignore - If block hasn't changed, trigger transforming path and just mark as processed
+    // If block hasn't changed, trigger transforming path and just mark as processed
     if (existingEntry && existingEntry.lastEdited === block.last_edited_time) {
       console.debug(
         '[MediaHandler] Block unchanged, skipping processing but applying transformation:',
@@ -155,7 +151,6 @@ export class MediaHandler implements ProcessorChainNode {
       if (mediaInfo.type !== 'DIRECT') {
         await this.manifestManager.updateEntry(block.id, {
           mediaInfo,
-          // @ts-ignore
           lastEdited: block.last_edited_time,
         });
       }
@@ -203,10 +198,7 @@ export class MediaHandler implements ProcessorChainNode {
   /**
    * Update block with processed media information
    */
-  private updateBlockMedia(
-    block: ListBlockChildrenResponseResult,
-    mediaInfo: MediaInfo,
-  ): void {
+  private updateBlockMedia(block: NotionBlock, mediaInfo: MediaInfo): void {
     console.debug(
       '[MediaHandler] Updating media information for block:',
       block.id,

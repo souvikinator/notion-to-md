@@ -61,7 +61,7 @@ export interface RendererContext {
     ) => Promise<string>;
 
     processBlock: (
-      block: NotionBlocks,
+      block: NotionBlock,
       metadata?: ContextMetadata,
     ) => Promise<string>;
   };

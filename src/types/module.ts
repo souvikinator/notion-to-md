@@ -2,7 +2,7 @@ import {
   MediaManifestManager,
   PageReferenceManifestManager,
 } from '../utils/index';
-import { ExtendedFetcherOutput } from './notion';
+import { ExtendedFetcherOutput } from './fetcher';
 
 export interface ChainData {
   pageId: string;

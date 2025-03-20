@@ -1,10 +1,11 @@
 import { PageReferenceEntryType } from '../../types/manifest-manager';
 import { ProcessorChainNode, ChainData } from '../../types/module';
 import {
-  PageProperties,
-  ListBlockChildrenResponseResults,
-  ListBlockChildrenResponseResult,
+  NotionBlock,
+  NotionBlocks,
+  NotionPageProperties,
 } from '../../types/notion';
+
 import { PageReferenceManifestManager } from '../../utils/manifest-manager';
 import { PageReferenceHandlerError } from '../errors';
 
@@ -18,7 +19,7 @@ export class PageReferenceHandler implements ProcessorChainNode {
   next?: ProcessorChainNode;
   private pageId: string;
   private processedRefs: Set<string> = new Set();
-  private pageProperties: PageProperties | null = null;
+  private pageProperties: NotionPageProperties | null = null;
   private manifestManager: PageReferenceManifestManager;
 
   constructor(
@@ -56,8 +57,8 @@ export class PageReferenceHandler implements ProcessorChainNode {
   }
 
   async processBlocks(
-    blocks: ListBlockChildrenResponseResults,
-    properties: PageProperties,
+    blocks: NotionBlocks,
+    properties: NotionPageProperties,
   ): Promise<void> {
     try {
       console.debug('[PageRefHandler] Processing blocks:', blocks.length);
@@ -129,9 +130,7 @@ export class PageReferenceHandler implements ProcessorChainNode {
     }
   }
 
-  private async processPageRef(
-    block: ListBlockChildrenResponseResult,
-  ): Promise<void> {
+  private async processPageRef(block: NotionBlock): Promise<void> {
     try {
       const pageId = this.extractPageId(block);
       if (!pageId) return;
@@ -155,9 +154,8 @@ export class PageReferenceHandler implements ProcessorChainNode {
     }
   }
 
-  private extractPageId(block: ListBlockChildrenResponseResult): string | null {
+  private extractPageId(block: NotionBlock): string | null {
     if (
-      'type' in block &&
       block.type === 'link_to_page' &&
       block.link_to_page?.type === 'page_id'
     ) {
@@ -165,9 +163,10 @@ export class PageReferenceHandler implements ProcessorChainNode {
     }
 
     // @ts-ignore
-    if ('type' in block && block[block.type] && block[block.type].rich_text) {
-      // @ts-ignore
-      const richText = block[block.type].rich_text;
+    const blockContent = block[block.type];
+
+    if (blockContent && blockContent.rich_text) {
+      const richText = blockContent.rich_text;
       for (const text of richText) {
         if (
           text.type === 'mention' &&
@@ -207,10 +206,7 @@ export class PageReferenceHandler implements ProcessorChainNode {
    * NOTE: since link_to_page and child_page do not support URL/href property,
    * we only convert them to mention block to maintain consistency
    */
-  private updateBlockContent(
-    block: ListBlockChildrenResponseResult,
-    url: string,
-  ): void {
+  private updateBlockContent(block: NotionBlock, url: string): void {
     try {
       if (!('type' in block)) {
         throw new PageReferenceHandlerError('Invalid block structure');
@@ -220,15 +216,15 @@ export class PageReferenceHandler implements ProcessorChainNode {
         block.type === 'link_to_page' &&
         block.link_to_page?.type === 'page_id'
       ) {
-        //@ts-ignore - url doesn't exist in block, we are forcefully adding one
+        //@ts-ignore - url doesn't exist in block, we are adding to keep things consistent
         block.link_to_page.url = url;
       } else if (block.type === 'child_page') {
-        //@ts-ignore - Add URL to child page block
+        // @ts-ignore
         block.child_page.url = url;
       } else {
         // Handle mentions
-        const blockContent = block[block.type as keyof typeof block];
         // @ts-ignore
+        const blockContent = block[block.type];
         if (blockContent && 'rich_text' in blockContent) {
           for (const text of blockContent.rich_text) {
             if (text.type === 'mention' && text.mention?.type === 'page') {

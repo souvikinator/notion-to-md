@@ -20,6 +20,7 @@ export type {
   NotionRichTextItem,
   NotionDatabaseQueryMapping,
   NotionDatabaseQueryOptions,
+  NotionExtendedChildDatabaseObject,
 } from './notion';
 
 // Manifest manager types

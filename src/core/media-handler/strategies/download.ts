@@ -9,8 +9,8 @@ import {
   MediaStrategyType,
   MediaManifestEntry,
 } from '../../../types/manifest-manager';
-import { ListBlockChildrenResponseResult } from '../../../types/notion';
 import { MediaStrategy, MediaProcessingError } from '../../../types/strategy';
+import { NotionBlock } from '../../../types/notion';
 
 export class DownloadStrategy implements MediaStrategy {
   constructor(private config: DownloadStrategyConfig) {
@@ -36,7 +36,7 @@ export class DownloadStrategy implements MediaStrategy {
     );
   }
 
-  async process(block: ListBlockChildrenResponseResult): Promise<MediaInfo> {
+  async process(block: NotionBlock): Promise<MediaInfo> {
     console.debug('[DownloadStrategy] Processing block:', block.id);
     console.debug(
       '[DownloadStrategy] Extracting media URL from block:',
@@ -183,7 +183,6 @@ export class DownloadStrategy implements MediaStrategy {
   async cleanup(entry: MediaManifestEntry): Promise<void> {
     console.debug(
       '[DownloadStrategy] Starting cleanup for media at: ',
-      // @ts-ignore
       entry.mediaInfo.localPath,
     );
     // Cleanup always fails forward regardless of config
@@ -210,11 +209,7 @@ export class DownloadStrategy implements MediaStrategy {
         console.error(processingError);
       }
     } else {
-      console.debug(
-        '[DownloadStrategy] Nothing to cleanup for entry:',
-        // @ts-ignore
-        entry.blockId,
-      );
+      console.debug('[DownloadStrategy] Nothing to cleanup for entry');
     }
   }
 
@@ -257,16 +252,13 @@ export class DownloadStrategy implements MediaStrategy {
     return { localPath, mimeType };
   }
 
-  private extractMediaUrl(
-    block: ListBlockChildrenResponseResult,
-  ): string | null {
+  private extractMediaUrl(block: NotionBlock): string | null {
     try {
       if (!block || !('type' in block)) {
         console.debug('[DownloadStrategy] Invalid block structure');
         return null;
       }
 
-      // @ts-ignore
       if (!['image', 'video', 'file', 'pdf'].includes(block.type)) {
         console.debug('[DownloadStrategy] Unsupported block type:', block.type);
         return null;

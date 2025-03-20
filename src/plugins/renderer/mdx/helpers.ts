@@ -1,9 +1,7 @@
-import { PageProperties } from '../../../types/notion';
-
-type NotionPropertyValue = PageProperties[string];
+import { NotionPageProperty } from '../../../types/notion';
 
 // Helper to extract values from Notion property objects using proper types
-export function extractPropertyValue(property: NotionPropertyValue): any {
+export function extractPropertyValue(property: NotionPageProperty): any {
   // If no property, return null
   if (!property) return null;
 
@@ -80,7 +78,7 @@ export function extractPropertyValue(property: NotionPropertyValue): any {
           return property.rollup.date?.start || '';
         case 'array':
           return property.rollup.array.map((item) =>
-            extractPropertyValue(item as NotionPropertyValue),
+            extractPropertyValue(item as NotionPageProperty),
           );
       }
       break;

@@ -1,13 +1,12 @@
 import type { Client } from '@notionhq/client';
 import { BlockFetcherConfig } from '../../types/configuration';
+import { ExtendedFetcherOutput, FetcherOutput } from '../../types/fetcher';
 import { ProcessorChainNode, ChainData } from '../../types/module';
 import {
-  ListBlockChildrenResponseResult,
-  PageObjectProperties,
-  CommentResponseResults,
-  FetcherOutput,
-  ListBlockChildrenResponseResults,
-  ExtendedFetcherOutput,
+  NotionBlock,
+  NotionBlocks,
+  NotionComments,
+  NotionPageProperties,
 } from '../../types/notion';
 import {
   fetchNotionAllComments,
@@ -35,13 +34,13 @@ export class BlockFetcher implements ProcessorChainNode {
   next?: ProcessorChainNode;
 
   private queue: QueueTask[] = [];
-  private blocks = new Map<string, ListBlockChildrenResponseResult>();
+  private blocks = new Map<string, NotionBlock>();
   private processedTasks = new Set<string>();
-  private pageProperties?: PageObjectProperties;
-  private rootComments: CommentResponseResults = [];
+  private pageProperties?: NotionPageProperties;
+  private rootComments: NotionComments = [];
   private rootBlockId: string = '';
-  private mediaBlocks: ListBlockChildrenResponseResult[] = [];
-  private pageRefBlocks: ListBlockChildrenResponseResult[] = [];
+  private mediaBlocks: NotionBlocks = [];
+  private pageRefBlocks: NotionBlocks = [];
 
   private rateLimiter: RateLimiter;
 
@@ -223,10 +222,6 @@ export class BlockFetcher implements ProcessorChainNode {
           task.entity_id,
           this.rateLimiter,
         );
-        console.log(
-          '@@@@ ',
-          this.config.databaseConfig?.databaseQueries?.[task.entity_id],
-        );
         // Fetch database content
         const databaseContent = await fetchNotionDatabaseContent(
           this.client,
@@ -237,14 +232,11 @@ export class BlockFetcher implements ProcessorChainNode {
 
         // Add database info to the block
         const block = this.blocks.get(task.entity_id);
-        if (block) {
-          // @ts-ignore - Adding database information to the block
-          const childDatabase = block.child_database;
-          // @ts-ignore
+        if (block && block.type === 'child_database') {
           block.child_database = {
-            ...childDatabase,
-            metadata: databaseMetadata,
-            content: databaseContent,
+            ...block.child_database,
+            properties: databaseMetadata, // output of the notionSdk.databases.retrieve
+            content: databaseContent, //  output of the notionSdk.databases.query
           };
         }
         break;
@@ -254,20 +246,19 @@ export class BlockFetcher implements ProcessorChainNode {
     this.processedTasks.add(taskId);
   }
 
-  private buildBlockTree(rootId: string): ListBlockChildrenResponseResults {
-    const childrenMap = new Map<string, ListBlockChildrenResponseResult[]>();
+  private buildBlockTree(rootId: string): NotionBlocks {
+    const childrenMap = new Map<string, NotionBlocks>();
 
     for (const [_id, block] of this.blocks.entries()) {
-      const parentId =
-        // @ts-ignore
-        block.parent?.type === 'block_id'
-          ? // @ts-ignore
-            normalizeUUID(block.parent.block_id)
-          : // @ts-ignore
-            block.parent?.type === 'page_id'
-            ? // @ts-ignore
-              normalizeUUID(block.parent.page_id)
-            : undefined;
+      let parentId: string | undefined;
+
+      if (block.parent?.type === 'block_id') {
+        parentId = normalizeUUID(block.parent.block_id);
+      } else if (block.parent?.type === 'page_id') {
+        parentId = normalizeUUID(block.parent.page_id);
+      } else {
+        parentId = undefined;
+      }
 
       if (parentId) {
         if (!childrenMap.has(parentId)) {
@@ -277,9 +268,7 @@ export class BlockFetcher implements ProcessorChainNode {
       }
     }
 
-    const buildChildren = (
-      parentId: string,
-    ): ListBlockChildrenResponseResults => {
+    const buildChildren = (parentId: string): NotionBlocks => {
       const children = childrenMap.get(normalizeUUID(parentId)) || [];
       return children.map((block) => {
         block.children = buildChildren(block.id);

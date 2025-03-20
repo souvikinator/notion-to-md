@@ -1,35 +1,35 @@
-import {
-  GetDatabaseResponse,
-  PageObjectResponse,
-} from '@notionhq/client/build/src/api-endpoints';
-import {
-  CommentResponseResults,
-  NotionDatabaseQueryOptions,
-  ListBlockChildrenResponseResult,
-  ListBlockChildrenResponseResults,
-  PageObjectProperties,
-} from '../../types/notion';
 import type { Client as NotionClient } from '@notionhq/client';
+import {
+  NotionBlock,
+  NotionBlocks,
+  NotionComments,
+  NotionDatabaseContent,
+  NotionDatabaseProperties,
+  NotionDatabaseQueryOptions,
+  NotionPageProperties,
+} from '../../types/notion';
 import { RateLimiter } from '../rate-limiter/index';
 
-export function isMediaBlock(block: ListBlockChildrenResponseResult): boolean {
-  // @ts-ignore
+export function isMediaBlock(block: NotionBlock): boolean {
   return ['image', 'video', 'file', 'pdf'].includes(block.type);
 }
 
-export function isPageRefBlock(
-  block: ListBlockChildrenResponseResult,
-): boolean {
-  //@ts-ignore - Check for page mentions in paragraphs
-  if (block.type && block[block.type].rich_text) {
-    // @ts-ignore - Check for mentions in rich text for any block
-    const hasPageMention = block[block.type].rich_text.some(
-      (text: any) => text.type === 'mention' && text.mention?.type === 'page',
-    );
-    if (hasPageMention) return true;
+export function isPageRefBlock(block: NotionBlock): boolean {
+  const blockTypeObject = (block as any)[block.type];
+
+  switch (block.type) {
+    case 'link_to_page':
+    case 'child_page':
+      return true;
+    default:
+      if (blockTypeObject.rich_text) {
+        return blockTypeObject.rich_text.some(
+          (text: any) =>
+            text.type === 'mention' && text.mention?.type === 'page',
+        );
+      }
+      return false;
   }
-  // @ts-ignore - Check for direct page links
-  return block.type === 'link_to_page' || block.type === 'child_page';
 }
 
 /**
@@ -61,8 +61,8 @@ export async function fetchNotionBlockChildren(
   client: NotionClient,
   blockId: string,
   rateLimiter: RateLimiter,
-): Promise<ListBlockChildrenResponseResults> {
-  let allBlocks: ListBlockChildrenResponseResults = [];
+): Promise<NotionBlocks> {
+  let allBlocks: NotionBlocks = [];
   let hasMore = true;
   let cursor: string | undefined;
 
@@ -77,7 +77,7 @@ export async function fetchNotionBlockChildren(
     // Filter out unsupported blocks
     const blocks = response.results.filter(
       (block) => 'type' in block && block.type !== 'unsupported',
-    ) as ListBlockChildrenResponseResults;
+    ) as NotionBlocks;
 
     allBlocks = [...allBlocks, ...blocks];
     hasMore = response.has_more;
@@ -88,14 +88,14 @@ export async function fetchNotionBlockChildren(
 }
 
 /**
- * Fetches all comments for a given block ID
+ * Fetches all comments for a given block ID and page ID
  */
 export async function fetchNotionAllComments(
   client: NotionClient,
   blockId: string,
   rateLimiter: RateLimiter,
-): Promise<CommentResponseResults> {
-  let allComments: CommentResponseResults = [];
+): Promise<NotionComments> {
+  let allComments: NotionComments = [];
   let hasMore = true;
   let cursor: string | undefined;
 
@@ -122,7 +122,7 @@ export async function fetchNotionPageProperties(
   client: NotionClient,
   pageId: string,
   rateLimiter: RateLimiter,
-): Promise<PageObjectProperties> {
+): Promise<NotionPageProperties> {
   const response = await rateLimiter.execute(() =>
     client.pages.retrieve({ page_id: pageId }),
   );
@@ -137,12 +137,13 @@ export async function fetchNotionDatabaseMetadata(
   client: NotionClient,
   databaseId: string,
   rateLimiter: RateLimiter,
-): Promise<GetDatabaseResponse> {
-  return rateLimiter.execute(() =>
+): Promise<NotionDatabaseProperties> {
+  const res = await rateLimiter.execute(() =>
     client.databases.retrieve({
       database_id: databaseId,
     }),
   );
+  return res.properties;
 }
 
 /**
@@ -153,8 +154,8 @@ export async function fetchNotionDatabaseContent(
   databaseId: string,
   rateLimiter: RateLimiter,
   query?: NotionDatabaseQueryOptions,
-): Promise<PageObjectResponse[]> {
-  let allItems: PageObjectResponse[] = [];
+): Promise<NotionDatabaseContent[]> {
+  let allItems: NotionDatabaseContent[] = [];
   let hasMore = true;
   let cursor: string | undefined;
 
@@ -168,7 +169,7 @@ export async function fetchNotionDatabaseContent(
       });
     });
 
-    allItems = [...allItems, ...(response.results as PageObjectResponse[])];
+    allItems = [...allItems, ...(response.results as NotionDatabaseContent[])];
     hasMore = response.has_more;
     cursor = response.next_cursor ?? undefined;
   }

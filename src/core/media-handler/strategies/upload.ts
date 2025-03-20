@@ -4,7 +4,7 @@ import {
   MediaStrategyType,
   MediaManifestEntry,
 } from '../../../types/manifest-manager';
-import { ListBlockChildrenResponseResult } from '../../../types/notion';
+import { NotionBlock } from '../../../types/notion';
 import { MediaStrategy, MediaProcessingError } from '../../../types/strategy';
 import { isExternalUrl } from '../../../utils/notion';
 
@@ -24,7 +24,7 @@ export class UploadStrategy implements MediaStrategy {
     this.config.failForward = config.failForward ?? true;
   }
 
-  async process(block: ListBlockChildrenResponseResult): Promise<MediaInfo> {
+  async process(block: NotionBlock): Promise<MediaInfo> {
     const url = this.extractMediaUrl(block);
 
     // Handle missing URL
@@ -184,15 +184,12 @@ export class UploadStrategy implements MediaStrategy {
     }
   }
 
-  private extractMediaUrl(
-    block: ListBlockChildrenResponseResult,
-  ): string | null {
+  private extractMediaUrl(block: NotionBlock): string | null {
     try {
       if (!block || !('type' in block)) {
         return null;
       }
 
-      // @ts-ignore
       if (!['image', 'video', 'file', 'pdf'].includes(block.type)) {
         return null;
       }

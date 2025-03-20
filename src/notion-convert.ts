@@ -15,7 +15,7 @@ import { MDXRenderer } from './plugins/renderer';
 import { normalizeUUID } from './utils/notion/index';
 import { MediaStrategyType } from './types/manifest-manager';
 import { ProcessorChainNode, NotionExporter, ChainData } from './types/module';
-import { ExtendedFetcherOutput } from './types/notion';
+import { ExtendedFetcherOutput } from './types/fetcher';
 import { MediaStrategy } from './types/strategy';
 import {
   NotionConverterConfig,

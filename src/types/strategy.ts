@@ -1,5 +1,5 @@
 import { MediaInfo, MediaManifestEntry } from './manifest-manager';
-import { ListBlockChildrenResponseResult } from './notion';
+import { NotionBlock } from './notion';
 
 export interface MediaStrategy {
   /**
@@ -8,7 +8,7 @@ export interface MediaStrategy {
    * @returns Promise resolving to MediaInfo with processing results
    * @throws MediaProcessingError if processing fails
    */
-  process(block: ListBlockChildrenResponseResult): Promise<MediaInfo>;
+  process(block: NotionBlock): Promise<MediaInfo>;
 
   /**
    * Transform the processed media path/URL according to configuration

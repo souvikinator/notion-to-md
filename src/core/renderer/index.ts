@@ -1,9 +1,9 @@
-import { RichTextItemResponse } from '@notionhq/client/build/src/api-endpoints';
 import { ProcessorChainNode, ChainData } from '../../types/module';
 import {
-  ListBlockChildrenResponseResult,
-  BlockType,
-  AnnotationType,
+  NotionAnnotationType,
+  NotionBlock,
+  NotionBlockType,
+  NotionRichTextItem,
 } from '../../types/notion';
 import {
   VariableCollector,
@@ -44,12 +44,12 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
       pageId: '',
       pageProperties: {},
       metadata: {},
-      block: {} as ListBlockChildrenResponseResult,
+      block: {} as NotionBlock,
       blockTree: [],
       variableData: this.variableDataCollector,
       transformers: {
-        blocks: {} as Record<BlockType, BlockTransformer>,
-        annotations: {} as Record<AnnotationType, AnnotationTransformer>,
+        blocks: {} as Record<NotionBlockType, BlockTransformer>,
+        annotations: {} as Record<NotionAnnotationType, AnnotationTransformer>,
       },
       utils: {
         processRichText: this.processRichText.bind(this),
@@ -149,7 +149,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
    * Note: Block level imports are stored with the transformer, not added to import variable immediately.
    * Only added when the transformer is actually used.
    */
-  public createBlockTransformer<T extends BlockType>(
+  public createBlockTransformer<T extends NotionBlockType>(
     type: T,
     transformer: BlockTransformer,
   ): this {
@@ -161,11 +161,11 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
    * Creates multiple block transformers at once
    */
   public createBlockTransformers(
-    transformers: Partial<Record<BlockType, BlockTransformer>>,
+    transformers: Partial<Record<NotionBlockType, BlockTransformer>>,
   ): this {
     for (const [type, transformer] of Object.entries(transformers)) {
       if (transformer) {
-        this.createBlockTransformer(type as BlockType, transformer);
+        this.createBlockTransformer(type as NotionBlockType, transformer);
       }
     }
     return this;
@@ -186,10 +186,12 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
    * Creates multiple annotation transformers simultaneously.
    */
   public createAnnotationTransformers(
-    transformers: Record<string, AnnotationTransformer>,
+    transformers: Partial<Record<NotionAnnotationType, AnnotationTransformer>>,
   ): this {
     Object.entries(transformers).forEach(([name, transformer]) => {
-      this.createAnnotationTransformer(name, transformer);
+      if (transformer) {
+        this.createAnnotationTransformer(name, transformer);
+      }
     });
     return this;
   }
@@ -237,7 +239,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
    * Applies registered annotation transformers in order.
    */
   protected async processRichText(
-    richText: RichTextItemResponse[],
+    richText: NotionRichTextItem[],
     metadata?: ContextMetadata,
   ): Promise<string> {
     const results = await Promise.all(
@@ -256,9 +258,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
           }
         }
 
-        // @ts-ignore
-        const equation = item.equation;
-        if (equation) {
+        if (item.type === 'equation' && item.equation) {
           text = await this.context.transformers.annotations.equation.transform(
             {
               text,
@@ -307,7 +307,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
    * - Only the complete list is added to the collector
    */
   protected async processBlock(
-    block: ListBlockChildrenResponseResult,
+    block: NotionBlock,
     metadata?: ContextMetadata,
   ): Promise<string> {
     // @ts-ignore

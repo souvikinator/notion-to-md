@@ -1,9 +1,11 @@
-import { BlockType } from '../../../../types/notion';
+import { NotionBlockType } from '../../../../types/notion';
 import { BlockTransformer } from '../../../../types/renderer';
 
 const INDENT = '    '; // 4 whitespace = tab space (keeping it consistent)
 
-export const blockTransformers: Partial<Record<BlockType, BlockTransformer>> = {
+export const blockTransformers: Partial<
+  Record<NotionBlockType, BlockTransformer>
+> = {
   paragraph: {
     transform: async ({ block, utils }) => {
       //@ts-ignore Just process this block's content
