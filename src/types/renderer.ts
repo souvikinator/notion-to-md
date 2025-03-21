@@ -86,7 +86,7 @@ export interface AnnotationTransformer {
 
 export interface BaseRendererUtils {
   // Required base utilities
-  processRichText: (
+  transformRichText: (
     richText: NotionRichTextItem[],
     metadata?: ContextMetadata,
   ) => Promise<string>;
@@ -95,4 +95,9 @@ export interface BaseRendererUtils {
     block: NotionBlock,
     metadata?: ContextMetadata,
   ) => Promise<string>;
+
+  transformDatabaseProperties: (
+    properties: NotionDatabaseEntryProperties,
+    context: RendererContext,
+  ) => Promise<Partial<Record<NotionDatabasePropertyType, string>>>;
 }

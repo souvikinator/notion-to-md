@@ -3,7 +3,7 @@ import { blockTransformers } from './transformers/blocks';
 import { annotationTransformers } from './transformers/annotations';
 import { createDefaultVariableResolvers } from './resolvers';
 import { databasePropertyTransformers } from './transformers/database-properties';
-import { formatAsMarkdownTable } from './helpers';
+import { formatAsMarkdownTable, transformDatabaseToTable } from './helpers';
 
 export interface FrontmatterConfig {
   include?: string[];
@@ -34,6 +34,7 @@ export class MDXRenderer extends BaseRendererPlugin {
 
     // register utilities if any
     this.addUtil('formatAsMarkdownTable', formatAsMarkdownTable);
+    this.addUtil('transformDatabaseToTable', transformDatabaseToTable);
 
     // Initialize resolvers
     const resolvers = createDefaultVariableResolvers();

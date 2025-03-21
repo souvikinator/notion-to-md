@@ -36,7 +36,7 @@ Transformers convert Notion blocks to output format. Their output goes to a targ
 ```typescript
 renderer.createBlockTransformer('paragraph', {
   transform: async ({ block, utils }) => {
-    const content = await utils.processRichText(block.paragraph.rich_text);
+    const content = await utils.transformRichText(block.paragraph.rich_text);
     return content;
   },
   targetVariable: 'content',
@@ -57,7 +57,7 @@ interface RendererContext {
   blockTree: ListBlockChildrenResponseResults;
   variableData: VariableCollector;
   transformers: { blocks, annotations };
-  utils: { processRichText, processChildren };
+  utils: { transformRichText, processChildren };
 }
 ```
 
@@ -107,7 +107,7 @@ class MDRenderer extends BaseRendererPlugin {
     this.createBlockTransformers({
       paragraph: {
         transform: async ({ block, utils }) => {
-          return await utils.processRichText(block.paragraph.rich_text);
+          return await utils.transformRichText(block.paragraph.rich_text);
         }
       }
     });

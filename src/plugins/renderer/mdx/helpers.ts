@@ -1,4 +1,55 @@
-import { NotionPageProperty } from '../../../types/notion';
+import { NotionDatabaseEntry, NotionPageProperty } from '../../../types/notion';
+
+/**
+ * Helper function to transform a full database to a markdown table
+ */
+export async function transformDatabaseToTable(context: {
+  entries: NotionDatabaseEntry[];
+  utils: any;
+  transformers: any;
+}): Promise<string> {
+  const { entries, utils, transformers } = context;
+
+  if (!entries || !entries.length) {
+    return '';
+  }
+
+  // Extract all unique property names from all entries
+  const propertyNames = [
+    ...new Set(entries.flatMap((entry) => Object.keys(entry.properties || {}))),
+  ];
+
+  // Create header row with property names
+  const headers = propertyNames;
+
+  // Transform each entry's properties into a row
+  const rows = await Promise.all(
+    entries.map(async (entry) => {
+      const rowData = await Promise.all(
+        propertyNames.map(async (propName) => {
+          const prop = entry.properties?.[propName];
+          if (!prop) return '';
+
+          const transformer = transformers.properties[prop.type];
+          if (transformer) {
+            return await transformer.transform({
+              property: prop,
+              properties: entry.properties,
+              utils,
+            });
+          }
+
+          // Fallback
+          return String(extractPropertyValue(prop) || '');
+        }),
+      );
+
+      return rowData;
+    }),
+  );
+
+  return utils.formatAsMarkdownTable(headers, rows);
+}
 
 export function formatAsMarkdownTable(
   headers: string[],

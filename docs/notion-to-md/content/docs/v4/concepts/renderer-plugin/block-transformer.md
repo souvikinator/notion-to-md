@@ -35,13 +35,13 @@ Simple transformers for common blocks:
 protected blockTransformers = {
   heading_1: {
     transform: async ({ block, utils }) => {
-      const text = await utils.processRichText(block.heading_1.rich_text);
+      const text = await utils.transformRichText(block.heading_1.rich_text);
       return `# ${text}\n\n`;
     }
   },
   paragraph: {
     transform: async ({ block, utils }) => {
-      const text = await utils.processRichText(block.paragraph.rich_text);
+      const text = await utils.transformRichText(block.paragraph.rich_text);
       return `${text}\n\n`;
     }
   }
@@ -69,7 +69,7 @@ protected blockTransformers = {
 
   callout: {
     transform: async ({ block, utils }) => {
-      const text = await utils.processRichText(block.callout.rich_text);
+      const text = await utils.transformRichText(block.callout.rich_text);
       return `<Callout type="info">${text}</Callout>\n\n`;
     },
     imports: [
@@ -97,7 +97,7 @@ protected blockTransformers = {
   // Sidebar content goes to sidebar variable
   callout: {
     transform: async ({ block, utils }) => {
-      const text = await utils.processRichText(block.callout.rich_text);
+      const text = await utils.transformRichText(block.callout.rich_text);
       return `<aside class="sidebar-note">${text}</aside>\n\n`;
     },
     targetVariable: 'sidebar'
@@ -115,8 +115,8 @@ Sometimes a block might need to contribute to multiple variables. You can handle
 protected blockTransformers = {
   hero_section: {
     transform: async ({ block, utils, variableData }) => {
-      const title = await utils.processRichText(block.hero_section.title);
-      const subtitle = await utils.processRichText(block.hero_section.subtitle);
+      const title = await utils.transformRichText(block.hero_section.title);
+      const subtitle = await utils.transformRichText(block.hero_section.subtitle);
 
       // Add required styles
       const styles = variableData.get('styles') || [];
@@ -200,5 +200,5 @@ protected blockTransformers = {
 
 4. **Context Usage**
    - Leverage the full context object for advanced transformations
-   - Use utility methods like `processRichText` for consistent formatting
+   - Use utility methods like `transformRichText` for consistent formatting
    - Access metadata and page properties when needed

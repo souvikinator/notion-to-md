@@ -113,7 +113,7 @@ Now, we need to intercept blocks with comments and transform them appropriately.
 renderer.createBlockTransformer('paragraph', {
   transform: async ({ block, utils, variableData }) => {
     // Process rich text as usual
-    const text = await utils.processRichText(block.paragraph.rich_text);
+    const text = await utils.transformRichText(block.paragraph.rich_text);
 
     // Check if the block has comments
     if (block.comments && block.comments.length > 0) {
@@ -182,7 +182,7 @@ renderer.addVariable("footnotes", async (_, context) => {
 // Create a custom transformer for paragraphs
 renderer.createBlockTransformer("paragraph", {
   transform: async ({ block, utils, variableData }) => {
-    const text = await utils.processRichText(block.paragraph.rich_text);
+    const text = await utils.transformRichText(block.paragraph.rich_text);
 
     // Check if the block has comments
     if (block.comments && block.comments.length > 0) {
@@ -293,7 +293,7 @@ function addCommentsAsFootnotes(text, block, variableData) {
 // Now we can use this utility with any block transformer
 renderer.createBlockTransformer('heading_1', {
   transform: async ({ block, utils, variableData }) => {
-    const text = await utils.processRichText(block.heading_1.rich_text);
+    const text = await utils.transformRichText(block.heading_1.rich_text);
     const processedText = addCommentsAsFootnotes(text, block, variableData);
     return `# ${processedText}\n\n`;
   }
@@ -301,7 +301,7 @@ renderer.createBlockTransformer('heading_1', {
 
 renderer.createBlockTransformer('bulleted_list_item', {
   transform: async ({ block, utils, variableData }) => {
-    const text = await utils.processRichText(block.bulleted_list_item.rich_text);
+    const text = await utils.transformRichText(block.bulleted_list_item.rich_text);
     const processedText = addCommentsAsFootnotes(text, block, variableData);
     return `- ${processedText}\n`;
   }
@@ -318,7 +318,7 @@ If you have comments on nested blocks (like in toggle lists), you'll need to pas
 ```javascript
 renderer.createBlockTransformer('toggle', {
   transform: async ({ block, utils, variableData, metadata }) => {
-    const summary = await utils.processRichText(block.toggle.rich_text);
+    const summary = await utils.transformRichText(block.toggle.rich_text);
     const processedSummary = addCommentsAsFootnotes(summary, block, variableData);
 
     // Process children with the same context to maintain footnote numbering

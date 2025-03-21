@@ -33,7 +33,7 @@ interface RendererContext {
 
   // Utility functions
   utils: {
-    processRichText: (richText: RichText[], metadata?: any) => Promise<string>;
+    transformRichText: (richText: RichText[], metadata?: any) => Promise<string>;
     processBlock: (block: Block, metadata?: any) => Promise<string>;
   };
 
@@ -78,7 +78,7 @@ This context is used by:
 const codeTransformer = {
   transform: async (context: RendererContext) => {
     const { block, utils, metadata } = context;
-    const code = await utils.processRichText(block.code.rich_text);
+    const code = await utils.transformRichText(block.code.rich_text);
     return `<CodeBlock lang="${block.code.language}">${code}</CodeBlock>`;
   }
 };

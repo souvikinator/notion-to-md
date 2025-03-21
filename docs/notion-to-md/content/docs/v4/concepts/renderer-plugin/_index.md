@@ -87,7 +87,7 @@ classDiagram
         #annotationTransformers: Record~string, AnnotationTransformer~
         +process(data: ChainData): Promise~ChainData~
         #processBlock(block: Block): Promise~string~
-        #processRichText(richText: RichText[]): Promise~string~
+        #transformRichText(richText: RichText[]): Promise~string~
     }
 
     class MDXRenderer {
@@ -128,7 +128,7 @@ interface RendererContext {
     annotations: Record<AnnotationType, AnnotationTransformer>;
   };
   utils: {
-    processRichText: (richText: RichText[]) => Promise<string>;
+    transformRichText: (richText: RichText[]) => Promise<string>;
     processBlock: (block: Block) => Promise<string>;
   };
 }

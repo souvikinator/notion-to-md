@@ -35,7 +35,7 @@ Or perhaps you want callouts to use your design system's alert component:
 ```typescript
 renderer.createBlockTransformer('callout', {
   transform: async ({ block, utils }) => {
-    const text = await utils.processRichText(block.callout.rich_text);
+    const text = await utils.transformRichText(block.callout.rich_text);
     const emoji = block.callout.icon?.emoji;
 
     return `<Alert type="info" icon="${emoji}">${text}</Alert>\n\n`;
@@ -46,7 +46,7 @@ renderer.createBlockTransformer('callout', {
 
 The transform function receives a rich context including:
 - `block`: The Notion block data
-- `utils`: Helper functions like `processRichText`
+- `utils`: Helper functions like `transformRichText`
 - `metadata`: Additional context you can pass
 - And more!
 
@@ -136,7 +136,7 @@ Now you can collect content into these variables from your transformers:
 ```typescript
 renderer.createBlockTransformer('paragraph', {
   transform: async ({ block, utils, context }) => {
-    const text = await utils.processRichText(block.paragraph.rich_text);
+    const text = await utils.transformRichText(block.paragraph.rich_text);
 
     // If block has comments, add them to footnotes
     if (block.paragraph.comments?.length) {
@@ -226,7 +226,7 @@ renderer.createBlockTransformer('code', {
 ```typescript
 renderer.createBlockTransformer('callout', {
   transform: async ({ block, utils }) => {
-    const text = await utils.processRichText(block.callout.rich_text);
+    const text = await utils.transformRichText(block.callout.rich_text);
     const type = block.callout.icon?.emoji === '💡' ? 'tip' : 'info';
 
     return `<Callout

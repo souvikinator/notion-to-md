@@ -3,6 +3,7 @@ import {
   NotionAnnotationType,
   NotionBlock,
   NotionBlockType,
+  NotionDatabaseEntryProperties,
   NotionDatabasePropertyType,
   NotionRichTextItem,
 } from '../../types/notion';
@@ -58,8 +59,10 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
         >,
       },
       utils: {
-        processRichText: this.processRichText.bind(this),
+        transformRichText: this.transformRichText.bind(this),
         processBlock: this.processBlock.bind(this),
+        transformDatabaseProperties:
+          this.transformDatabaseProperties.bind(this),
       },
       manifest: {},
     };
@@ -276,7 +279,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
    * Core processing function that processes Notion rich text content.
    * Applies registered annotation transformers in order.
    */
-  protected async processRichText(
+  protected async transformRichText(
     richText: NotionRichTextItem[],
     metadata?: ContextMetadata,
   ): Promise<string> {
@@ -412,6 +415,36 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
         `Failed to process block: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
+  }
+
+  /**
+   * Takes in database properties and applies the defined transformers for the given properties
+   * If no transformer is found, empty string is returned
+   */
+  protected async transformDatabaseProperties(
+    properties: NotionDatabaseEntryProperties,
+    context: RendererContext,
+  ): Promise<Partial<Record<NotionDatabasePropertyType, string>>> {
+    const result: Partial<Record<NotionDatabasePropertyType, string>> = {};
+
+    for (const [propName, property] of Object.entries(properties)) {
+      const transformer = context.transformers.properties[property.type];
+
+      if (transformer) {
+        result[propName as NotionDatabasePropertyType] =
+          await transformer.transform({
+            property,
+            properties,
+            block: context.block,
+            utils: context.utils,
+            metadata: context.metadata,
+          });
+      } else {
+        result[propName as NotionDatabasePropertyType] = '';
+      }
+    }
+
+    return result;
   }
 
   /**

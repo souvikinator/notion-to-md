@@ -9,7 +9,7 @@ export const blockTransformers: Partial<
   paragraph: {
     transform: async ({ block, utils }) => {
       //@ts-ignore Just process this block's content
-      const text = await utils.processRichText(block.paragraph.rich_text);
+      const text = await utils.transformRichText(block.paragraph.rich_text);
 
       // If block has no content, return empty string
       if (!text) return '';
@@ -28,7 +28,7 @@ export const blockTransformers: Partial<
       const isToggle = headingBlock.is_toggleable;
       // since markdown doesn't get renderer in HTML, on toggle enabled
       // we parse annotations as HTML
-      const text = await utils.processRichText(headingBlock.rich_text, {
+      const text = await utils.transformRichText(headingBlock.rich_text, {
         html: isToggle,
       });
 
@@ -68,7 +68,7 @@ export const blockTransformers: Partial<
       const isToggle = headingBlock.is_toggleable;
       // since markdown doesn't get renderer in HTML, on toggle enabled
       // we parse annotations as HTML
-      const text = await utils.processRichText(headingBlock.rich_text, {
+      const text = await utils.transformRichText(headingBlock.rich_text, {
         html: isToggle,
       });
 
@@ -104,7 +104,7 @@ export const blockTransformers: Partial<
       const isToggle = headingBlock.is_toggleable;
       // since markdown doesn't get renderer in HTML, on toggle enabled
       // we parse annotations as HTML
-      const text = await utils.processRichText(headingBlock.rich_text, {
+      const text = await utils.transformRichText(headingBlock.rich_text, {
         html: isToggle,
       });
 
@@ -135,7 +135,7 @@ export const blockTransformers: Partial<
   bulleted_list_item: {
     transform: async ({ block, utils, metadata = {} }) => {
       // First, handle this block's own content
-      const text = await utils.processRichText(
+      const text = await utils.transformRichText(
         // @ts-ignore
         block.bulleted_list_item.rich_text,
       );
@@ -177,7 +177,7 @@ export const blockTransformers: Partial<
       const indent = INDENT.repeat(currentLevel);
 
       // Process the item's text content
-      const text = await utils.processRichText(
+      const text = await utils.transformRichText(
         // @ts-ignore
         block.numbered_list_item.rich_text,
       );
@@ -215,7 +215,7 @@ export const blockTransformers: Partial<
       // @ts-ignore
       const todoBlock = block.to_do;
 
-      const text = await utils.processRichText(todoBlock.rich_text);
+      const text = await utils.transformRichText(todoBlock.rich_text);
 
       // Determine checkbox state - checked or unchecked
       const checkbox = todoBlock.checked ? 'x' : ' ';
@@ -247,7 +247,7 @@ export const blockTransformers: Partial<
     transform: async ({ block, utils }) => {
       // @ts-ignore
       const calloutBlock = block.callout;
-      const text = await utils.processRichText(calloutBlock.rich_text);
+      const text = await utils.transformRichText(calloutBlock.rich_text);
       const icon = calloutBlock.icon?.emoji || '';
 
       // Process any children
@@ -279,7 +279,7 @@ export const blockTransformers: Partial<
   toggle: {
     transform: async ({ block, utils }) => {
       // @ts-ignore Process the toggle text
-      const text = await utils.processRichText(block.toggle.rich_text, {
+      const text = await utils.transformRichText(block.toggle.rich_text, {
         html: true, // since markdown doesn't get's renderer
       });
 
@@ -311,7 +311,7 @@ export const blockTransformers: Partial<
   code: {
     transform: async ({ block, utils }) => {
       // @ts-ignore
-      const text = await utils.processRichText(block.code.rich_text);
+      const text = await utils.transformRichText(block.code.rich_text);
       // @ts-ignore
       const language = block.code.language || '';
       return `\`\`\`${language}\n${text}\n\`\`\`\n\n`;
@@ -321,7 +321,7 @@ export const blockTransformers: Partial<
   quote: {
     transform: async ({ block, utils }) => {
       // @ts-ignore
-      const text = await utils.processRichText(block.quote.rich_text);
+      const text = await utils.transformRichText(block.quote.rich_text);
 
       // Format main quote text
       const lines = text
@@ -360,7 +360,7 @@ export const blockTransformers: Partial<
 
       const caption =
         imageBlock.caption.length > 0
-          ? await utils.processRichText(imageBlock.caption)
+          ? await utils.transformRichText(imageBlock.caption)
           : 'Image';
 
       return `![${caption}](${url})\n\n`;
@@ -378,7 +378,7 @@ export const blockTransformers: Partial<
 
       const caption =
         videoBlock.caption.length > 0
-          ? await utils.processRichText(videoBlock.caption)
+          ? await utils.transformRichText(videoBlock.caption)
           : 'Video';
 
       return `[${caption}](${url})\n\n`;
@@ -396,7 +396,7 @@ export const blockTransformers: Partial<
 
       const caption =
         fileBlock.caption.length > 0
-          ? await utils.processRichText(fileBlock.caption)
+          ? await utils.transformRichText(fileBlock.caption)
           : fileBlock.name || 'File';
 
       return `[${caption}](${url})\n\n`;
@@ -414,7 +414,7 @@ export const blockTransformers: Partial<
 
       const caption =
         pdfBlock.caption.length > 0
-          ? await utils.processRichText(pdfBlock.caption)
+          ? await utils.transformRichText(pdfBlock.caption)
           : 'PDF Document';
 
       return `[${caption}](${url})\n\n`;
@@ -428,7 +428,7 @@ export const blockTransformers: Partial<
       const url = bookmarkBlock.url;
       const caption =
         bookmarkBlock.caption.length > 0
-          ? await utils.processRichText(bookmarkBlock.caption)
+          ? await utils.transformRichText(bookmarkBlock.caption)
           : url;
       return `[${caption}](${url})\n\n`;
     },
@@ -442,7 +442,7 @@ export const blockTransformers: Partial<
 
       const caption =
         embedBlock.caption.length > 0
-          ? await utils.processRichText(embedBlock.caption)
+          ? await utils.transformRichText(embedBlock.caption)
           : url;
 
       return `[${caption}](${url})\n\n`;
@@ -463,7 +463,7 @@ export const blockTransformers: Partial<
 
   table: {
     transform: async ({ block, utils }) => {
-      if (!block.children?.length) return '';
+      if (!block.children?.length || block.type !== 'table') return '';
 
       // First, process all rows to get their cell content
       const processedRows = await Promise.all(
@@ -474,7 +474,7 @@ export const blockTransformers: Partial<
           // Process each cell's rich text content
           return Promise.all(
             row.table_row.cells.map(async (cell) => {
-              const content = await utils.processRichText(cell);
+              const content = await utils.transformRichText(cell);
               // Ensure empty cells have a space to maintain table structure
               return content.trim() || ' ';
             }),
@@ -483,40 +483,26 @@ export const blockTransformers: Partial<
       );
 
       // Start building the table
-      let markdown = '';
-
-      // For column tables (first column is header) or tables with column headers
-      // We'll always create a header row
-      // @ts-ignore
       if (block.table?.has_column_header || block.table?.has_row_header) {
         // Use first row as header
         const headerRow = processedRows[0];
-        markdown += `| ${headerRow.join(' | ')} |\n`;
-        // Add separator row with the correct number of columns
-        markdown += `| ${headerRow.map(() => '---').join(' | ')} |\n`;
-        // Add remaining rows
-        processedRows.slice(1).forEach((row) => {
-          markdown += `| ${row.join(' | ')} |\n`;
-        });
+        const dataRows = processedRows.slice(1);
+
+        // Use the formatAsMarkdownTable utility with the header separate from data rows
+        return utils.formatAsMarkdownTable(headerRow, dataRows) + '\n';
       } else {
-        // For tables without explicit headers, we'll create a generic header
+        // For tables without explicit headers, we'll create generic headers
         // Get the number of columns from the first row
         const columnCount = processedRows[0]?.length || 0;
+
         // Create generic headers (Column 1, Column 2, etc.)
         const headers = Array(columnCount)
           .fill('')
           .map((_, i) => `Column ${i + 1}`);
-        // Add header row
-        markdown += `| ${headers.join(' | ')} |\n`;
-        // Add separator row
-        markdown += `| ${headers.map(() => '---').join(' | ')} |\n`;
-        // Add all data rows
-        processedRows.forEach((row) => {
-          markdown += `| ${row.join(' | ')} |\n`;
-        });
-      }
 
-      return markdown + '\n';
+        // Use the formatAsMarkdownTable utility with all rows as data
+        return utils.formatAsMarkdownTable(headers, processedRows) + '\n';
+      }
     },
   },
 
@@ -556,7 +542,7 @@ export const blockTransformers: Partial<
       if (block.link_to_page.type === 'page_id') {
         // @ts-ignore
         const url = block.link_to_page.url || block.id;
-        return `[🔗 Linked page](${url})\n\n`;
+        return `[Linked page](${url})\n\n`;
       }
       return '';
     },
@@ -568,15 +554,60 @@ export const blockTransformers: Partial<
       const title = block.child_page.title;
       // @ts-ignore
       const url = block.child_page.url || block.id;
-      return `[📑 ${title}](${url})\n\n`;
+      return `[${title}](${url})\n\n`;
     },
   },
 
   child_database: {
-    transform: async ({ block }) => {
-      // @ts-ignore
-      const title = block.child_database.title | 'child database';
-      return `[${title}](${block.id})\n\n`;
+    transform: async (context) => {
+      const { block, utils } = context;
+      if (
+        !block.type ||
+        block.type !== 'child_database' ||
+        !block.child_database
+      ) {
+        return `\n`;
+      }
+
+      // Get the database title
+      const title = block.child_database.title;
+
+      // If there are no entries, just show the title
+      if (
+        !block.child_database.entries ||
+        block.child_database.entries.length === 0
+      ) {
+        return `## ${title}\n\n*No entries in database*\n\n`;
+      }
+
+      // Get all entries with transformed properties
+      const transformedEntries = await Promise.all(
+        block.child_database.entries.map(async (entry) => {
+          return await utils.transformDatabaseProperties(
+            entry.properties,
+            context,
+          );
+        }),
+      );
+
+      // Get all unique property names across all entries
+      const propertyNames = [
+        ...new Set(
+          block.child_database.entries.flatMap((entry) =>
+            Object.keys(entry.properties || {}),
+          ),
+        ),
+      ];
+
+      // Format as a table - use property names as headers
+      const rows = transformedEntries.map((entry) => {
+        // @ts-ignore
+        return propertyNames.map((propName) => entry[propName] || '');
+      });
+
+      const tableContent = utils.formatAsMarkdownTable(propertyNames, rows);
+
+      return `## ${title}\n\n${tableContent}\n\n`;
     },
   },
 

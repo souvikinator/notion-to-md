@@ -123,7 +123,7 @@ Let's add more essential block transformers and integrate them into our renderer
 const blockTransformers = {
   paragraph: {
     transform: async ({ block, utils }) => {
-      const text = await utils.processRichText(block.paragraph.rich_text);
+      const text = await utils.transformRichText(block.paragraph.rich_text);
       return `<p className="notion-paragraph">${text}</p>\n\n`;
     }
   },
@@ -133,7 +133,7 @@ const blockTransformers = {
     transform: async ({ block, utils }) => {
       const headingBlock = block.heading_1;
       const isToggle = headingBlock.is_toggleable;
-      const text = await utils.processRichText(headingBlock.rich_text);
+      const text = await utils.transformRichText(headingBlock.rich_text);
 
       if (!isToggle) {
         return `<h1 className="notion-h1">${text}</h1>\n\n`;
@@ -159,7 +159,7 @@ const blockTransformers = {
 
   code: {
     transform: async ({ block, utils }) => {
-      const code = await utils.processRichText(block.code.rich_text);
+      const code = await utils.transformRichText(block.code.rich_text);
       const lang = block.code.language || 'plain';
 
       return `<CodeBlock language="${lang}">

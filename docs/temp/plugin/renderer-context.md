@@ -30,7 +30,7 @@ interface RendererContext {
 
   // Utility functions
   utils: {
-    processRichText: (richText: RichTextItemResponse[], metadata?: ContextMetadata) => Promise<string>;
+    transformRichText: (richText: RichTextItemResponse[], metadata?: ContextMetadata) => Promise<string>;
     processChildren: (blocks: ListBlockChildrenResponseResults, metadata?: ContextMetadata) => Promise<string>;
   };
 }
@@ -155,7 +155,7 @@ addVariable('frontmatter', async (name, context) => {
 
 3. Rich Text Processing
 ```typescript
-processRichText(richText, new Map([
+transformRichText(richText, new Map([
   ['inFootnote', true],
   ['footnoteIndex', 1]
 ]));

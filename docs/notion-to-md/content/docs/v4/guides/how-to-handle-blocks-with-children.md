@@ -29,7 +29,7 @@ const bulletedListTransformer = {
     const indent = '  '.repeat(level);
 
     // Process this item's text
-    const text = await utils.processRichText(block.bulleted_list_item.rich_text);
+    const text = await utils.transformRichText(block.bulleted_list_item.rich_text);
 
     // If no children, return just this item
     if (!block.children?.length) {
@@ -87,7 +87,7 @@ const numberListTransformer = {
 ```typescript
 const toggleTransformer = {
   transform: async ({ block, utils }) => {
-    const text = await utils.processRichText(block.toggle.rich_text);
+    const text = await utils.transformRichText(block.toggle.rich_text);
 
     // Process child content if present
     const childContent = block.children?.length
@@ -108,7 +108,7 @@ const toggleTransformer = {
 ```typescript
 const calloutTransformer = {
   transform: async ({ block, utils }) => {
-    const text = await utils.processRichText(block.callout.rich_text);
+    const text = await utils.transformRichText(block.callout.rich_text);
 
     // Process children and maintain callout formatting
     const childContent = block.children?.length
