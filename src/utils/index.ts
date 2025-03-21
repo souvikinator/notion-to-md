@@ -10,7 +10,7 @@ export { RateLimiter } from './rate-limiter';
 export {
   fetchNotionAllComments,
   fetchNotionBlockChildren,
-  fetchNotionDatabaseContent,
-  fetchNotionDatabaseMetadata,
+  fetchNotionDatabase,
+  fetchNotionDatabaseSchema,
   fetchNotionPageProperties,
 } from './notion';

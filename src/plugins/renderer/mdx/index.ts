@@ -2,6 +2,8 @@ import { BaseRendererPlugin } from '../../../core/renderer/index';
 import { blockTransformers } from './transformers/blocks';
 import { annotationTransformers } from './transformers/annotations';
 import { createDefaultVariableResolvers } from './resolvers';
+import { databasePropertyTransformers } from './transformers/database-properties';
+import { formatAsMarkdownTable } from './helpers';
 
 export interface FrontmatterConfig {
   include?: string[];
@@ -28,6 +30,10 @@ export class MDXRenderer extends BaseRendererPlugin {
     // Initialize transformers
     this.createBlockTransformers(blockTransformers);
     this.createAnnotationTransformers(annotationTransformers);
+    this.createPropertyTransformers(databasePropertyTransformers);
+
+    // register utilities if any
+    this.addUtil('formatAsMarkdownTable', formatAsMarkdownTable);
 
     // Initialize resolvers
     const resolvers = createDefaultVariableResolvers();

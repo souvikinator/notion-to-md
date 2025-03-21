@@ -7,9 +7,12 @@ import {
   NotionBlock,
   NotionBlocks,
   NotionBlockType,
+  NotionDatabasePropertyType,
   NotionPageProperties,
   NotionRichTextAnnotation,
   NotionRichTextItem,
+  NotionDatabaseEntryProperties,
+  NotionDatabaseEntryProperty,
 } from './notion';
 
 export type ContextMetadata = Record<string, any>;
@@ -51,20 +54,24 @@ export interface RendererContext {
   transformers: {
     blocks: Record<NotionBlockType, BlockTransformer>;
     annotations: Record<NotionAnnotationType, AnnotationTransformer>;
+    properties: Record<NotionDatabasePropertyType, DatabasePropertyTransformer>;
   };
 
-  utils: {
-    // Helper functions
-    processRichText: (
-      richText: NotionRichTextItem[],
-      metadata?: ContextMetadata,
-    ) => Promise<string>;
-
-    processBlock: (
-      block: NotionBlock,
-      metadata?: ContextMetadata,
-    ) => Promise<string>;
+  utils: BaseRendererUtils & {
+    [key: string]: any;
   };
+}
+
+export interface DatabasePropertyContext {
+  property: NotionDatabaseEntryProperty; // The specific property being transformed
+  properties: NotionDatabaseEntryProperties; // All properties from the database
+  block: NotionBlock; // The block that contains the property
+  utils: RendererContext['utils']; // Same utils as block transformers
+  metadata?: ContextMetadata; // Additional metadata
+}
+
+export interface DatabasePropertyTransformer {
+  transform: (context: DatabasePropertyContext) => Promise<string>;
 }
 
 export interface BlockTransformer {
@@ -75,4 +82,17 @@ export interface BlockTransformer {
 
 export interface AnnotationTransformer {
   transform: (context: AnnotationContext) => Promise<string>;
+}
+
+export interface BaseRendererUtils {
+  // Required base utilities
+  processRichText: (
+    richText: NotionRichTextItem[],
+    metadata?: ContextMetadata,
+  ) => Promise<string>;
+
+  processBlock: (
+    block: NotionBlock,
+    metadata?: ContextMetadata,
+  ) => Promise<string>;
 }

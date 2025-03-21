@@ -1,5 +1,30 @@
 import { NotionPageProperty } from '../../../types/notion';
 
+export function formatAsMarkdownTable(
+  headers: string[],
+  rows: string[][],
+): string {
+  if (!headers.length || !rows.length) return '';
+
+  // Create header row
+  let table = `| ${headers.join(' | ')} |\n`;
+
+  // Create separator row
+  table += `| ${headers.map(() => '---').join(' | ')} |\n`;
+
+  // Create data rows
+  for (const row of rows) {
+    // Ensure row has same number of columns as headers
+    const paddedRow = [...row];
+    while (paddedRow.length < headers.length) {
+      paddedRow.push('');
+    }
+    table += `| ${paddedRow.join(' | ')} |\n`;
+  }
+
+  return table;
+}
+
 // Helper to extract values from Notion property objects using proper types
 export function extractPropertyValue(property: NotionPageProperty): any {
   // If no property, return null

@@ -11,8 +11,8 @@ import {
 import {
   fetchNotionAllComments,
   fetchNotionBlockChildren,
-  fetchNotionDatabaseContent,
-  fetchNotionDatabaseMetadata,
+  fetchNotionDatabase,
+  fetchNotionDatabaseSchema,
   fetchNotionPageProperties,
   isMediaBlock,
   isPageRefBlock,
@@ -217,13 +217,13 @@ export class BlockFetcher implements ProcessorChainNode {
 
       case 'fetch_database': {
         // Fetch database metadata
-        const databaseMetadata = await fetchNotionDatabaseMetadata(
+        const databaseMetadata = await fetchNotionDatabaseSchema(
           this.client,
           task.entity_id,
           this.rateLimiter,
         );
         // Fetch database content
-        const databaseContent = await fetchNotionDatabaseContent(
+        const databaseContent = await fetchNotionDatabase(
           this.client,
           task.entity_id,
           this.rateLimiter,
@@ -235,8 +235,8 @@ export class BlockFetcher implements ProcessorChainNode {
         if (block && block.type === 'child_database') {
           block.child_database = {
             ...block.child_database,
-            properties: databaseMetadata, // output of the notionSdk.databases.retrieve
-            content: databaseContent, //  output of the notionSdk.databases.query
+            schema: databaseMetadata, // output of the notionSdk.databases.retrieve
+            entries: databaseContent, //  output of the notionSdk.databases.query.properties
           };
         }
         break;

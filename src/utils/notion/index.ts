@@ -3,9 +3,9 @@ import {
   NotionBlock,
   NotionBlocks,
   NotionComments,
-  NotionDatabaseContent,
-  NotionDatabaseProperties,
+  NotionDatabaseEntry,
   NotionDatabaseQueryOptions,
+  NotionDatabaseSchema,
   NotionPageProperties,
 } from '../../types/notion';
 import { RateLimiter } from '../rate-limiter/index';
@@ -133,29 +133,29 @@ export async function fetchNotionPageProperties(
 /**
  * Fetches database metadata
  */
-export async function fetchNotionDatabaseMetadata(
+export async function fetchNotionDatabaseSchema(
   client: NotionClient,
   databaseId: string,
   rateLimiter: RateLimiter,
-): Promise<NotionDatabaseProperties> {
+): Promise<NotionDatabaseSchema> {
   const res = await rateLimiter.execute(() =>
     client.databases.retrieve({
       database_id: databaseId,
     }),
   );
-  return res.properties;
+  return res as NotionDatabaseSchema;
 }
 
 /**
  * Fetches all pages in a database
  */
-export async function fetchNotionDatabaseContent(
+export async function fetchNotionDatabase(
   client: NotionClient,
   databaseId: string,
   rateLimiter: RateLimiter,
   query?: NotionDatabaseQueryOptions,
-): Promise<NotionDatabaseContent[]> {
-  let allItems: NotionDatabaseContent[] = [];
+): Promise<NotionDatabaseEntry[]> {
+  let allItems: NotionDatabaseEntry[] = [];
   let hasMore = true;
   let cursor: string | undefined;
 
@@ -169,7 +169,7 @@ export async function fetchNotionDatabaseContent(
       });
     });
 
-    allItems = [...allItems, ...(response.results as NotionDatabaseContent[])];
+    allItems = [...allItems, ...(response.results as NotionDatabaseEntry[])];
     hasMore = response.has_more;
     cursor = response.next_cursor ?? undefined;
   }

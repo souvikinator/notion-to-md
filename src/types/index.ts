@@ -8,11 +8,10 @@ export type {
   NotionBlocks,
   NotionComment,
   NotionComments,
-  NotionDatabaseContent,
   NotionDatabaseId,
-  NotionDatabaseProperties,
-  NotionDatabaseProperty,
-  NotionDatabasePropertyType,
+  NotionDatabaseEntry,
+  NotionDatabaseEntryProperties,
+  NotionDatabaseEntryProperty,
   NotionPageProperties,
   NotionPageProperty,
   NotionPagePropertyType,
@@ -21,6 +20,10 @@ export type {
   NotionDatabaseQueryMapping,
   NotionDatabaseQueryOptions,
   NotionExtendedChildDatabaseObject,
+  NotionDatabaseSchemaProperty,
+  NotionDatabaseSchemaProperties,
+  NotionDatabaseSchema,
+  NotionDatabasePropertyType,
 } from './notion';
 
 // Manifest manager types

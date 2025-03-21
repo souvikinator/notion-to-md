@@ -3,6 +3,7 @@ import {
   NotionAnnotationType,
   NotionBlock,
   NotionBlockType,
+  NotionDatabasePropertyType,
   NotionRichTextItem,
 } from '../../types/notion';
 import {
@@ -13,6 +14,7 @@ import {
   AnnotationTransformer,
   VariableResolver,
   ContextMetadata,
+  DatabasePropertyTransformer,
 } from '../../types/renderer';
 
 /**
@@ -50,6 +52,10 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
       transformers: {
         blocks: {} as Record<NotionBlockType, BlockTransformer>,
         annotations: {} as Record<NotionAnnotationType, AnnotationTransformer>,
+        properties: {} as Record<
+          NotionDatabasePropertyType,
+          DatabasePropertyTransformer
+        >,
       },
       utils: {
         processRichText: this.processRichText.bind(this),
@@ -121,6 +127,14 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
   }
 
   /**
+   * Add utility functions to the context for usage
+   */
+  public addUtil<T>(name: string, util: T): this {
+    this.context.utils[name] = util;
+    return this;
+  }
+
+  /**
    * Adds imports that will be collected in the imports variable
    */
   public addImports(...imports: string[]): this {
@@ -141,6 +155,30 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
     this.validateTemplate(template);
     this.template = template;
     this.initializeTemplateVariables();
+    return this;
+  }
+
+  public createPropertyTransformer(
+    type: NotionDatabasePropertyType,
+    transformer: DatabasePropertyTransformer,
+  ): this {
+    this.context.transformers.properties[type] = transformer;
+    return this;
+  }
+
+  public createPropertyTransformers(
+    transformers: Partial<
+      Record<NotionDatabasePropertyType, DatabasePropertyTransformer>
+    >,
+  ): this {
+    for (const [type, transformer] of Object.entries(transformers)) {
+      if (transformer) {
+        this.createPropertyTransformer(
+          type as NotionDatabasePropertyType,
+          transformer,
+        );
+      }
+    }
     return this;
   }
 

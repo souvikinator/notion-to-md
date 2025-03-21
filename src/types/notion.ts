@@ -22,23 +22,36 @@ export type ExtractTypes<T> = T extends { type: infer U } ? U : never;
 /** Unique identifier for a Notion database */
 export type NotionDatabaseId = string;
 
-/** Query parameters used to filter and retrieve database entries */
+/** Query parameters for filtering and retrieving database entries */
 export type NotionDatabaseQueryOptions = QueryDatabaseParameters;
 
+/** Represents a Notion database, where the "properties" field contains its content */
+export type NotionDatabaseEntry = PageObjectResponse;
+
+/** Represents the properties of a Notion database entry */
+export type NotionDatabaseEntryProperties = NotionDatabaseEntry['properties'];
+
+/** Represents a single property within a Notion database entry */
+export type NotionDatabaseEntryProperty = NotionDatabaseEntryProperties[string];
+
 /**
- * Represents the content of a Notion database, containing all entries and their properties.
+ * Extracts all possible Notion database property types.
+ *
+ * Why from database content instead of schema?
+ * Some properties appear in the UI and content response but are missing from the database schema type.
  */
-export type NotionDatabaseContent = DatabaseObjectResponse;
+export type NotionDatabasePropertyType =
+  ExtractTypes<NotionDatabaseEntryProperty>;
 
-/** Represents the schema of a Notion database, containing all defined properties */
-export type NotionDatabaseProperties = DatabaseObjectResponse['properties'];
+/** Represents the schema of a Notion database, defining all properties */
+export type NotionDatabaseSchema = DatabaseObjectResponse;
 
-/** Represents a single property within a Notion database */
-export type NotionDatabaseProperty =
-  DatabaseObjectResponse['properties'][string];
+/** Represents the properties schema of a Notion database */
+export type NotionDatabaseSchemaProperties = NotionDatabaseSchema['properties'];
 
-/** Extracts all possible types of Notion database properties */
-export type NotionDatabasePropertyType = ExtractTypes<NotionDatabaseProperty>;
+/** Represents a single property within a Notion database schema */
+export type NotionDatabaseSchemaProperty =
+  NotionDatabaseSchemaProperties[string];
 
 /**
  * extending the child_database{} object inside the block with type: "child_database"
@@ -49,8 +62,8 @@ export type NotionDatabasePropertyType = ExtractTypes<NotionDatabaseProperty>;
  */
 export type NotionExtendedChildDatabaseObject =
   ChildDatabaseBlockObjectResponse['child_database'] & {
-    properties: NotionDatabaseProperties;
-    content: NotionDatabaseContent[];
+    schema: NotionDatabaseSchema;
+    entries: NotionDatabaseEntry[];
   };
 
 /**
