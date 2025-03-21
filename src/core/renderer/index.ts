@@ -287,19 +287,24 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
       richText.map(async (item) => {
         let text = item.plain_text;
         const link = item.href;
-        // Process each annotation that has a registered transformer
-        for (const [name, value] of Object.entries(item.annotations)) {
-          if (value && this.context.transformers.annotations[name]) {
-            text = await this.context.transformers.annotations[name].transform({
-              text,
-              annotations: item.annotations,
-              metadata,
-              manifest: this.context.manifest,
-            });
-          }
+        const annotations = item.annotations;
+
+        // 1. Process code annotation first if it exists and is enabled
+        if (annotations.code && this.context.transformers.annotations.code) {
+          text = await this.context.transformers.annotations.code.transform({
+            text,
+            annotations,
+            metadata,
+            manifest: this.context.manifest,
+          });
         }
 
-        if (item.type === 'equation' && item.equation) {
+        // 2. Process equation next if it exists
+        if (
+          item.type === 'equation' &&
+          item.equation &&
+          this.context.transformers.annotations.equation
+        ) {
           text = await this.context.transformers.annotations.equation.transform(
             {
               text,
@@ -309,8 +314,24 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
           );
         }
 
+        // 3. Process all other annotations except code
+        for (const [name, value] of Object.entries(annotations)) {
+          if (
+            name !== 'code' &&
+            value &&
+            this.context.transformers.annotations[name]
+          ) {
+            text = await this.context.transformers.annotations[name].transform({
+              text,
+              annotations,
+              metadata,
+              manifest: this.context.manifest,
+            });
+          }
+        }
+
+        // 4. Apply link transformation last if exists
         if (link) {
-          // Apply link transformation last if exists
           text = await this.context.transformers.annotations.link.transform({
             text,
             link: link ? { url: link } : undefined,
