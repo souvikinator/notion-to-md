@@ -153,7 +153,7 @@ oh and the best part is the configuration and the custom variable resolver works
 
 ## Conclusion
 
-The [plugin system](../../docs/v4/concepts/plugin-system) in notion-to-md v4 makes it easy to customize every aspect of the conversion process, ensuring that your content maintains its structure and metadata as it moves from Notion to your publishing platforms.
+The [plugin system](../../docs/v4/concepts/renderer-plugin/) in notion-to-md v4 makes it easy to customize every aspect of the conversion process, ensuring that your content maintains its structure and metadata as it moves from Notion to your publishing platforms.
 
 For more advanced customization, check out the guide on [creating a renderer plugin from scratch](../../docs/v4/guides/how-to-create-renderer-from-scratch).
 

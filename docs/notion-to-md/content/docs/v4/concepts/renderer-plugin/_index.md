@@ -113,7 +113,7 @@ This architecture provides a consistent interface while allowing for complete cu
 
 ## Data Context
 
-Throughout the rendering process, components have access to a comprehensive [context object](/notion-to-md/docs/v4/concepts/context):
+Throughout the rendering process, components have access to a comprehensive [context object](context):
 
 ```typescript
 interface RendererContext {
@@ -141,7 +141,7 @@ This context provides access to everything needed for sophisticated rendering de
 notion-to-md v4 comes with a default MD/MDX renderer, which serves as both a useful default and an example implementation:
 
 {{< callout type="info" >}}
-For detailed view at the implementation, please refer the [default renderer notion-to-md ships](https://github.com/souvikinator/notion-to-md/tree/v4.0.0-alpha/src/plugins/renderer/default/mdx) with, as it's a good reference for creating your own renderer.
+For detailed view at the implementation, please refer the [default renderer notion-to-md ships](https://github.com/souvikinator/notion-to-md/tree/v4.0.0-alpha/src/plugins/renderer/mdx) with, as it's a good reference for creating your own renderer.
 {{< /callout >}}
 
 ```javascript

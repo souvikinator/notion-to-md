@@ -28,7 +28,7 @@ Before starting, make sure you have:
 
 - notion-to-md v4 installed: `npm install notion-to-md@alpha`
 - Notion API token with access to your content and can read comments
-- You understand [block transformation](../docs/v4/concepts/renderer-plugin/block-transformer) and [variable system](../docs/v4/concepts/renderer-plugin/block-transformer/variables-and-templates).
+- You understand [block transformation](../../docs/v4/concepts/renderer-plugin/block-transformer) and [variable system](../../docs/v4/concepts/renderer-plugin/variables-and-templates).
 
 Here is the test notion page:
 
@@ -101,7 +101,7 @@ renderer.addVariable('footnotes', async (_, context) => {
 > know more about [context](../../docs/v4/concepts/renderer-plugin/context/)
 
 Here, we're:
-1. Adding a `{{{footnotes}}}` placeholder to the [template](../docs/v4/concepts/renderer-plugin/variables-and-templates) where our footnotes will appear.
+1. Adding a `{{{footnotes}}}` placeholder to the [template](../../docs/v4/concepts/renderer-plugin/variables-and-templates) where our footnotes will appear.
 2. Creating a variable resolver that formats the collected footnotes as a section, the output of resolver is substituted in the template.
 
 ## Step 4: Modify Block Transformers to Handle Comments

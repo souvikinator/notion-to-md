@@ -139,7 +139,7 @@ Variables collect content throughout the rendering process, but before being use
 
 ##### What is a Variable Resolver?
 - It's a function that takes collected content and formats it for final output
-- It receives the full [rendering context](/notion-to-md/docs/v4/concepts/context) and returns a formatted string
+- It receives the full [rendering context](../context) and returns a formatted string
 
 Variables can work in two ways:
 1. As collectors that gather content during rendering and then the resolver formats it for final output in the template.
@@ -173,7 +173,7 @@ date: ${date}
 
 
 {{< callout type="info" >}}
-To get a clear idea about the transformers and variables interactions, check out the [block transformer](/docs/v4/concepts/renderer-plugin/block-transformer) page.
+To get a clear idea about the transformers and variables interactions, check out the [block transformer](../block-transformer) page.
 {{< /callout >}}
 
 ##### Default Resolution
@@ -407,7 +407,7 @@ Then update your template to include it:
 ```
 
 {{< callout type="info" >}}
-To explore more about how to modify an existing renderer plugin based on your needs, refer to the [Modifying Plugin](/docs/v4/concepts/renderer-plugin/modifying-plugin) guide.
+To explore more about how to modify an existing renderer plugin based on your needs, refer to the [Modifying Plugin](/notion-to-md/docs/v4/guides/how-to-modify-renderer-plugin) guide.
 {{< /callout >}}
 
 {{% /details %}}

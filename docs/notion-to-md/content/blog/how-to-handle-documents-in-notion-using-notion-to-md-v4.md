@@ -34,7 +34,7 @@ The first step in working with PDFs or any media is ensuring the files themselve
 2. Download Strategy
 3. Upload Strategy
 
-To know more about each strategy, refer to the [Media Handling Strategies](../../docs/notion-to-md/content/docs/v4/concepts/media-handler.md) guide.
+To know more about each strategy, refer to the [Media Handling Strategies](../../docs/v4/concepts/media-handler) guide.
 
 In this guide we are going to use the download strategy to store the pdfs locally.
 

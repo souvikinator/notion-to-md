@@ -31,7 +31,7 @@ Notion-to-md v4 offers three strategies for handling media, each tailored to dif
 The Download Strategy downloads media files from Notion and saves them to a local directory.
 
 {{< callout type="info" >}}
-Detailed configuration options for the **Download strategy** are available in the [Configuration Guide](/docs/v4/concepts/configuration/#download-strategy).
+Detailed configuration options for the **Download strategy** are available in the [Configuration Guide](../configuration/#download-strategy).
 {{< /callout >}}
 
 ### Basic Configuration
@@ -82,7 +82,7 @@ Without transformation, the paths in your content would point to server-side loc
 The Upload Strategy uploads media files to an external service like AWS S3, Cloudinary, or any custom storage system.
 
 {{< callout type="info" >}}
-Detailed configuration options for the **Upload strategy** are available in the [Configuration Guide](/docs/v4/concepts/configuration/#upload-strategy).
+Detailed configuration options for the **Upload strategy** are available in the [Configuration Guide](../configuration/#upload-strategy).
 {{< /callout >}}
 
 ### Basic Configuration

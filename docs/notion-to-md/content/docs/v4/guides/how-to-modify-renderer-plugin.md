@@ -11,7 +11,7 @@ The default MDX renderer or infact any renderer you are using might work great f
 The most common customization need is changing how specific blocks are rendered. For example, maybe you want your code blocks to use a custom component:
 
 {{< callout type="info" >}}
-Know more about [Block Transformer](/docs/v4/concepts/renderer-plugin/block-transformer/).
+Know more about [Block Transformer](../../concepts/renderer-plugin/block-transformer/).
 {{< /callout >}}
 
 ```typescript
@@ -55,7 +55,7 @@ The transform function receives a rich context including:
 Want to change how bold text looks? Or maybe add custom styling to links? Annotation transformers are your friend:
 
 {{< callout type="info" >}}
-Know more about [Annotation Transformer](/docs/v4/concepts/renderer-plugin/annotation-transformer/).
+Know more about [Annotation Transformer](../../concepts/renderer-plugin/annotation-transformer/).
 {{< /callout >}}
 
 
@@ -128,7 +128,7 @@ renderer.addVariable('footnotes', async (_, context) => {
 ```
 
 {{< callout type="info" >}}
-**Notice** that we are using 'comments' variable but we are not using it in the template. That's because we are using it to collect comments from the blocks in the [block transformer](/notion-to-md/docs/v4/concepts/renderer-plugin/block-transformer) and then adding them to the footnotes section after the collection is done.
+**Notice** that we are using 'comments' variable but we are not using it in the template. That's because we are using it to collect comments from the blocks in the [block transformer](../../concepts/renderer-plugin/block-transformer) and then adding them to the footnotes section after the collection is done.
 {{< /callout >}}
 
 Now you can collect content into these variables from your transformers:

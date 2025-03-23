@@ -98,11 +98,11 @@ new DefaultExporter({
 
 Once you have basic conversion working, you might want to explore more advanced features:
 
-- [Media Handling](/notion-to-md/docs/v4/concepts/media-handler) - Download and process images and files
-- [Page Reference Handling](/notion-to-md/docs/v4/concepts/page-reference-handler) - Handle links between Notion pages
-- [Plugin system](/notion-to-md/docs/v4/concepts/plugin-system) - Extend the functionality of notion-to-md
-- [Exporter Plugin](/notion-to-md/docs/v4/concepts/exporter-plugin/) - Save conversion output to different destinations
-- [Renderer Plugin](/notion-to-md/docs/v4/concepts/renderer-plugin/) - Create custom output formats
-- [Fetcher](/notion-to-md/docs/v4/concepts/fetcher) - Customize the fetching process
+- [Media Handling](../concepts/media-handler) - Download and process images and files
+- [Page Reference Handling](../concepts/page-reference-handler) - Handle links between Notion pages
+- [Plugin system](../concepts/plugin-system) - Extend the functionality of notion-to-md
+- [Exporter Plugin](../concepts/exporter-plugin/) - Save conversion output to different destinations
+- [Renderer Plugin](../concepts/renderer-plugin/) - Create custom output formats
+<!-- - [Fetcher](/notion-to-md/docs/v4/concepts/fetcher) - Customize the fetching process -->
 
 That's it! You've successfully set up notion-to-md v4 and converted your first page.
