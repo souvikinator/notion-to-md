@@ -98,9 +98,9 @@ new DefaultExporter({
 
 Once you have basic conversion working, you might want to explore more advanced features:
 
-- [Media Handling](../concepts/media-handler) - Download and process images and files
-- [Page Reference Handling](../concepts/page-reference-handler) - Handle links between Notion pages
-- [Plugin system](../concepts/plugin-system) - Extend the functionality of notion-to-md
+- [Media Handling](../concepts/media-handler/) - Download and process images and files
+- [Page Reference Handling](../concepts/page-reference-handler/) - Handle links between Notion pages
+- [Plugin system](../concepts/renderer-plugin/) - Extend the functionality of notion-to-md
 - [Exporter Plugin](../concepts/exporter-plugin/) - Save conversion output to different destinations
 - [Renderer Plugin](../concepts/renderer-plugin/) - Create custom output formats
 <!-- - [Fetcher](/notion-to-md/docs/v4/concepts/fetcher) - Customize the fetching process -->

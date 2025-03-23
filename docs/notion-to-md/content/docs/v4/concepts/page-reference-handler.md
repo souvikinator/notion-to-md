@@ -111,7 +111,7 @@ await n2m.convert('your-page-id');
 ```
 
 {{< callout type="info" >}}
-Detailed configuration options are available in the [Page reference configuration guide](/docs/v4/concepts/configuration/#page-reference-configuration).
+Detailed configuration options are available in the [Page reference configuration guide](../configuration/#page-reference-configuration).
 {{< /callout >}}
 
 ## Advanced Use Cases

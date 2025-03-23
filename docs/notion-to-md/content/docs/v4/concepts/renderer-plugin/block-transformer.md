@@ -109,7 +109,7 @@ protected blockTransformers = {
 
 ##### Complex Block with Multiple Variables
 
-Sometimes a block might need to contribute to multiple variables. You can handle this by using the [context's utility methods](/notion-to-md/docs/v4/concepts/context):
+Sometimes a block might need to contribute to multiple variables. You can handle this by using the [context's utility methods](../context):
 
 ```typescript
 protected blockTransformers = {
