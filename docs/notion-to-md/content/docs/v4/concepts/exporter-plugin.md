@@ -88,7 +88,7 @@ interface ChainData {
 The `export` method receives all the data from the conversion process, giving you complete flexibility in how you handle it.
 
 {{< callout type="info" >}}
-Detailed types breakdown can be found in the [Exporter configuration guide](/docs/v4/concepts/configuration/#exporter-configuration).
+Detailed types breakdown can be found in the [Exporter configuration guide](../configuration/#exporter-configuration).
 {{< /callout >}}
 
 ## Basic Exporter

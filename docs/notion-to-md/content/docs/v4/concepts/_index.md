@@ -9,7 +9,7 @@ Notion to Markdown v4 introduces support for exporting to multiple formats, but 
 If you’re looking to build a custom renderer plugin or want to understand how Notion to Markdown works under the hood, here are some key concepts you should familiarize yourself with before getting started.
 {{< cards >}}
   {{< card link="./configuration" title="Configuration reference" >}}
-  {{< card link="./plugin-system" title="Understanding the Plugin System" tag="important" tagType="info" >}}
+  {{< card link="./renderer-plugin" title="Understanding the Plugin System" tag="important" tagType="info" >}}
   {{< card link="./exporter-plugin" title="Exported plugin" tag="important" tagType="info" >}}
   {{< card link="./renderer-plugin" title="Renderer plugin" tag="important" tagType="info" >}}
   {{< card link="./media-handler" title="Media Handler"  >}}

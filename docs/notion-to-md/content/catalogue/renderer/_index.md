@@ -24,5 +24,5 @@ Have you created a useful plugin for Notion to MD? Share it with the community b
 
 Want to build a custom plugin? Check out our comprehensive guides:
 {{< cards >}}
-{{< card icon="document" title="Creating a Renderer Plugin" link="../../v4/guides/how-to-create-renderer-from-scratch" >}}
+{{< card icon="document" title="Creating a Renderer Plugin" link="../../docs/v4/guides/how-to-create-renderer-from-scratch" >}}
 {{< /cards >}}
