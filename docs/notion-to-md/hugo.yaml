@@ -1,4 +1,4 @@
-baseURL: https://docs.joinescape.org/notion-to-md/
+baseURL: https://notionconvert.com
 languageCode: en-us
 title: Notion To MD
 module:
@@ -14,7 +14,7 @@ markup:
   enableInlineShortcodes: true
 
 params:
-  description: Convert Notion pages to Markdown and any other format programmatically.
+  description: Convert or Export Notion pages to Markdown and any other format programmatically.
 
   enableGitInfo: true
 

@@ -28,9 +28,7 @@ We aim to build more than a Markdown converter; our goal is to develop a compreh
 
 For installation instructions, complete API references, and detailed examples, please visit our comprehensive documentation:
 
-[https://docs.joinescape.org/notion-to-md/](https://docs.joinescape.org/notion-to-md/)
-
-
+[https://notionconvert.com](https://notionconvert.com)
 
 ---
 
