@@ -13,7 +13,7 @@ layout: hextra-home
 {{< hextra/hero-badge >}}
 
   <div class="hx-w-2 hx-h-2 hx-rounded-full hx-bg-primary-400"></div>
-  <span>We are open-source! Support us with a ⭐ on GitHub</span>
+  <span>We are free & open-source!</span>
   {{< icon name="arrow-circle-right" attributes="height=14" >}}
 {{< /hextra/hero-badge >}}
 
@@ -29,7 +29,7 @@ layout: hextra-home
 </div>
 
 <!-- Social Proof Section -->
-<div class="flex flex-wrap justify-center gap-4 mb-12">
+<div class="flex flex-wrap justify-left md:justify-center gap-4 mb-12">
   <!-- GitHub Stars Badge (blue tint) -->
   <a href="https://github.com/souvikinator/notion-to-md" class="flex items-center px-4 py-2 rounded-full bg-blue-50/80 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-700/30 transition-all duration-200 hover:bg-blue-100/90 dark:hover:bg-blue-800/40 backdrop-blur-sm" target="_blank" rel="noopener noreferrer">
     {{< icon name="github" attributes="height=16 class='mr-2'" >}}
