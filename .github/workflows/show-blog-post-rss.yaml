@@ -15,7 +15,7 @@ jobs:
       - name: Fetch RSS Feed
         uses: sarisia/actions-readme-feed@v1
         with:
-          url: 'https://docs.joinescape.org/notion-to-md/blog/index.xml'
+          url: 'https://notionconvert.com/blog/index.xml'
           file: 'README.md'
           max_entry: 5
           start_flag: '<!-- feed start -->'
