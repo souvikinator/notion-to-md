@@ -1,6 +1,10 @@
 import type { Client } from '@notionhq/client';
 import { BlockFetcherConfig } from '../../types/configuration';
-import { ExtendedFetcherOutput, FetcherOutput } from '../../types/fetcher';
+import {
+  ExtendedFetcherOutput,
+  FetcherOutput,
+  TrackedBlockReferenceObject,
+} from '../../types/fetcher';
 import { ProcessorChainNode, ChainData } from '../../types/module';
 import {
   NotionBlock,
@@ -15,7 +19,9 @@ import {
   fetchNotionDatabaseSchema,
   fetchNotionPageProperties,
   isMediaBlock,
+  isMediaProperty,
   isPageRefBlock,
+  isPageRefProperty,
   normalizeUUID,
 } from '../../utils/notion';
 import { RateLimiter } from '../../utils/rate-limiter/index';
@@ -39,8 +45,8 @@ export class BlockFetcher implements ProcessorChainNode {
   private pageProperties?: NotionPageProperties;
   private rootComments: NotionComments = [];
   private rootBlockId: string = '';
-  private mediaBlocks: NotionBlocks = [];
-  private pageRefBlocks: NotionBlocks = [];
+  private mediaBlockReferences: TrackedBlockReferenceObject[] = [];
+  private pageRefBlockReferences: TrackedBlockReferenceObject[] = [];
 
   private rateLimiter: RateLimiter;
 
@@ -78,6 +84,10 @@ export class BlockFetcher implements ProcessorChainNode {
     this.pageProperties = undefined;
     this.rootComments = [];
 
+    // Reset the new tracking arrays
+    this.mediaBlockReferences = [];
+    this.pageRefBlockReferences = [];
+
     // Initialize queue with root level tasks
     this.addTask({ type: 'fetch_blocks', entity_id: pageId });
 
@@ -105,9 +115,11 @@ export class BlockFetcher implements ProcessorChainNode {
     if (this.config.trackMediaBlocks || this.config.trackPageRefBlocks) {
       return {
         ...baseOutput,
-        ...(this.config.trackMediaBlocks && { mediaBlocks: this.mediaBlocks }),
+        ...(this.config.trackMediaBlocks && {
+          mediaBlockReferences: this.mediaBlockReferences,
+        }),
         ...(this.config.trackPageRefBlocks && {
-          pageRefBlocks: this.pageRefBlocks,
+          pageRefBlockReferences: this.pageRefBlockReferences,
         }),
       };
     }
@@ -146,10 +158,21 @@ export class BlockFetcher implements ProcessorChainNode {
           // these will be used by the next stage saving us from a
           // lot of recursive calls to idenitfy blocks
           if (this.config.trackMediaBlocks && isMediaBlock(storedBlock)) {
-            this.mediaBlocks.push(storedBlock);
+            this.mediaBlockReferences.push({
+              type: 'block',
+              parentId: task.parentId || this.rootBlockId,
+              id: block.id,
+              ref: storedBlock,
+            });
           }
+
           if (this.config.trackPageRefBlocks && isPageRefBlock(storedBlock)) {
-            this.pageRefBlocks.push(storedBlock);
+            this.pageRefBlockReferences.push({
+              type: 'block',
+              parentId: task.parentId || this.rootBlockId,
+              id: block.id,
+              ref: storedBlock,
+            });
           }
 
           // if block is a child_database and in config it's enabled send to queue to fetch
@@ -238,6 +261,39 @@ export class BlockFetcher implements ProcessorChainNode {
             schema: databaseMetadata, // output of the notionSdk.databases.retrieve
             entries: databaseContent, //  output of the notionSdk.databases.query.properties
           };
+
+          for (const databaseEntry of databaseContent) {
+            if (databaseEntry && databaseEntry.properties) {
+              for (const [propertyName, property] of Object.entries(
+                databaseEntry.properties,
+              )) {
+                // Check for media properties
+                if (this.config.trackMediaBlocks && isMediaProperty(property)) {
+                  this.mediaBlockReferences.push({
+                    type: 'property',
+                    parentId: databaseEntry.id,
+                    id: property.id || `${databaseEntry.id}:${propertyName}`,
+                    propertyName: propertyName,
+                    ref: property,
+                  });
+                }
+
+                // Check for page mention properties
+                if (
+                  this.config.trackPageRefBlocks &&
+                  isPageRefProperty(property)
+                ) {
+                  this.pageRefBlockReferences.push({
+                    type: 'property',
+                    parentId: databaseEntry.id,
+                    id: property.id || `${databaseEntry.id}:${propertyName}`,
+                    propertyName: propertyName,
+                    ref: property,
+                  });
+                }
+              }
+            }
+          }
         }
         break;
       }

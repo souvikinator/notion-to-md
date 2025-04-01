@@ -4,6 +4,7 @@ import {
   NotionBlocks,
   NotionComments,
   NotionDatabaseEntry,
+  NotionDatabaseEntryProperty,
   NotionDatabaseQueryOptions,
   NotionDatabaseSchema,
   NotionPageProperties,
@@ -30,6 +31,32 @@ export function isPageRefBlock(block: NotionBlock): boolean {
       }
       return false;
   }
+}
+
+// checks if database property is a media property
+export function isMediaProperty(
+  property: NotionDatabaseEntryProperty,
+): boolean {
+  return (
+    property.type === 'files' &&
+    Array.isArray(property.files) &&
+    property.files.length > 0
+  );
+}
+
+// Checks if a property contains page mentions
+export function isPageRefProperty(
+  property: NotionDatabaseEntryProperty,
+): boolean {
+  // Only rich_text properties contain page mentions
+  if (property.type !== 'rich_text' || !Array.isArray(property.rich_text)) {
+    return false;
+  }
+
+  // Check each rich text item for page mentions
+  return property.rich_text.some(
+    (item) => item.type === 'mention' && item.mention?.type === 'page',
+  );
 }
 
 /**
