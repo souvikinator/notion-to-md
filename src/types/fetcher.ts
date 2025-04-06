@@ -4,6 +4,7 @@ import {
   NotionComments,
   NotionDatabaseEntryProperty,
   NotionPageProperties,
+  NotionPageProperty,
 } from './notion';
 
 export interface FetcherOutput {
@@ -13,11 +14,11 @@ export interface FetcherOutput {
 }
 
 export interface TrackedBlockReferenceObject {
-  type: 'block' | 'property';
+  type: 'block' | 'database_property' | 'page_property';
   parentId: string; // Database/page ID for properties, parent block ID for blocks
   id: string; // Block ID or property ID
-  propertyName?: string; // Only for properties - name of the property
-  ref: NotionBlock | NotionDatabaseEntryProperty; // Direct reference to the original object
+  propertyName?: string; // For properties - name of the property
+  ref: NotionBlock | NotionDatabaseEntryProperty | NotionPageProperty; // Direct reference
 }
 
 export interface TrackedBlocks {

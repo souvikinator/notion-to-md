@@ -235,6 +235,34 @@ export class BlockFetcher implements ProcessorChainNode {
         );
 
         this.pageProperties = properties;
+
+        // Add tracking for page properties containing media or page references
+        if (properties) {
+          for (const [propertyName, property] of Object.entries(properties)) {
+            // Check for media properties
+            if (this.config.trackMediaBlocks && isMediaProperty(property)) {
+              this.mediaBlockReferences.push({
+                type: 'page_property',
+                parentId: task.entity_id,
+                id: property.id || `${task.entity_id}:${propertyName}`,
+                propertyName: propertyName,
+                ref: property,
+              });
+            }
+
+            // Check for page reference properties
+            if (this.config.trackPageRefBlocks && isPageRefProperty(property)) {
+              this.pageRefBlockReferences.push({
+                type: 'page_property',
+                parentId: task.entity_id,
+                id: property.id || `${task.entity_id}:${propertyName}`,
+                propertyName: propertyName,
+                ref: property,
+              });
+            }
+          }
+        }
+
         break;
       }
 
@@ -270,7 +298,7 @@ export class BlockFetcher implements ProcessorChainNode {
                 // Check for media properties
                 if (this.config.trackMediaBlocks && isMediaProperty(property)) {
                   this.mediaBlockReferences.push({
-                    type: 'property',
+                    type: 'database_property',
                     parentId: databaseEntry.id,
                     id: property.id || `${databaseEntry.id}:${propertyName}`,
                     propertyName: propertyName,
@@ -284,7 +312,7 @@ export class BlockFetcher implements ProcessorChainNode {
                   isPageRefProperty(property)
                 ) {
                   this.pageRefBlockReferences.push({
-                    type: 'property',
+                    type: 'database_property',
                     parentId: databaseEntry.id,
                     id: property.id || `${databaseEntry.id}:${propertyName}`,
                     propertyName: propertyName,
