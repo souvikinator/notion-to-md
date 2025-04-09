@@ -4,6 +4,11 @@ import {
 } from '../utils/index';
 import { ExtendedFetcherOutput } from './fetcher';
 
+export interface ConvertResult {
+  content: string;
+  blockTree: ExtendedFetcherOutput;
+}
+
 export interface ChainData {
   pageId: string;
   blockTree: ExtendedFetcherOutput;

@@ -44,7 +44,12 @@ export type { MediaStrategy } from './strategy';
 export { MediaProcessingError } from './strategy';
 
 // Module types
-export type { ChainData, ProcessorChainNode, NotionExporter } from './module';
+export type {
+  ChainData,
+  ProcessorChainNode,
+  NotionExporter,
+  ConvertResult,
+} from './module';
 
 export { ExporterError } from './module';
 

@@ -14,7 +14,12 @@ import { BaseRendererPlugin } from './core/renderer';
 import { MDXRenderer } from './plugins/renderer';
 import { normalizeUUID } from './utils/notion/index';
 import { MediaStrategyType } from './types/manifest-manager';
-import { ProcessorChainNode, NotionExporter, ChainData } from './types/module';
+import {
+  ProcessorChainNode,
+  NotionExporter,
+  ChainData,
+  ConvertResult,
+} from './types/module';
 import { ExtendedFetcherOutput } from './types/fetcher';
 import { MediaStrategy } from './types/strategy';
 import {
@@ -196,10 +201,11 @@ export class NotionConverter {
   /**
    * Main conversion method that processes a Notion page through the chain.
    */
-  async convert(pageId: string): Promise<void> {
-    // making sure that we are consistent with the UUID from the user input
+  async convert(pageId: string): Promise<ConvertResult> {
+    // Making sure that we are consistent with the UUID from the user input
     pageId = normalizeUUID(pageId);
     console.debug('[NotionConverter] Starting conversion for page:', pageId);
+
     try {
       // Initialize the processor chain if not already done
       if (!this.processorChain) {
@@ -218,10 +224,16 @@ export class NotionConverter {
 
       // Process through the chain
       console.debug('[NotionConverter] Beginning chain processing');
-      await this.processorChain!.process(chainData);
+      const result = await this.processorChain!.process(chainData);
       console.debug(
         '[NotionConverter] Chain processing completed successfully',
       );
+
+      // Return the structured result
+      return {
+        content: result.content,
+        blockTree: result.blockTree,
+      };
     } catch (error) {
       console.debug('[NotionConverter] Error during conversion:', error);
       this.handleError(error);
