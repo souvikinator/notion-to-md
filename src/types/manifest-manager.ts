@@ -33,6 +33,9 @@ export interface MediaInfo {
   uploadedUrl?: string;
   transformedPath?: string;
   mimeType?: string;
+  sourceType?: 'block' | 'database_property' | 'page_property';
+  propertyName?: string;
+  propertyIndex?: number;
 }
 
 /**

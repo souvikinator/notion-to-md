@@ -12,25 +12,25 @@ classDiagram
         -mediaHandler: MediaHandler|null
         -pageReferenceHandler: PageReferenceHandler
         -renderer: RendererPlugin
-        
+
         %% Configuration
         -config: NotionConverterConfig
         -outputPath: string
         -mediaConfig: MediaConfig|null
-        
+
         %% Constructor
         +constructor(client: Client, config?: NotionConverterConfig)
-        
+
         %% Builder Methods
         +setOutputPath(path: string): this
         +downloadMediaTo(config: DownloadConfig): this
         +uploadMediaUsing(config: UploadConfig): this
         +withPageReferences(config: PageRefConfig): this
         +withRenderer(renderer: RendererPlugin): this
-        
+
         %% Core Operation
         +convert(pageId: string): Promise~ConversionResult~
-        
+
         %% Private Methods
         -initializeModules(pageId: string): Promise~void~
         -validateConfiguration(): void
@@ -118,7 +118,7 @@ classDiagram
     NotionConverter --> Client : uses
     NotionConverter --> NotionConverterConfig : configured by
     NotionConverter --> ConversionResult : produces
-    
+
     BlockFetcher --> BlockFetcherConfig : configured by
     MediaHandler --> MediaConfig : configured by
     PageReferenceHandler --> PageRefConfig : configured by
@@ -131,33 +131,33 @@ classDiagram
     class BaseManifestManager {
         %% Constants and Common Properties
         #readonly BASE_DIR: string
-        
+
         %% Constructor
         +constructor(baseDir?: string)
-        
+
         %% Core Directory Operations
         #ensureDirectories(): Promise~void~
         #getManifestPath(id: string): string
-        
+
         %% Base Manifest Operations
         #loadManifest(path: string): Promise~any~
         #saveManifest(path: string, data: any): Promise~void~
         #validateManifest(data: any): boolean
-        
+
         %% Error Handling
         #handleFileError(error: Error): void
         #handleValidationError(error: Error): void
-        
+
         %% Abstract Methods
         +initialize(): Promise~void~
         +save(): Promise~void~
     }
-    
+
     class MediaManifestManager {
         %% Properties
         -mediaDir: string
         -currentPageId: string
-        
+
         %% Media Specific Methods
         +initializeForPage(pageId: string): Promise~void~
         +updateMediaEntry(blockId: string, entry: MediaEntry): void
@@ -165,37 +165,37 @@ classDiagram
         +removeMediaEntry(blockId: string): void
         +getAllMediaEntries(): Record~string, MediaEntry~
         +getOrphanedMedia(currentBlockIds: Set~string~): MediaEntry[]
-        
+
         %% Override Methods
         +initialize(): Promise~void~
         +save(): Promise~void~
-        
+
         %% Helper Methods
         -validateMediaEntry(entry: MediaEntry): boolean
         -cleanupOrphanedEntries(): Promise~void~
     }
-    
+
     class PageReferenceManifestManager {
         %% Properties
         -pageRefDir: string
         -globalManifestName: string
-        
+
         %% Page Reference Specific Methods
         +updatePageReference(pageId: string, url: string): void
         +getPageReference(pageId: string): string|undefined
         +getAllPageReferences(): Record~string, string~
         +removePageReference(pageId: string): void
         +bulkUpdateReferences(mappings: Record~string, string~): void
-        
+
         %% Override Methods
         +initialize(): Promise~void~
         +save(): Promise~void~
-        
+
         %% Helper Methods
         -validatePageReference(pageId: string, url: string): boolean
         -normalizeUrl(url: string): string
     }
-    
+
     BaseManifestManager <|-- MediaManifestManager : extends
     BaseManifestManager <|-- PageReferenceManifestManager : extends
 ```
@@ -216,43 +216,43 @@ classDiagram
         #getPageRefManifest(): PageReferenceManifestManager
         #validateManifestAccess(): void
     }
-    
+
     class BlockFetcher {
         -client: Client
         -config: BlockFetcherConfig
         +getBlocks(pageId: string): Promise~FetcherOutput~
     }
-    
+
     class MediaHandler {
         -strategy: MediaStrategy
         +processBlocks(blocks: Block[]): Promise~void~
     }
-    
+
     class PageReferenceHandler {
         -config: PageRefConfig
         +processBlocks(blocks: Block[]): Promise~void~
     }
-    
+
     class RendererPlugin {
         +render(blocks: Block[]): Promise~string~
     }
-    
+
     class BaseManifestManager {
         <<abstract>>
         +initialize(): Promise~void~
         +save(): Promise~void~
     }
-    
+
     class MediaManifestManager {
         +initializeForPage(pageId: string): Promise~void~
         +updateMediaEntry(blockId: string, entry: MediaEntry): void
     }
-    
+
     class PageReferenceManifestManager {
         +updatePageReference(pageId: string, url: string): void
         +getAllPageReferences(): Record~string, string~
     }
-    
+
     %% Inheritance Relationships
     BaseModule <|-- BlockFetcher
     BaseModule <|-- MediaHandler
@@ -260,11 +260,11 @@ classDiagram
     BaseModule <|-- RendererPlugin
     BaseManifestManager <|-- MediaManifestManager
     BaseManifestManager <|-- PageReferenceManifestManager
-    
+
     %% Usage Relationships
     BaseModule o-- MediaManifestManager : uses
     BaseModule o-- PageReferenceManifestManager : uses
-    
+
     %% Styling
     class BaseModule {
         <<abstract>>
@@ -488,16 +488,16 @@ classDiagram
 
         %% Constructor
         +constructor(strategy: MediaStrategy)
-        
+
         %% Public Methods
         +processBlocks(blocks: Block[]): Promise~void~
-        
+
         %% Private Processing Methods
         -processBlockArray(blocks: Block[]): Promise~void~
         -processMediaBlock(block: Block): Promise~void~
         -hasMedia(block: Block): boolean
         -handleCleanup(): Promise~void~
-        
+
         %% Error Handling
         -handleProcessingError(error: Error, block: Block): void
         -handleCleanupError(error: Error, entry: MediaManifestEntry): void
@@ -563,14 +563,14 @@ classDiagram
         -processedPages: Set~string~
         -currentPageId: string
         -pageReferences: Map~string, PageReferenceInfo~
-        
+
         %% Constructor
         +constructor(config: PageReferenceConfig)
-        
+
         %% Public Methods
         +processBlocks(blocks: Block[]): Promise~void~
         +getPageReferences(): PageReferenceInfo[]
-        
+
         %% Private Methods
         -processBlockArray(blocks: Block[]): Promise~void~
         -processPageReference(block: Block): Promise~void~
@@ -637,7 +637,7 @@ classDiagram
     PageReference --> ReferenceType : uses
     PageReference --> ReferenceContext : contains
     PageReferenceHandler --> PageReferenceError : throws
-    
+
     %% Processing States
     class ProcessingState {
         <<note>>
@@ -646,4 +646,169 @@ classDiagram
         3. Transform URLs
         4. Update Manifest
     }
+```
+
+## Flow diagram
+
+```mermaid
+flowchart TD
+    Start([Process Begins]) --> BF[Block Fetcher]
+
+    %% Block Fetcher Process
+    BF --> FetchBlocks[Fetch Blocks]
+    BF --> FetchPageProps[Fetch Page Properties]
+    BF --> FetchDatabaseInfo[Fetch Database Info]
+
+    %% Content Analysis
+    FetchBlocks --> AnalyzeBlocks[Analyze Regular Blocks]
+    FetchPageProps --> AnalyzePageProps[Analyze Page Properties]
+    FetchDatabaseInfo --> AnalyzeDatabaseProps[Analyze Database Properties]
+
+    %% Tracking Logic
+    AnalyzeBlocks --> IsMediaBlock{Is Media Block?}
+    IsMediaBlock -->|Yes| TrackMediaBlock[Track Media Block Reference]
+    IsMediaBlock -->|No| IsPageRefBlock{Has Page Reference?}
+    IsPageRefBlock -->|Yes| TrackPageRefBlock[Track Page Reference]
+    IsPageRefBlock -->|No| Continue1[Continue]
+
+    AnalyzePageProps --> ProcessPageProps[Process Each Property]
+    ProcessPageProps --> IsMediaPageProp{Is Media Property?}
+    IsMediaPageProp -->|Yes| TrackMediaPageProp[Track Media Page Property]
+    IsMediaPageProp -->|No| IsPageRefPageProp{Has Page Reference?}
+    IsPageRefPageProp -->|Yes| TrackPageRefPageProp[Track Page Reference]
+    IsPageRefPageProp -->|No| Continue2[Continue]
+
+    AnalyzeDatabaseProps --> ProcessDBProps[Process Each DB Property]
+    ProcessDBProps --> IsMediaDBProp{Is Media Property?}
+    IsMediaDBProp -->|Yes| TrackMediaDBProp[Track Media DB Property]
+    IsMediaDBProp -->|No| IsPageRefDBProp{Has Page Reference?}
+    IsPageRefDBProp -->|Yes| TrackPageRefDBProp[Track Page Reference]
+    IsPageRefDBProp -->|No| Continue3[Continue]
+
+    %% Collection of References
+    TrackMediaBlock --> MediaRefs[Media References Collection]
+    TrackMediaPageProp --> MediaRefs
+    TrackMediaDBProp --> MediaRefs
+
+    TrackPageRefBlock --> PageRefs[Page References Collection]
+    TrackPageRefPageProp --> PageRefs
+    TrackPageRefDBProp --> PageRefs
+
+    %% Output and Next Steps
+    MediaRefs --> Output[Build Extended Fetcher Output]
+    PageRefs --> Output
+    Continue1 --> Output
+    Continue2 --> Output
+    Continue3 --> Output
+
+    Output --> MH[Media Handler]
+    Output --> PRH[Page Reference Handler]
+
+    %% Handlers Processing
+    MH --> ProcessMediaRefs[Process All Media References]
+    ProcessMediaRefs --> UpdateMediaURLs[Update URLs in Source]
+    UpdateMediaURLs --> UpdateMediaManifest[Update Media Manifest]
+
+    PRH --> ProcessPageRefs[Process All Page References]
+    ProcessPageRefs --> UpdatePageLinks[Update Links in Source]
+    UpdatePageLinks --> UpdatePageRefManifest[Update Page Ref Manifest]
+
+    %% End of Process
+    UpdateMediaManifest --> Renderer[Renderer]
+    UpdatePageRefManifest --> Renderer
+    Renderer --> End([Process Complete])
+
+    %% Style Definitions
+    classDef process fill:#f0f8ff,stroke:#87cefa,stroke-width:2px
+    classDef decision fill:#fff5ee,stroke:#ff7f50,stroke-width:2px
+    classDef collection fill:#f0fff0,stroke:#32cd32,stroke-width:2px
+    classDef module fill:#e6e6fa,stroke:#9370db,stroke-width:2px
+
+    class BF,FetchBlocks,FetchPageProps,FetchDatabaseInfo,AnalyzeBlocks,AnalyzePageProps,AnalyzeDatabaseProps,ProcessPageProps,ProcessDBProps,MH,PRH,ProcessMediaRefs,ProcessPageRefs,UpdateMediaURLs,UpdatePageLinks,UpdateMediaManifest,UpdatePageRefManifest,Renderer process
+    class IsMediaBlock,IsPageRefBlock,IsMediaPageProp,IsPageRefPageProp,IsMediaDBProp,IsPageRefDBProp decision
+    class MediaRefs,PageRefs collection
+    class BF,MH,PRH,Renderer module
+```
+
+```mermaid
+flowchart TD
+    Start([Start Filename Generation]) --> IdentifySourceType{What is the source type?}
+    
+    %% Block handling
+    IdentifySourceType -->|Block| HasBlockFileName{Has filename in block?}
+    HasBlockFileName -->|Yes| UseBlockFileName[Use filename_blockId.extension]
+    HasBlockFileName -->|No| ExtractFromURL1[Extract filename from URL]
+    ExtractFromURL1 --> HasExtractedName1{Extraction successful?}
+    HasExtractedName1 -->|Yes| UseExtractedNameBlock[Use extractedName_blockId.extension]
+    HasExtractedName1 -->|No| UseDefaultBlock[Use file_blockId.extension]
+    
+    %% Database property handling
+    IdentifySourceType -->|Database Property| IsNotionFile{Is Notion file?}
+    IsNotionFile -->|Yes| HasDBFileName{Has filename?}
+    HasDBFileName -->|Yes| UseDBFileName[Use filename_index_propertyName.extension]
+    HasDBFileName -->|No| ExtractFromURL2[Extract filename from URL]
+    ExtractFromURL2 --> HasExtractedName2{Extraction successful?}
+    HasExtractedName2 -->|Yes| UseExtractedNameDB[Use extractedName_index_propertyName.extension]
+    HasExtractedName2 -->|No| UseDefaultDB[Use file_index_propertyName.extension]
+    
+    %% External URL handling for DB properties
+    IsNotionFile -->|No| ExtractFromExternalURL[Extract last path segment from URL]
+    ExtractFromExternalURL --> HasValidExtName{Valid extracted name?}
+    HasValidExtName -->|Yes| UseExtractedExternal[Use extractedName_index_propertyName]
+    HasValidExtName -->|No| UseFallbackExternal[Use file_index_propertyName]
+    
+    %% Page property handling
+    IdentifySourceType -->|Page Property| HasPageFileName{Has filename?}
+    HasPageFileName -->|Yes| UsePageFileName[Use filename_propertyName.extension]
+    HasPageFileName -->|No| ExtractFromURL3[Extract filename from URL]
+    ExtractFromURL3 --> HasExtractedName3{Extraction successful?}
+    HasExtractedName3 -->|Yes| UseExtractedNamePage[Use extractedName_propertyName.extension]
+    HasExtractedName3 -->|No| UseDefaultPage[Use file_propertyName.extension]
+    
+    %% Extension handling
+    UseBlockFileName --> ExtensionCheck1{Has extension?}
+    UseExtractedNameBlock --> ExtensionCheck1
+    UseDefaultBlock --> ExtensionCheck1
+    
+    UseDBFileName --> ExtensionCheck2{Has extension?}
+    UseExtractedNameDB --> ExtensionCheck2
+    UseDefaultDB --> ExtensionCheck2
+    
+    UsePageFileName --> ExtensionCheck3{Has extension?}
+    UseExtractedNamePage --> ExtensionCheck3
+    UseDefaultPage --> ExtensionCheck3
+    
+    %% Preserve or add extension
+    ExtensionCheck1 -->|Yes| PreserveExt1[Keep original extension]
+    ExtensionCheck1 -->|No| NoForceExt1[Don't add extension]
+    
+    ExtensionCheck2 -->|Yes| PreserveExt2[Keep original extension]
+    ExtensionCheck2 -->|No| NoForceExt2[Don't add extension]
+    
+    ExtensionCheck3 -->|Yes| PreserveExt3[Keep original extension]
+    ExtensionCheck3 -->|No| NoForceExt3[Don't add extension]
+    
+    %% Special handling for external URLs
+    UseExtractedExternal --> StripQueryParams[Strip query params and hash]
+    UseFallbackExternal --> FinalNameExternal[Use as is]
+    StripQueryParams --> FinalNameExternal
+    
+    %% Final filename generation
+    PreserveExt1 --> FinalName[Return Final Filename]
+    NoForceExt1 --> FinalName
+    PreserveExt2 --> FinalName
+    NoForceExt2 --> FinalName
+    PreserveExt3 --> FinalName
+    NoForceExt3 --> FinalName
+    FinalNameExternal --> FinalName
+    
+    %% Style
+    classDef decision fill:#1e1e2f,color:#ffffff,stroke:#4fc3f7,stroke-width:2px
+    classDef process fill:#2e2e3e,color:#e0f7fa,stroke:#fbc02d,stroke-width:2px
+    classDef endpoint fill:#4527a0,color:#ffffff,stroke:#ce93d8,stroke-width:2px
+
+    class IdentifySourceType,HasBlockFileName,HasExtractedName1,HasDBFileName,HasExtractedName2,HasValidExtName,HasPageFileName,HasExtractedName3,ExtensionCheck1,ExtensionCheck2,ExtensionCheck3,IsNotionFile decision
+    class UseBlockFileName,UseExtractedNameBlock,UseDefaultBlock,UseDBFileName,UseExtractedNameDB,UseDefaultDB,UseExtractedExternal,UseFallbackExternal,UsePageFileName,UseExtractedNamePage,UseDefaultPage,ExtractFromURL1,ExtractFromURL2,ExtractFromURL3,ExtractFromExternalURL,PreserveExt1,NoForceExt1,PreserveExt2,NoForceExt2,PreserveExt3,NoForceExt3,StripQueryParams process
+    class Start,FinalName,FinalNameExternal endpoint
+
 ```

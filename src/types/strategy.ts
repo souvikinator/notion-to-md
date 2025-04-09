@@ -1,14 +1,18 @@
 import { MediaInfo, MediaManifestEntry } from './manifest-manager';
-import { NotionBlock } from './notion';
+import { TrackedBlockReferenceObject } from './fetcher';
 
 export interface MediaStrategy {
   /**
-   * Process a media block and return information about the processed media
-   * @param block The block containing media to process
+   * Process media and return information about the processed media
+   * @param reference The reference object containing media to process
+   * @param index Optional index for database properties with multiple files
    * @returns Promise resolving to MediaInfo with processing results
    * @throws MediaProcessingError if processing fails
    */
-  process(block: NotionBlock): Promise<MediaInfo>;
+  process(
+    reference: TrackedBlockReferenceObject,
+    index?: number,
+  ): Promise<MediaInfo>;
 
   /**
    * Transform the processed media path/URL according to configuration

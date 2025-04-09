@@ -1,7 +1,6 @@
 import fetch from 'node-fetch';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import mime from 'mime/lite';
 import { isExternalUrl } from '../../../utils/notion';
 import { DownloadStrategyConfig } from '../../../types/configuration';
 import {
@@ -10,7 +9,13 @@ import {
   MediaManifestEntry,
 } from '../../../types/manifest-manager';
 import { MediaStrategy, MediaProcessingError } from '../../../types/strategy';
-import { NotionBlock } from '../../../types/notion';
+import {
+  NotionBlock,
+  NotionDatabaseEntryProperty,
+  NotionPageProperty,
+} from '../../../types/notion';
+import { TrackedBlockReferenceObject } from '../../../types/fetcher';
+import { generateFilename } from '../../../utils/media';
 
 export class DownloadStrategy implements MediaStrategy {
   constructor(private config: DownloadStrategyConfig) {
@@ -36,21 +41,28 @@ export class DownloadStrategy implements MediaStrategy {
     );
   }
 
-  async process(block: NotionBlock): Promise<MediaInfo> {
-    console.debug('[DownloadStrategy] Processing block:', block.id);
+  async process(
+    reference: TrackedBlockReferenceObject,
+    index?: number,
+  ): Promise<MediaInfo> {
+    const id = reference.id;
     console.debug(
-      '[DownloadStrategy] Extracting media URL from block:',
-      block.id,
+      '[DownloadStrategy] Processing reference:',
+      id,
+      'type:',
+      reference.type,
     );
-    const url = this.extractMediaUrl(block);
+
+    console.debug(
+      '[DownloadStrategy] Extracting media URL from reference:',
+      id,
+    );
+    const url = this.extractReferenceUrl(reference, index);
     if (!url) {
-      console.debug(
-        '[DownloadStrategy] No media URL found in block:',
-        block.id,
-      );
+      console.debug('[DownloadStrategy] No media URL found in reference:', id);
       const error = new MediaProcessingError(
-        'No media URL found in block',
-        block.id,
+        'No media URL found in reference',
+        id,
         'process',
         new Error('URL extraction failed'),
       );
@@ -64,6 +76,7 @@ export class DownloadStrategy implements MediaStrategy {
         type: MediaStrategyType.DIRECT,
         originalUrl: '',
         transformedPath: '',
+        sourceType: reference.type,
       };
     }
 
@@ -76,39 +89,49 @@ export class DownloadStrategy implements MediaStrategy {
         type: MediaStrategyType.DIRECT,
         originalUrl: url,
         transformedPath: url,
+        sourceType: reference.type,
+        propertyName: reference.propertyName,
+        propertyIndex:
+          reference.type === 'database_property' ? index : undefined,
       };
     }
 
     try {
       console.debug('[DownloadStrategy] Downloading file from:', url);
-      const { localPath, mimeType } = await this.downloadFile(url, block.id);
+
+      // Generate filename based on reference type
+      const filename = generateFilename(reference, index);
+
+      const localPath = await this.downloadFile(url, filename);
+
       console.debug(
         '[DownloadStrategy] File downloaded successfully. Local path:',
         localPath,
-        'MIME type:',
-        mimeType,
       );
 
       const mediaInfo: MediaInfo = {
         type: MediaStrategyType.DOWNLOAD,
         originalUrl: url,
         localPath,
-        mimeType,
+        sourceType: reference.type,
+        propertyName: reference.propertyName,
+        propertyIndex:
+          reference.type === 'database_property' ? index : undefined,
         transformedPath: this.transform({
           type: MediaStrategyType.DOWNLOAD,
           originalUrl: url,
           localPath,
-          mimeType,
+          sourceType: reference.type,
         }),
       };
 
       console.debug('[DownloadStrategy] Media info created:', mediaInfo);
       return mediaInfo;
     } catch (error) {
-      console.debug('[DownloadStrategy] Error processing block:', error);
+      console.debug('[DownloadStrategy] Error processing reference:', error);
       const processingError = new MediaProcessingError(
         'Failed to download media',
-        block.id,
+        id,
         'process',
         error,
       );
@@ -122,6 +145,10 @@ export class DownloadStrategy implements MediaStrategy {
         type: MediaStrategyType.DIRECT,
         originalUrl: url,
         transformedPath: url,
+        sourceType: reference.type,
+        propertyName: reference.propertyName,
+        propertyIndex:
+          reference.type === 'database_property' ? index : undefined,
       };
     }
   }
@@ -213,10 +240,7 @@ export class DownloadStrategy implements MediaStrategy {
     }
   }
 
-  private async downloadFile(
-    url: string,
-    blockId: string,
-  ): Promise<{ localPath: string; mimeType: string }> {
+  private async downloadFile(url: string, filename: string): Promise<string> {
     const response = await fetch(url);
     if (!response.ok) {
       console.debug(
@@ -226,22 +250,12 @@ export class DownloadStrategy implements MediaStrategy {
       throw new Error(`Failed to download file: ${response.statusText}`);
     }
 
-    // Get the content type and clean it up
-    const contentType = response.headers.get('content-type') || '';
-    const mimeType = contentType.split(';')[0].trim();
-    console.debug('[DownloadStrategy] Detected MIME type:', mimeType);
-
-    // Try to determine extension using multiple methods
-    const extension = this.determineFileExtension(mimeType);
-    console.debug('[DownloadStrategy] Determined extension:', extension);
-
     await fs.mkdir(this.config.outputDir, { recursive: true });
     console.debug(
       '[DownloadStrategy] Created output directory:',
       this.config.outputDir,
     );
 
-    const filename = `${blockId}.${extension}`;
     const localPath = path.join(this.config.outputDir, filename);
     console.debug('[DownloadStrategy] Generated local path:', localPath);
 
@@ -249,10 +263,42 @@ export class DownloadStrategy implements MediaStrategy {
     await fs.writeFile(localPath, buffer);
     console.debug('[DownloadStrategy] File written successfully');
 
-    return { localPath, mimeType };
+    return localPath;
   }
 
-  private extractMediaUrl(block: NotionBlock): string | null {
+  private extractReferenceUrl(
+    reference: TrackedBlockReferenceObject,
+    index: number = 0,
+  ): string | null {
+    try {
+      switch (reference.type) {
+        case 'block':
+          return this.extractBlockUrl(reference.ref as NotionBlock);
+
+        case 'database_property':
+          return this.extractDatabasePropertyUrl(
+            reference.ref as NotionDatabaseEntryProperty,
+            index,
+          );
+
+        case 'page_property':
+          return this.extractPagePropertyUrl(
+            reference.ref as NotionPageProperty,
+          );
+
+        default:
+          return null;
+      }
+    } catch (error) {
+      console.debug(
+        '[DownloadStrategy] Error extracting reference URL:',
+        error,
+      );
+      return null;
+    }
+  }
+
+  private extractBlockUrl(block: NotionBlock): string | null {
     try {
       if (!block || !('type' in block)) {
         console.debug('[DownloadStrategy] Invalid block structure');
@@ -279,52 +325,43 @@ export class DownloadStrategy implements MediaStrategy {
 
       return url;
     } catch (error) {
-      console.debug('[DownloadStrategy] Error extracting media URL:', error);
+      console.debug('[DownloadStrategy] Error extracting block URL:', error);
       return null;
     }
   }
 
-  /**
-   * Determines file extension using multiple fallback methods:
-   * 1. Standard MIME package detection
-   * 2. Extraction from application/[ext] format
-   * 3. Default .bin fallback
-   */
-  private determineFileExtension(mimeType: string): string {
-    // First try: Use standard mime package detection
-    const standardExtension = mime.getExtension(mimeType);
-    if (standardExtension) {
-      console.debug(
-        '[DownloadStrategy] Found extension via mime package:',
-        standardExtension,
-      );
-      return standardExtension;
+  private extractDatabasePropertyUrl(
+    property: NotionDatabaseEntryProperty,
+    index: number,
+  ): string | null {
+    if (
+      property.type !== 'files' ||
+      !property.files ||
+      !property.files[index]
+    ) {
+      return null;
     }
 
-    // Second try: Extract from application/[extension] format
-    if (mimeType.startsWith('application/')) {
-      const parts = mimeType.split('/');
-      if (parts.length === 2) {
-        // Clean up the extension by removing any parameters
-        // e.g., application/x-custom+xml -> x-custom
-        const rawExt = parts[1].split('+')[0];
+    const fileEntry = property.files[index];
+    if (fileEntry.type === 'external') {
+      return fileEntry.external?.url || null;
+    } else {
+      // Using optional chaining to handle potential undefined
+      return (fileEntry as any).file?.url || null;
+    }
+  }
 
-        // Remove x- prefix if present (common in MIME types)
-        const cleanExt = rawExt.replace(/^x-/, '');
-
-        // Only use if the extension looks valid (contains valid characters)
-        if (/^[a-zA-Z0-9-]+$/.test(cleanExt)) {
-          console.debug(
-            '[DownloadStrategy] Extracted extension from MIME type:',
-            cleanExt,
-          );
-          return cleanExt;
-        }
-      }
+  private extractPagePropertyUrl(property: NotionPageProperty): string | null {
+    if (property.type !== 'files' || !property.files || !property.files[0]) {
+      return null;
     }
 
-    // Fallback: Use .bin for unknown types
-    console.debug('[DownloadStrategy] Using fallback .bin extension');
-    return 'bin';
+    const fileEntry = property.files[0];
+    if (fileEntry.type === 'external') {
+      return fileEntry.external?.url || null;
+    } else {
+      // Using optional chaining and typecasting to handle potential undefined
+      return (fileEntry as any).file?.url || null;
+    }
   }
 }

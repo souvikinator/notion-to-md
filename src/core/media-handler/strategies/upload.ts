@@ -4,14 +4,23 @@ import {
   MediaStrategyType,
   MediaManifestEntry,
 } from '../../../types/manifest-manager';
-import { NotionBlock } from '../../../types/notion';
+import {
+  NotionBlock,
+  NotionDatabaseEntryProperty,
+  NotionPageProperty,
+} from '../../../types/notion';
+import { TrackedBlockReferenceObject } from '../../../types/fetcher';
 import { MediaStrategy, MediaProcessingError } from '../../../types/strategy';
 import { isExternalUrl } from '../../../utils/notion';
 
 export class UploadStrategy implements MediaStrategy {
   constructor(private config: UploadStrategyConfig) {
-    // Constructor validation always throws as it's a configuration error
-    if (!config.uploadHandler) {
+    console.debug(
+      '[UploadStrategy] Initializing with config:',
+      JSON.stringify(config),
+    );
+
+    if (!this.config.uploadHandler) {
       throw new MediaProcessingError(
         'Configuration Error',
         'constructor',
@@ -20,18 +29,44 @@ export class UploadStrategy implements MediaStrategy {
       );
     }
 
-    // Set default for failForward if not provided
     this.config.failForward = config.failForward ?? true;
+    console.debug(
+      '[UploadStrategy] Initialized successfully. failForward:',
+      this.config.failForward,
+    );
   }
 
-  async process(block: NotionBlock): Promise<MediaInfo> {
-    const url = this.extractMediaUrl(block);
+  async process(
+    reference: TrackedBlockReferenceObject,
+    index?: number,
+  ): Promise<MediaInfo> {
+    const id = reference.id;
+    console.debug('[UploadStrategy] Processing reference:', id);
 
-    // Handle missing URL
+    console.debug('[UploadStrategy] Extracting URL from reference');
+    let url: string | null = null;
+
+    // Extract URL based on reference type
+    switch (reference.type) {
+      case 'block':
+        url = this.extractBlockUrl(reference.ref as NotionBlock);
+        break;
+      case 'database_property':
+        url = this.extractDatabasePropertyUrl(
+          reference.ref as NotionDatabaseEntryProperty,
+          index || 0,
+        );
+        break;
+      case 'page_property':
+        url = this.extractPagePropertyUrl(reference.ref as NotionPageProperty);
+        break;
+    }
+
     if (!url) {
+      console.debug('[UploadStrategy] No URL found in reference');
       const error = new MediaProcessingError(
-        'No media URL found in block',
-        block.id,
+        'No URL found in reference',
+        id,
         'process',
         new Error('URL extraction failed'),
       );
@@ -45,27 +80,32 @@ export class UploadStrategy implements MediaStrategy {
         type: MediaStrategyType.DIRECT,
         originalUrl: '',
         transformedPath: '',
+        sourceType: reference.type,
       };
     }
 
+    console.debug('[UploadStrategy] Extracted URL:', url);
+
     // Handle external URLs preservation
     if (this.config.preserveExternalUrls && isExternalUrl(url)) {
+      console.debug('[UploadStrategy] Preserving external URL');
       return {
         type: MediaStrategyType.DIRECT,
         originalUrl: url,
         transformedPath: url,
+        sourceType: reference.type,
       };
     }
 
     try {
       // Attempt upload
-      const uploadedUrl = await this.config.uploadHandler(url, block.id);
+      const uploadedUrl = await this.config.uploadHandler(url, id);
 
       // Handle failed upload (handler returns falsy value)
       if (!uploadedUrl) {
         const error = new MediaProcessingError(
           'Upload handler returned invalid URL',
-          block.id,
+          id,
           'process',
           new Error('Upload failed'),
         );
@@ -79,10 +119,11 @@ export class UploadStrategy implements MediaStrategy {
           type: MediaStrategyType.DIRECT,
           originalUrl: url,
           transformedPath: url,
+          sourceType: reference.type,
         };
       }
 
-      // Successful upload
+      // Create media info with uploaded URL
       const mediaInfo: MediaInfo = {
         type: MediaStrategyType.UPLOAD,
         originalUrl: url,
@@ -92,13 +133,14 @@ export class UploadStrategy implements MediaStrategy {
           originalUrl: url,
           uploadedUrl,
         }),
+        sourceType: reference.type,
       };
 
       return mediaInfo;
     } catch (error) {
       const processingError = new MediaProcessingError(
         'Failed to upload media',
-        block.id,
+        id,
         'process',
         error,
       );
@@ -112,20 +154,19 @@ export class UploadStrategy implements MediaStrategy {
         type: MediaStrategyType.DIRECT,
         originalUrl: url,
         transformedPath: url,
+        sourceType: reference.type,
       };
     }
   }
 
   transform(mediaInfo: MediaInfo): string {
-    // For direct types, always return original URL
     if (mediaInfo.type === MediaStrategyType.DIRECT) {
       return mediaInfo.originalUrl;
     }
 
-    // Validate uploaded URL
     if (!mediaInfo.uploadedUrl) {
       const error = new MediaProcessingError(
-        'Missing uploaded URL',
+        'Missing uploaded URL for uploaded file',
         'unknown',
         'transform',
         new Error('Uploaded URL required for transformation'),
@@ -140,7 +181,6 @@ export class UploadStrategy implements MediaStrategy {
     }
 
     try {
-      // Apply custom transformation if configured
       if (this.config.transformPath) {
         return this.config.transformPath(mediaInfo.uploadedUrl);
       }
@@ -148,7 +188,7 @@ export class UploadStrategy implements MediaStrategy {
       return mediaInfo.uploadedUrl;
     } catch (error) {
       const processingError = new MediaProcessingError(
-        'Failed to transform URL',
+        'Failed to transform path',
         'unknown',
         'transform',
         error,
@@ -159,12 +199,11 @@ export class UploadStrategy implements MediaStrategy {
       }
 
       console.error(processingError);
-      return mediaInfo.originalUrl;
+      return mediaInfo.uploadedUrl || mediaInfo.originalUrl;
     }
   }
 
   async cleanup(entry: MediaManifestEntry): Promise<void> {
-    // Cleanup always fails forward regardless of config
     if (
       entry.mediaInfo.type === MediaStrategyType.UPLOAD &&
       this.config.cleanupHandler &&
@@ -175,7 +214,7 @@ export class UploadStrategy implements MediaStrategy {
       } catch (error) {
         const processingError = new MediaProcessingError(
           'Failed to cleanup uploaded file',
-          entry.mediaInfo.originalUrl,
+          entry.mediaInfo.uploadedUrl,
           'cleanup',
           error,
         );
@@ -184,7 +223,7 @@ export class UploadStrategy implements MediaStrategy {
     }
   }
 
-  private extractMediaUrl(block: NotionBlock): string | null {
+  private extractBlockUrl(block: NotionBlock): string | null {
     try {
       if (!block || !('type' in block)) {
         return null;
@@ -206,6 +245,41 @@ export class UploadStrategy implements MediaStrategy {
         : mediaBlock.file?.url;
     } catch {
       return null;
+    }
+  }
+
+  private extractDatabasePropertyUrl(
+    property: NotionDatabaseEntryProperty,
+    index: number,
+  ): string | null {
+    if (
+      property.type !== 'files' ||
+      !property.files ||
+      !property.files[index]
+    ) {
+      return null;
+    }
+
+    const fileEntry = property.files[index];
+    if (fileEntry.type === 'external') {
+      return fileEntry.external?.url || null;
+    } else {
+      // Using optional chaining and typecasting to handle potential undefined
+      return (fileEntry as any).file?.url || null;
+    }
+  }
+
+  private extractPagePropertyUrl(property: NotionPageProperty): string | null {
+    if (property.type !== 'files' || !property.files || !property.files[0]) {
+      return null;
+    }
+
+    const fileEntry = property.files[0];
+    if (fileEntry.type === 'external') {
+      return fileEntry.external?.url || null;
+    } else {
+      // Using optional chaining and typecasting to handle potential undefined
+      return (fileEntry as any).file?.url || null;
     }
   }
 }
