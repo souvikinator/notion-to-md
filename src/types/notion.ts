@@ -107,11 +107,22 @@ export type NotionComments = NotionComment[];
  *
  * "children" property stores child blocks of the block. Doesn't exist in the
  * Notion API response, specific to notion-to-md for easier processing
+ *
+ * "buffer" optional property is available for media blocks (video, pdf, image, file)
+ * and can store binary data of the media file. Specific to notion-to-md for
+ * handling media content. This is populated when buffer media strategy is used.
  */
 
 export type NotionBlock =
-  // For blocks that are NOT child_database
-  | (Exclude<BlockObjectResponse, ChildDatabaseBlockObjectResponse> & {
+  // For blocks that are NOT child_database and NOT media blocks
+  | (Exclude<
+      BlockObjectResponse,
+      | ChildDatabaseBlockObjectResponse
+      | Extract<
+          BlockObjectResponse,
+          { type: 'video' | 'pdf' | 'image' | 'file' }
+        >
+    > & {
       comments: NotionComments;
       children: NotionBlocks;
     })
@@ -120,6 +131,15 @@ export type NotionBlock =
       comments: NotionComments;
       children: NotionBlocks;
       child_database: NotionExtendedChildDatabaseObject;
+    })
+  // For media blocks (video, pdf, image, file), add optional buffer field
+  | (Extract<
+      BlockObjectResponse,
+      { type: 'video' | 'pdf' | 'image' | 'file' }
+    > & {
+      comments: NotionComments;
+      children: NotionBlocks;
+      buffer?: Buffer;
     });
 
 /** Represents an array of Notion blocks, allowing partial properties */
