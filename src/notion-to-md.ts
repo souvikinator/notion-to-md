@@ -430,7 +430,8 @@ export class NotionToMarkdown {
           const tableRows = await getBlockChildren(this.notionClient, id, 100);
           let rowsPromise = tableRows?.map(async (row) => {
             const { type } = row as any;
-            const cells = (row as any)[type]["cells"];
+            if (type !== 'table_row') return
+            const cells = (row as any).table_row["cells"];
 
             /**
              * this is more like a hack since matching the type text was
