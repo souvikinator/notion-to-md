@@ -1,6 +1,6 @@
 ---
-title: "Media Handling"
-description: "Learn how to process images and files from Notion pages"
+title: 'Media Handling'
+description: 'Learn how to process images and files from Notion pages'
 weight: 2
 ---
 
@@ -18,12 +18,91 @@ Notion stores media files on temporary URLs that expire after a short period. Wh
 
 Notion-to-md v4 offers three strategies for handling media, each tailored to different needs:
 
-- **Direct Strategy**: Uses Notion's URLs directly—ideal for temporary exports or testing, though it’s the least reliable option.
+- **Direct Strategy**: Uses Notion's URLs directly—ideal for temporary exports or testing, though it's the least reliable option.
 - **Download Strategy**: Downloads media files to your local filesystem, making it perfect for static sites, local applications, or scenarios where you need complete control.
 - **Upload Strategy**: Uploads media files to an external service (like S3 or Cloudinary), and is best suited for production websites, CMS integration, or cloud-based workflows.
 
 {{< callout type="info" >}}
 **Download** and **Upload** strategies also include **cleanup functionality** to remove unused media files. This ensures that your media storage remains organized and free from unnecessary files.
+{{< /callout >}}
+
+## Using the Direct Strategy (with Optional Buffering)
+
+The Direct Strategy is the simplest approach. It **keeps the original Notion media URLs** in your converted content. This is useful for quick tests or temporary exports where media permanence isn't a concern.
+
+**However, Notion URLs expire!** This strategy is generally **not suitable** for content that needs to remain accessible long-term (like websites or published documents).
+
+```javascript
+import { NotionConverter } from 'notion-to-md';
+
+const n2m = new NotionConverter(notionClient).useDirectStrategy(); // Simply enable the strategy
+
+const result = await n2m.convert('your-page-id');
+// result.markdown will contain Notion media URLs
+```
+
+{{< callout type="warning" >}}
+**Use with Caution:** Relying on Notion's temporary URLs can lead to broken media links over time. Use `Download` or `Upload` strategies for permanent content.
+{{< /callout >}}
+
+### Buffering Media Content
+
+The Direct Strategy has an optional **buffering** feature. When enabled, it fetches the media content from Notion's URL during conversion and attaches it directly to the corresponding block object as a Node.js `Buffer`.
+
+This is useful if you need access to the raw media data _immediately_ after conversion, without saving it to the filesystem or uploading it elsewhere.
+
+```javascript
+import { NotionConverter } from 'notion-to-md';
+import * as fs from 'fs/promises';
+
+const n2m = new NotionConverter(notionClient).useDirectStrategy({
+  buffer: true,
+}); // Enable buffering
+
+const result = await n2m.convert('your-page-id');
+
+// Access the buffer for a specific block (e.g., an image block)
+const imageBlock = result.blockTree.blocks.find(
+  (block) => block.type === 'image',
+);
+
+if (imageBlock && imageBlock.ref.buffer) {
+  // Now you have the raw image data in imageBlock.ref.buffer
+  // You could save it, process it, etc.
+  await fs.writeFile('my-image.jpg', imageBlock.ref.buffer);
+  console.log('Image saved from buffer!');
+}
+```
+
+**Configuration Options for Buffering:**
+
+You can customize buffering behavior:
+
+```javascript
+.useDirectStrategy({
+  buffer: {
+    // Only buffer specific block types
+    includeBlocks: ['image', 'pdf'],
+
+    // Set a max buffer size (e.g., 10MB) to avoid memory issues
+    maxBufferSize: 10 * 1024 * 1024,
+
+    // Provide custom logic for fetching specific block types
+    blockHandlers: {
+      image: async (block, url) => {
+        console.log(`Fetching image: ${url}`);
+        // Example: Add custom headers or use a different fetch library
+        const response = await fetch(url, { headers: { 'X-Custom-Header': 'value' } });
+        if (!response.ok) throw new Error('Custom fetch failed');
+        return Buffer.from(await response.arrayBuffer());
+      }
+    }
+  }
+})
+```
+
+{{< callout type="info" >}}
+Detailed configuration options for the **Direct strategy** (including buffering) are available in the [Configuration Guide](../configuration/#direct-strategy).
 {{< /callout >}}
 
 ## Using the Download Strategy
@@ -40,11 +119,10 @@ Detailed configuration options for the **Download strategy** are available in th
 import { NotionConverter } from 'notion-to-md';
 import * as path from 'path';
 
-const n2m = new NotionConverter(notionClient)
-  .downloadMediaTo({
-    outputDir: './public/images',
-    transformPath: (localPath) => `/images/${path.basename(localPath)}`
-  });
+const n2m = new NotionConverter(notionClient).downloadMediaTo({
+  outputDir: './public/images',
+  transformPath: (localPath) => `/images/${path.basename(localPath)}`,
+});
 
 await n2m.convert('your-page-id');
 ```
@@ -97,43 +175,46 @@ import fetch from 'node-fetch';
 const s3Client = new S3Client({ region: 'us-east-1' });
 const BUCKET_NAME = 'my-notion-media';
 
-const n2m = new NotionConverter(notionClient)
-  .uploadMediaUsing({
-    // Upload handler function
-    uploadHandler: async (url, blockId) => {
-      // Download the file from Notion
-      const response = await fetch(url);
-      const buffer = await response.arrayBuffer();
+const n2m = new NotionConverter(notionClient).uploadMediaUsing({
+  // Upload handler function
+  uploadHandler: async (url, blockId) => {
+    // Download the file from Notion
+    const response = await fetch(url);
+    const buffer = await response.arrayBuffer();
 
-      // Generate a filename based on the block ID
-      const filename = `${blockId}.jpg`;
-      const key = `notion-media/${filename}`;
+    // Generate a filename based on the block ID
+    const filename = `${blockId}.jpg`;
+    const key = `notion-media/${filename}`;
 
-      // Upload to S3
-      await s3Client.send(new PutObjectCommand({
+    // Upload to S3
+    await s3Client.send(
+      new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: key,
         Body: Buffer.from(buffer),
-        ContentType: response.headers.get('content-type')
-      }));
+        ContentType: response.headers.get('content-type'),
+      }),
+    );
 
-      // Return the new URL
-      return `https://${BUCKET_NAME}.s3.amazonaws.com/${key}`;
-    },
+    // Return the new URL
+    return `https://${BUCKET_NAME}.s3.amazonaws.com/${key}`;
+  },
 
-    // Optional: cleanup handler to delete files when no longer needed
-    cleanupHandler: async (entry) => {
-      // Extract the key from the URL
-      const url = new URL(entry.mediaInfo.uploadedUrl);
-      const key = url.pathname.substring(1); // Remove leading slash
+  // Optional: cleanup handler to delete files when no longer needed
+  cleanupHandler: async (entry) => {
+    // Extract the key from the URL
+    const url = new URL(entry.mediaInfo.uploadedUrl);
+    const key = url.pathname.substring(1); // Remove leading slash
 
-      // Delete from S3
-      await s3Client.send(new DeleteObjectCommand({
+    // Delete from S3
+    await s3Client.send(
+      new DeleteObjectCommand({
         Bucket: BUCKET_NAME,
-        Key: key
-      }));
-    }
-  });
+        Key: key,
+      }),
+    );
+  },
+});
 
 await n2m.convert('your-page-id');
 ```
@@ -175,32 +256,31 @@ import fetch from 'node-fetch';
 cloudinary.config({
   cloud_name: 'your-cloud-name',
   api_key: 'your-api-key',
-  api_secret: 'your-api-secret'
+  api_secret: 'your-api-secret',
 });
 
-const n2m = new NotionConverter(notionClient)
-  .uploadMediaUsing({
-    uploadHandler: async (url, blockId) => {
-      // Upload directly from URL to Cloudinary
-      const result = await cloudinary.uploader.upload(url, {
-        folder: 'notion-content',
-        public_id: blockId,
-        overwrite: true
-      });
+const n2m = new NotionConverter(notionClient).uploadMediaUsing({
+  uploadHandler: async (url, blockId) => {
+    // Upload directly from URL to Cloudinary
+    const result = await cloudinary.uploader.upload(url, {
+      folder: 'notion-content',
+      public_id: blockId,
+      overwrite: true,
+    });
 
-      // Return optimized URL
-      return result.secure_url;
-    },
+    // Return optimized URL
+    return result.secure_url;
+  },
 
-    cleanupHandler: async (entry) => {
-      // Extract public_id from the URL
-      const urlParts = entry.mediaInfo.uploadedUrl.split('/');
-      const publicId = urlParts[urlParts.length - 1].split('.')[0];
+  cleanupHandler: async (entry) => {
+    // Extract public_id from the URL
+    const urlParts = entry.mediaInfo.uploadedUrl.split('/');
+    const publicId = urlParts[urlParts.length - 1].split('.')[0];
 
-      // Delete from Cloudinary
-      await cloudinary.uploader.destroy(`notion-content/${publicId}`);
-    }
-  });
+    // Delete from Cloudinary
+    await cloudinary.uploader.destroy(`notion-content/${publicId}`);
+  },
+});
 ```
 
 ## Preserving External URLs
