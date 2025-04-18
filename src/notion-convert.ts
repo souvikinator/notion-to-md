@@ -2,6 +2,7 @@ import type { Client } from '@notionhq/client';
 import { BlockFetcher } from './core/block-fetcher';
 import { Exporter } from './core/exporter';
 import { MediaHandler } from './core/media-handler';
+import { DirectStrategy } from './core/media-handler/strategies/direct';
 import { DownloadStrategy } from './core/media-handler/strategies/download';
 import { UploadStrategy } from './core/media-handler/strategies/upload';
 import { PageRefConfig, PageReferenceHandler } from './core/page-ref-handler';
@@ -28,6 +29,7 @@ import {
   NotionDatabaseConfig,
   DownloadStrategyConfig,
   UploadStrategyConfig,
+  DirectStrategyConfig,
 } from './types/configuration';
 
 /**
@@ -126,6 +128,32 @@ export class NotionConverter {
       '[NotionConverter] Updated fetcher config with database options:',
       this.config.blockFetcherConfig,
     );
+
+    return this;
+  }
+
+  /**
+   * Configures the direct strategy for media handling.
+   * Can optionally buffer media content in memory.
+   */
+  useDirectStrategy(config?: DirectStrategyConfig): this {
+    console.debug(
+      '[NotionConverter] Configuring direct media strategy with:',
+      config || {},
+    );
+    this.config.mediaConfig = {
+      type: MediaStrategyType.DIRECT,
+      config: config || {},
+    };
+
+    // If buffering is enabled, make sure we track media blocks
+    if (config?.buffer && !this.config.blockFetcherConfig) {
+      this.config.blockFetcherConfig = {};
+    }
+
+    if (config?.buffer && this.config.blockFetcherConfig) {
+      this.config.blockFetcherConfig.trackMediaBlocks = true;
+    }
 
     return this;
   }
@@ -313,16 +341,17 @@ export class NotionConverter {
     current.next = this.config.renderer;
     current = this.config.renderer;
 
-    if (!this.config.exporters?.length) {
-      throw new Error(
-        'No exporter configured. Please configure at least one exporter using withExporter() and DefaultExporter.',
+    // Add exporter node only if exporters are configured
+    if (this.config.exporters?.length) {
+      console.debug('[NotionConverter] Adding Exporter to chain');
+      const exporterNode = new Exporter(this.config.exporters);
+      current.next = exporterNode;
+      // No need to update current since exporter is last as of now
+    } else {
+      console.debug(
+        '[NotionConverter] No exporters configured, skipping Exporter node',
       );
     }
-
-    console.debug('[NotionConverter] Adding Exporter to chain');
-    const exporterNode = new Exporter(this.config.exporters);
-    current.next = exporterNode;
-    // No need to update current since exporter is last as of now
 
     this.processorChain = head;
     console.debug('[NotionConverter] Processor chain initialization complete');
@@ -340,9 +369,15 @@ export class NotionConverter {
     );
     if (!config) throw new Error('Media config is required to create strategy');
 
-    return config.type === MediaStrategyType.DOWNLOAD
-      ? new DownloadStrategy(config.config as DownloadStrategyConfig)
-      : new UploadStrategy(config.config as UploadStrategyConfig);
+    switch (config.type) {
+      case MediaStrategyType.DOWNLOAD:
+        return new DownloadStrategy(config.config as DownloadStrategyConfig);
+      case MediaStrategyType.UPLOAD:
+        return new UploadStrategy(config.config as UploadStrategyConfig);
+      case MediaStrategyType.DIRECT:
+      default:
+        return new DirectStrategy(config.config as DirectStrategyConfig);
+    }
   }
 
   /**

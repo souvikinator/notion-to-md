@@ -47,6 +47,32 @@ export interface UploadStrategyConfig {
   failForward?: boolean;
 }
 
+export type DirectStrategyBufferSupportedBlockType =
+  | 'pdf'
+  | 'file'
+  | 'image'
+  | 'video';
+
+// direct media strategy
+export interface BufferOptions {
+  // Block types to buffer (if omitted, all media blocks are buffered)
+  includeBlocks?: DirectStrategyBufferSupportedBlockType[];
+  // Maximum buffer size in bytes (0 for no limit)
+  maxBufferSize?: number;
+  // Custom fetching logic
+  blockHandlers?: Record<
+    DirectStrategyBufferSupportedBlockType,
+    (block: any, url: string) => Promise<Buffer>
+  >;
+}
+
+export interface DirectStrategyConfig {
+  // Enable and configure buffer functionality
+  buffer?: boolean | BufferOptions;
+  // Continue processing on errors, default is true
+  failForward?: boolean;
+}
+
 /**
  * Configuration interface for NotionConverter that is built up
  * through the builder pattern methods
@@ -54,7 +80,10 @@ export interface UploadStrategyConfig {
 export interface NotionConverterConfig {
   mediaConfig?: {
     type: MediaStrategyType;
-    config: DownloadStrategyConfig | UploadStrategyConfig;
+    config:
+      | DownloadStrategyConfig
+      | UploadStrategyConfig
+      | DirectStrategyConfig;
   };
   pageRefConfig?: PageRefConfig;
   renderer?: BaseRendererPlugin;

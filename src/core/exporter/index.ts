@@ -19,7 +19,6 @@ export class Exporter implements ProcessorChainNode {
 
     if (!exporters?.length) {
       console.debug('[Exporter] No exporters provided');
-      throw new Error('At least one exporter is required');
     }
 
     console.debug('[Exporter] Successfully initialized with exporters');
@@ -30,6 +29,12 @@ export class Exporter implements ProcessorChainNode {
       pageId: data.pageId,
       exporterCount: this.exporters.length,
     });
+
+    // If no exporters, just pass the data through
+    if (this.exporters.length === 0) {
+      console.debug('[Exporter] No exporters to run, passing data through');
+      return data;
+    }
 
     const errors: ExporterError[] = [];
 
