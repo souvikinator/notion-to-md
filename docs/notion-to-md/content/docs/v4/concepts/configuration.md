@@ -1,6 +1,6 @@
 ---
-title: "Configuration"
-description: "Complete reference for notion-to-md v4 configuration options"
+title: 'Configuration'
+description: 'Complete reference for notion-to-md v4 configuration options'
 weight: 1
 ---
 
@@ -28,12 +28,12 @@ Block Fetcher is responsible for retrieving content from the Notion API. Its con
 
 ```typescript
 interface BlockFetcherConfig {
-  fetchPageProperties?: boolean;  // Include page properties in output
-  fetchComments?: boolean;        // Include comments in output
-  maxRequestsPerSecond?: number;  // API rate limit (default: 3)
-  batchSize?: number;             // Batch size for concurrent requests (default: 3)
-  trackMediaBlocks?: boolean;     // Track blocks with media content
-  trackPageRefBlocks?: boolean;   // Track blocks with page references
+  fetchPageProperties?: boolean; // Include page properties in output
+  fetchComments?: boolean; // Include comments in output
+  maxRequestsPerSecond?: number; // API rate limit (default: 3)
+  batchSize?: number; // Batch size for concurrent requests (default: 3)
+  trackMediaBlocks?: boolean; // Track blocks with media content
+  trackPageRefBlocks?: boolean; // Track blocks with page references
 }
 ```
 
@@ -54,13 +54,12 @@ interface BlockFetcherConfig {
 ### Example
 
 ```javascript
-const n2m = new NotionConverter(notionClient)
-  .configureFetcher({
-    fetchPageProperties: true,
-    fetchComments: false,
-    maxRequestsPerSecond: 5,
-    batchSize: 10
-  });
+const n2m = new NotionConverter(notionClient).configureFetcher({
+  fetchPageProperties: true,
+  fetchComments: false,
+  maxRequestsPerSecond: 5,
+  batchSize: 10,
+});
 ```
 
 ## Media Handling Configuration
@@ -73,10 +72,10 @@ Use this strategy when you want to save Notion media files to your local filesys
 
 ```typescript
 interface DownloadStrategyConfig {
-  outputDir: string;                         // Directory to save media files
-  transformPath?: (localPath: string) => string;  // Transform file paths for output
-  preserveExternalUrls?: boolean;            // Keep external URLs unchanged
-  failForward?: boolean;                     // Continue on errors (default: true)
+  outputDir: string; // Directory to save media files
+  transformPath?: (localPath: string) => string; // Transform file paths for output
+  preserveExternalUrls?: boolean; // Keep external URLs unchanged
+  failForward?: boolean; // Continue on errors (default: true)
 }
 ```
 
@@ -86,19 +85,18 @@ interface DownloadStrategyConfig {
 
 - **transformPath**: A function that converts local file paths to the paths that will appear in the output. For example, converting `/server/path/image.jpg` to `/public/images/image.jpg`. This ensures URLs in the output content correctly reference the media files.
 
-- **preserveExternalUrls**: When `true`, doesn't download media from external sources (non-Notion URLs). Keeps the original URLs in the output. Useful when you want to preserve references to third-party content.
+- **preserveExternalUrls**: When `true`, doesn't download media from external sources (non-Notion URLs). Keeps the original URLs in the output.
 
 - **failForward**: When `true` (default), continues processing even if a media file fails to download. The original URL will be used as a fallback. When `false`, errors during media processing will halt the conversion.
 
 ### Example
 
 ```javascript
-const n2m = new NotionConverter(notionClient)
-  .downloadMediaTo({
-    outputDir: './public/images',
-    transformPath: (localPath) => `/images/${path.basename(localPath)}`,
-    preserveExternalUrls: true
-  });
+const n2m = new NotionConverter(notionClient).downloadMediaTo({
+  outputDir: './public/images',
+  transformPath: (localPath) => `/images/${path.basename(localPath)}`,
+  preserveExternalUrls: true,
+});
 ```
 
 ### Upload Strategy
@@ -107,11 +105,11 @@ Use this strategy when you want to upload Notion media to an external service li
 
 ```typescript
 interface UploadStrategyConfig {
-  uploadHandler: (url: string, blockId: string) => Promise<string>;  // Upload function
-  cleanupHandler?: (entry: MediaManifestEntry) => Promise<void>;     // Cleanup function
-  transformPath?: (uploadedUrl: string) => string;                   // Transform URLs
-  preserveExternalUrls?: boolean;                                    // Keep external URLs
-  failForward?: boolean;                                             // Continue on errors
+  uploadHandler: (url: string, blockId: string) => Promise<string>; // Upload function
+  cleanupHandler?: (entry: MediaManifestEntry) => Promise<void>; // Cleanup function
+  transformPath?: (uploadedUrl: string) => string; // Transform URLs
+  preserveExternalUrls?: boolean; // Keep external URLs
+  failForward?: boolean; // Continue on errors
 }
 ```
 
@@ -130,17 +128,16 @@ interface UploadStrategyConfig {
 ### Example
 
 ```javascript
-const n2m = new NotionConverter(notionClient)
-  .uploadMediaUsing({
-    uploadHandler: async (url, blockId) => {
-      // Upload file to S3/Cloudinary/etc
-      return 'https://cdn.example.com/uploaded-file.jpg';
-    },
-    cleanupHandler: async (entry) => {
-      // Delete file from storage when no longer needed
-    },
-    transformPath: (url) => url.replace('s3.amazonaws.com', 'cdn.example.com')
-  });
+const n2m = new NotionConverter(notionClient).uploadMediaUsing({
+  uploadHandler: async (url, blockId) => {
+    // Upload file to S3/Cloudinary/etc
+    return 'https://cdn.example.com/uploaded-file.jpg';
+  },
+  cleanupHandler: async (entry) => {
+    // Delete file from storage when no longer needed
+  },
+  transformPath: (url) => url.replace('s3.amazonaws.com', 'cdn.example.com'),
+});
 ```
 
 ## Page Reference Configuration
@@ -154,9 +151,9 @@ Read more about [how to use page reference builder utility](/notion-to-md/docs/v
 
 ```typescript
 interface PageRefConfig {
-  UrlPropertyNameNotion?: string;            // Property containing page URL
-  baseUrl?: string;                          // Base URL for page references
-  transformUrl?: (url: string) => string;    // Custom URL transformation
+  UrlPropertyNameNotion?: string; // Property containing page URL
+  baseUrl?: string; // Base URL for page references
+  transformUrl?: (url: string) => string; // Custom URL transformation
 }
 ```
 
@@ -171,12 +168,11 @@ interface PageRefConfig {
 ### Example
 
 ```javascript
-const n2m = new NotionConverter(notionClient)
-  .withPageReferences({
-    UrlPropertyNameNotion: 'slug',
-    baseUrl: 'https://example.com/blog',
-    transformUrl: (url) => url.toLowerCase().replace(/\s+/g, '-')
-  });
+const n2m = new NotionConverter(notionClient).withPageReferences({
+  UrlPropertyNameNotion: 'slug',
+  baseUrl: 'https://example.com/blog',
+  transformUrl: (url) => url.toLowerCase().replace(/\s+/g, '-'),
+});
 ```
 
 ## Renderer Configuration
@@ -193,20 +189,22 @@ The built-in MDX renderer supports frontmatter generation and customization.
 
 ```typescript
 interface FrontmatterConfig {
-  include?: string[];              // Properties to include
-  exclude?: string[];              // Properties to exclude
+  include?: string[]; // Properties to include
+  exclude?: string[]; // Properties to exclude
   rename?: Record<string, string>; // Rename properties
-  defaults?: Record<string, any>;  // Default values
+  transform?: Record<string, (prop: any) => string>; // Transform functions
+  defaults?: Record<string, any>; // Default values
 }
 
 interface MDXRendererConfig {
-  frontmatter?: boolean | FrontmatterConfig;  // Enable/configure frontmatter
+  frontmatter?: boolean | FrontmatterConfig; // Enable/configure frontmatter
 }
 ```
 
 ### Field Explanations
 
 - **frontmatter**: Controls frontmatter generation. Can be:
+
   - `true`: Generate frontmatter from all page properties
   - `false`: Don't generate frontmatter
   - `FrontmatterConfig`: Configure detailed frontmatter behavior
@@ -217,6 +215,8 @@ interface MDXRendererConfig {
 
 - **rename**: A mapping of original property names to new names. For example, `{ "Created time": "date" }` will rename the "Created time" property to "date" in the output.
 
+- **transform**: A mapping where keys are property names and values are functions `(property, allProperties) => string`. These functions receive the Notion property object and all page properties, returning a transformed string value for the frontmatter. Useful for formatting dates, generating slugs, etc.
+
 - **defaults**: Default values for properties that might be missing. These values will be used if the corresponding property doesn't exist or is empty.
 
 > [!NOTE]
@@ -226,11 +226,16 @@ interface MDXRendererConfig {
 
 ```javascript
 import { MDXRenderer } from 'notion-to-md/plugins/renderer/mdx';
+import { NotionPageProperty, NotionPageProperties } from 'notion-to-md/types/notion';
 
 const renderer = new MDXRenderer({
   frontmatter: {
-    include: ['title', 'date', 'tags'],
-    rename: { title: 'name' },
+    include: ['Name', 'date', 'tags'],
+    rename: { Name: 'title' },
+    transform: {
+      date: (prop: NotionPageProperty) => prop.type === 'date' ? new Date(prop.date.start).toLocaleDateString() : '',
+      tags: (prop: NotionPageProperty) => prop.type === 'multi_select' ? JSON.stringify(prop.multi_select.map(t => t.name)) : '[]'
+    },
     defaults: { draft: false }
   }
 });
@@ -249,10 +254,10 @@ interface NotionExporter<TConfig = unknown> {
 }
 
 interface ChainData {
-  pageId: string;                  // ID of the converted page
+  pageId: string; // ID of the converted page
   blockTree: ExtendedFetcherOutput; // Raw block data
-  metadata?: Record<string, any>;  // Additional metadata
-  content: string;                 // Converted content
+  metadata?: Record<string, any>; // Additional metadata
+  content: string; // Converted content
 }
 ```
 
@@ -293,25 +298,25 @@ For reference, these are the detailed types used in some configuration options. 
 
 ```typescript
 enum MediaStrategyType {
-  DOWNLOAD = "DOWNLOAD",  // Media is downloaded to local filesystem
-  UPLOAD = "UPLOAD",      // Media is uploaded to external service
-  DIRECT = "DIRECT"       // Original media URLs are used directly
+  DOWNLOAD = 'DOWNLOAD', // Media is downloaded to local filesystem
+  UPLOAD = 'UPLOAD', // Media is uploaded to external service
+  DIRECT = 'DIRECT', // Original media URLs are used directly
 }
 
 interface MediaInfo {
-  type: MediaStrategyType;      // The strategy used for this media
-  originalUrl: string;          // The original Notion URL
-  localPath?: string;           // Path on local filesystem (for DOWNLOAD)
-  uploadedUrl?: string;         // URL after upload (for UPLOAD)
-  transformedPath?: string;      // Final URL/filepath used in output
-  mimeType?: string;            // Media content type
+  type: MediaStrategyType; // The strategy used for this media
+  originalUrl: string; // The original Notion URL
+  localPath?: string; // Path on local filesystem (for DOWNLOAD)
+  uploadedUrl?: string; // URL after upload (for UPLOAD)
+  transformedPath?: string; // Final URL/filepath used in output
+  mimeType?: string; // Media content type
 }
 
 interface MediaManifestEntry {
-  mediaInfo: MediaInfo;        // Complete media information
-  lastEdited: string;          // Last edit timestamp from Notion
-  createdAt: string;           // When the entry was first created
-  updatedAt: string;           // When the entry was last updated
+  mediaInfo: MediaInfo; // Complete media information
+  lastEdited: string; // Last edit timestamp from Notion
+  createdAt: string; // When the entry was first created
+  updatedAt: string; // When the entry was last updated
 }
 ```
 
@@ -319,13 +324,13 @@ interface MediaManifestEntry {
 
 ```typescript
 enum PageReferenceEntryType {
-  PROPERTY = "PROPERTY",  // URL derived from page property
-  MANIFEST = "MANIFEST"   // URL stored in reference manifest
+  PROPERTY = 'PROPERTY', // URL derived from page property
+  MANIFEST = 'MANIFEST', // URL stored in reference manifest
 }
 
 interface PageReferenceEntry {
-  url: string;                 // The URL for the page reference
-  source: PageReferenceEntryType;  // How the URL was determined
-  lastUpdated: string;         // When the reference was last updated
+  url: string; // The URL for the page reference
+  source: PageReferenceEntryType; // How the URL was determined
+  lastUpdated: string; // When the reference was last updated
 }
 ```
