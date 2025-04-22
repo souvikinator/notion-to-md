@@ -101,35 +101,29 @@ export class MediaHandler implements ProcessorChainNode {
       `[MediaHandler] Processing ${mediaRefs.length} media references concurrently`,
     );
 
-    // Process all references concurrently
     const processingPromises = mediaRefs.map(async (ref) => {
       try {
-        // Process each reference individually
         await this.processMediaReference(ref);
       } catch (error) {
-        // Log error for the specific reference that failed
+        // Handle errors from individual reference processing based on failForward
         console.debug(
           `[MediaHandler] Error processing reference ${ref.id} during concurrent execution:`,
           error,
         );
         if (!this.failForward) {
-          // If not failing forward, re-throw to potentially reject Promise.all
-          // Although, often it's better to let Promise.all complete and gather errors.
-          // Let's log and suppress re-throw here to ensure all non-failing refs complete.
+          // Log critical error if not failing forward (though Promise.allSettled proceeds)
           console.error(
             `[MediaHandler] Critical error processing reference ${ref.id}. Processing stopped for this item. Error: ${error instanceof Error ? error.message : error}`,
           );
-          // Optionally, you could collect these errors instead of just logging.
-          // throw error; // Re-throwing would stop Promise.all Settled/Wait
+          // NOTE: We don't re-throw here to allow Promise.allSettled to complete fully.
         }
-        // If failing forward, just log the error and continue with others.
+        // If failing forward, log the error and continue with others.
         console.error(
           `[MediaHandler] Failed to process reference ${ref.id}, but continuing due to failForward=true: ${error instanceof Error ? error.message : error}`,
         );
       }
     });
 
-    // Wait for all processing promises to settle (complete or fail individually)
     await Promise.allSettled(processingPromises);
     console.debug('[MediaHandler] All concurrent processing settled.');
 
@@ -190,7 +184,6 @@ export class MediaHandler implements ProcessorChainNode {
   /**
    * Processes a single identifiable media item, either a block or a file within a property.
    * Delegates the core logic and decision-making to the configured strategy.
-   * The strategy is now responsible for updating the reference object directly.
    */
   private async processReferenceItem(
     ref: TrackedBlockReferenceObject,
@@ -203,7 +196,7 @@ export class MediaHandler implements ProcessorChainNode {
     const lastEditedTime = this.getLastEditedTime(ref);
 
     const strategyInput: StrategyInput = {
-      reference: ref, // Pass the reference object for strategy to potentially modify
+      reference: ref,
       index,
       refId,
       manifestManager: this.manifestManager,
@@ -212,7 +205,6 @@ export class MediaHandler implements ProcessorChainNode {
     };
 
     console.debug('[MediaHandler] Calling strategy process for:', refId);
-    // Strategy now handles processing AND updating the reference object
     const strategyOutput: StrategyOutput =
       await this.strategy.process(strategyInput);
 
@@ -237,8 +229,16 @@ export class MediaHandler implements ProcessorChainNode {
       );
     }
 
-    this.processedReferences.add(refId);
-    console.debug('[MediaHandler] Item processing complete for:', refId);
+    // Add to set only if strategy did not skip due to configuration.
+    if (strategyOutput.isProcessed) {
+      this.processedReferences.add(refId);
+      console.debug('[MediaHandler] Marked as processed (for cleanup):', refId);
+    } else {
+      console.debug(
+        '[MediaHandler] Marked as NOT processed (due to config skip):',
+        refId,
+      );
+    }
   }
 
   private async cleanupRemovedReferences(): Promise<void> {

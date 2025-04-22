@@ -22,6 +22,12 @@ export interface StrategyOutput {
   mediaInfo: MediaInfo | null;
   /** Indicates if the media manifest needs to be updated for this entry. */
   needsManifestUpdate: boolean;
+  /**
+   * Indicates if the strategy considered this reference processed for the purpose of cleanup tracking.
+   * - `true`: The reference was processed (successfully or failed-forward). It should NOT be cleaned up.
+   * - `false`: The reference was intentionally skipped due to configuration (e.g., `enableFor`, `preserveExternalUrls`). It MAY be cleaned up if missing from other runs.
+   */
+  isProcessed: boolean;
 }
 
 export interface MediaStrategy {

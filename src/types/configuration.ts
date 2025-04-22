@@ -31,28 +31,49 @@ export interface MediaHandlerConfig {
   failForward?: boolean;
 }
 
+/** Supported Notion reference types that media strategies can act upon */
+export type MediaReferenceType =
+  | 'block'
+  | 'database_property'
+  | 'page_property';
+
 // download media strategy
 export interface DownloadStrategyConfig {
+  /** Directory where downloaded media files will be saved. */
   outputDir: string;
+  /** Optional function to transform the local file path before it's used in the output. */
   transformPath?: (localPath: string) => string;
+  /** If true, keeps external (non-Notion) media URLs as they are instead of downloading. @default false */
   preserveExternalUrls?: boolean;
+  /**
+   * Specifies which types of media references this strategy should apply to.
+   * If omitted, defaults to all types: `['block', 'database_property', 'page_property']`.
+   * @default ['block', 'database_property', 'page_property']
+   */
+  enableFor?: MediaReferenceType[];
+  /** Continue processing other media references on errors. @default true */
   failForward?: boolean;
 }
 
 // upload media strategy
 export interface UploadStrategyConfig {
+  /** Asynchronous function to handle the upload of a media file. Takes original URL and context ID, returns the new public URL. */
   uploadHandler(url: string, contextId: string): Promise<string>;
+  /** Optional asynchronous function to handle cleanup of uploaded media (e.g., deleting from S3). */
   cleanupHandler?(entry: MediaManifestEntry): Promise<void>;
+  /** Optional function to transform the uploaded URL before it's used in the output. */
   transformPath?(uploadedUrl: string): string;
+  /** If true, keeps external (non-Notion) media URLs as they are instead of uploading. @default false */
   preserveExternalUrls?: boolean;
+  /**
+   * Specifies which types of media references this strategy should apply to.
+   * If omitted, defaults to all types: `['block', 'database_property', 'page_property']`.
+   * @default ['block', 'database_property', 'page_property']
+   */
+  enableFor?: MediaReferenceType[];
+  /** Continue processing other media references on errors. @default true */
   failForward?: boolean;
 }
-
-/** Supported Notion reference types for DirectStrategy buffering */
-export type DirectStrategyBufferReferenceType =
-  | 'block'
-  | 'database_property'
-  | 'page_property';
 
 /** Supported Notion media block content types */
 export type NotionMediaBlockType = 'image' | 'video' | 'pdf' | 'file';
@@ -79,7 +100,7 @@ export interface DirectStrategyBufferOptions {
    * Provide an empty array `[]` to disable buffering even if `buffer` is `true`.
    * @default ['block', 'database_property']
    */
-  enableFor?: DirectStrategyBufferReferenceType[];
+  enableFor?: MediaReferenceType[];
   /**
    * **Only applies if 'block' is included in `enableFor`**.
    * Array specifying which specific Notion media block content types should be buffered.
@@ -101,9 +122,7 @@ export interface DirectStrategyBufferOptions {
    * 'block', 'database_property', or 'page_property' references.
    * If a handler is provided for a type, it overrides the default fetch behavior for that type.
    */
-  handlers?: Partial<
-    Record<DirectStrategyBufferReferenceType, CustomBufferHandler>
-  >;
+  handlers?: Partial<Record<MediaReferenceType, CustomBufferHandler>>;
 }
 
 // direct media strategy

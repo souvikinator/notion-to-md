@@ -1,4 +1,7 @@
-import { UploadStrategyConfig } from '../../../types/configuration';
+import {
+  UploadStrategyConfig,
+  MediaReferenceType,
+} from '../../../types/configuration';
 import {
   MediaInfo,
   MediaStrategyType,
@@ -16,7 +19,14 @@ import {
   updateReferenceSourceUrl,
 } from '../../../utils/media/referenceUtils';
 
+const DEFAULT_UPLOAD_ENABLE_TYPES: MediaReferenceType[] = [
+  'block',
+  'database_property',
+  'page_property',
+];
+
 export class UploadStrategy implements MediaStrategy {
+  private readonly enabledTypes: MediaReferenceType[];
   constructor(private config: UploadStrategyConfig) {
     console.debug(
       '[UploadStrategy] Initializing with config:',
@@ -33,90 +43,89 @@ export class UploadStrategy implements MediaStrategy {
     }
 
     this.config.failForward = config.failForward ?? true;
-    console.debug(
-      '[UploadStrategy] Initialized successfully. failForward:',
-      this.config.failForward,
-    );
+    this.enabledTypes = config.enableFor ?? DEFAULT_UPLOAD_ENABLE_TYPES;
+
+    console.debug('[UploadStrategy] Initialized successfully:', {
+      failForward: this.config.failForward,
+      enabledTypes: this.enabledTypes,
+    });
   }
 
   async process(input: StrategyInput): Promise<StrategyOutput> {
     const { reference, index, refId, manifestManager, lastEditedTime } = input;
 
+    const refType = reference.type as MediaReferenceType;
+    if (!this.enabledTypes.includes(refType)) {
+      console.debug(
+        `[UploadStrategy] Skipping reference ${refId}: Type '${refType}' not enabled.`,
+      );
+      return {
+        mediaInfo: null,
+        needsManifestUpdate: false,
+        isProcessed: false,
+      };
+    }
+
     console.debug(
       '[UploadStrategy] Processing reference ID:',
       refId,
       'type:',
-      reference.type,
+      refType,
     );
 
-    const existingEntry = manifestManager.getEntry(refId);
-
-    if (existingEntry && existingEntry.lastEdited === lastEditedTime) {
-      console.debug(
-        `[UploadStrategy] Manifest entry exists and is unchanged for ${refId}`,
+    const url = extractReferenceUrl(reference, index);
+    if (!url) {
+      console.error(
+        `[UploadStrategy] Failed to extract URL for ${refId}, skipping.`,
       );
+      if (!this.config.failForward) {
+        throw new MediaProcessingError(
+          'No media URL found in reference',
+          refId,
+          'process',
+          new Error('URL extraction failed'),
+        );
+      }
+      return { mediaInfo: null, needsManifestUpdate: false, isProcessed: true };
+    }
+
+    if (this.config.preserveExternalUrls && isExternalUrl(url)) {
+      console.debug(
+        `[UploadStrategy] Preserving external URL for ${refId}: ${url}`,
+      );
+      return {
+        mediaInfo: null,
+        needsManifestUpdate: false,
+        isProcessed: false,
+      };
+    }
+
+    const existingEntry = manifestManager.getEntry(refId);
+    if (existingEntry && existingEntry.lastEdited === lastEditedTime) {
       if (existingEntry.mediaInfo.uploadedUrl) {
         console.debug(
-          `[UploadStrategy] Using existing uploaded URL: ${existingEntry.mediaInfo.uploadedUrl}. Skipping upload.`,
+          `[UploadStrategy] Using existing unchanged uploaded URL for ${refId}.`,
         );
         const transformedPath = this.transform(existingEntry.mediaInfo);
         const mediaInfo: MediaInfo = {
           ...existingEntry.mediaInfo,
           transformedPath,
         };
-
         updateReferenceSourceUrl(reference, index, mediaInfo);
-
-        return { mediaInfo: mediaInfo, needsManifestUpdate: false };
+        return {
+          mediaInfo: mediaInfo,
+          needsManifestUpdate: false,
+          isProcessed: true,
+        };
       } else {
         console.debug(
-          `[UploadStrategy] Manifest entry for ${refId} has no uploadedUrl, proceeding to upload.`,
+          `[UploadStrategy] Manifest entry for ${refId} exists but lacks uploadedUrl, proceeding to upload.`,
         );
       }
     } else {
       console.debug(
         `[UploadStrategy] No matching/unchanged manifest entry for ${refId}, proceeding to upload.`,
       );
-    }
-
-    console.debug(
-      '[UploadStrategy] Extracting original URL from reference:',
-      refId,
-    );
-    const url = extractReferenceUrl(reference, index);
-
-    if (!url) {
-      console.debug('[UploadStrategy] No URL found in reference:', refId);
-      if (!this.config.failForward) {
-        throw new MediaProcessingError(
-          'No URL found in reference',
-          refId,
-          'process',
-          new Error('URL extraction failed'),
-        );
-      }
-      console.error(
-        `[UploadStrategy] Failed to extract URL for ${refId}, skipping.`,
-      );
-      return { mediaInfo: null, needsManifestUpdate: false };
-    }
-
-    console.debug('[UploadStrategy] Extracted original URL:', url);
-
-    if (this.config.preserveExternalUrls && isExternalUrl(url)) {
-      console.debug('[UploadStrategy] Preserving external URL:', url);
-      const mediaInfo: MediaInfo = {
-        type: MediaStrategyType.DIRECT,
-        originalUrl: url,
-        transformedPath: url,
-        sourceType: reference.type,
-        propertyName: reference.propertyName,
-        propertyIndex: index,
-      };
-
-      updateReferenceSourceUrl(reference, index, mediaInfo);
-
-      return { mediaInfo: mediaInfo, needsManifestUpdate: false };
     }
 
     try {
@@ -138,36 +147,39 @@ export class UploadStrategy implements MediaStrategy {
             new Error('Upload failed or returned empty URL'),
           );
         }
-        return { mediaInfo: null, needsManifestUpdate: false };
+        return {
+          mediaInfo: null,
+          needsManifestUpdate: false,
+          isProcessed: true,
+        };
       }
 
       console.debug(
         `[UploadStrategy] Upload successful for ${refId}. Uploaded URL:`,
         uploadedUrl,
       );
-
       const uploadedMediaInfo: Omit<MediaInfo, 'transformedPath'> = {
         type: MediaStrategyType.UPLOAD,
         originalUrl: url,
         uploadedUrl,
-        sourceType: reference.type,
+        sourceType: refType,
         propertyName: reference.propertyName,
         propertyIndex: index,
       };
-
       const transformedPath = this.transform(uploadedMediaInfo as MediaInfo);
-
       const finalMediaInfo: MediaInfo = {
         ...uploadedMediaInfo,
         transformedPath,
       };
 
       updateReferenceSourceUrl(reference, index, finalMediaInfo);
-
-      console.debug('[UploadStrategy] Media info created:', finalMediaInfo);
-      return { mediaInfo: finalMediaInfo, needsManifestUpdate: true };
+      return {
+        mediaInfo: finalMediaInfo,
+        needsManifestUpdate: true,
+        isProcessed: true,
+      };
     } catch (error) {
-      console.debug(
+      console.error(
         `[UploadStrategy] Error during upload for ${refId}:`,
         error,
       );
@@ -179,10 +191,7 @@ export class UploadStrategy implements MediaStrategy {
           error,
         );
       }
-      console.error(
-        `[UploadStrategy] Failed to upload media for ${refId}, skipping due to failForward=true. Error: ${error instanceof Error ? error.message : error}`,
-      );
-      return { mediaInfo: null, needsManifestUpdate: false };
+      return { mediaInfo: null, needsManifestUpdate: false, isProcessed: true };
     }
   }
 
@@ -190,43 +199,40 @@ export class UploadStrategy implements MediaStrategy {
     if (mediaInfo.type === MediaStrategyType.DIRECT) {
       return mediaInfo.originalUrl;
     }
-
     if (!mediaInfo.uploadedUrl) {
-      const error = new MediaProcessingError(
-        'Missing uploaded URL for uploaded file',
-        'unknown',
-        'transform',
-        new Error('Uploaded URL required for transformation'),
+      console.error(
+        `[UploadStrategy] Transform error: Missing uploadedUrl for media: ${mediaInfo.originalUrl}`,
       );
-
       if (!this.config.failForward) {
-        throw error;
+        throw new MediaProcessingError(
+          'Missing uploaded URL for uploaded file',
+          mediaInfo.originalUrl,
+          'transform',
+          new Error('uploadedUrl required'),
+        );
       }
-
-      console.error(error);
-      return mediaInfo.originalUrl;
+      return mediaInfo.originalUrl; // Fallback
     }
 
     try {
-      if (this.config.transformPath) {
-        return this.config.transformPath(mediaInfo.uploadedUrl);
-      }
-
-      return mediaInfo.uploadedUrl;
+      // Apply transformPath function if provided, otherwise return the uploadedUrl directly
+      return this.config.transformPath
+        ? this.config.transformPath(mediaInfo.uploadedUrl)
+        : mediaInfo.uploadedUrl;
     } catch (error) {
-      const processingError = new MediaProcessingError(
-        'Failed to transform path',
-        'unknown',
-        'transform',
+      console.error(
+        `[UploadStrategy] Error during path transformation for ${mediaInfo.uploadedUrl}:`,
         error,
       );
-
       if (!this.config.failForward) {
-        throw processingError;
+        throw new MediaProcessingError(
+          'Failed to transform path',
+          mediaInfo.uploadedUrl || 'unknown',
+          'transform',
+          error,
+        ); // Use unknown as fallback for error context id
       }
-
-      console.error(processingError);
-      return mediaInfo.uploadedUrl || mediaInfo.originalUrl;
+      return mediaInfo.uploadedUrl || mediaInfo.originalUrl; // Fallback to uploaded or original
     }
   }
 
@@ -237,15 +243,19 @@ export class UploadStrategy implements MediaStrategy {
       entry.mediaInfo.uploadedUrl
     ) {
       try {
+        console.debug(
+          `[UploadStrategy] Calling cleanup handler for: ${entry.mediaInfo.uploadedUrl}`,
+        );
         await this.config.cleanupHandler(entry);
+        console.debug(
+          `[UploadStrategy] Cleanup handler completed for: ${entry.mediaInfo.uploadedUrl}`,
+        );
       } catch (error) {
-        const processingError = new MediaProcessingError(
-          'Failed to cleanup uploaded file',
-          entry.mediaInfo.uploadedUrl,
-          'cleanup',
+        // Log error but don't throw
+        console.error(
+          `[UploadStrategy] Failed to cleanup uploaded file ${entry.mediaInfo.uploadedUrl}:`,
           error,
         );
-        console.error(processingError);
       }
     }
   }
