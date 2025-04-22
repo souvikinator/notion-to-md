@@ -5,13 +5,16 @@ import {
   MediaManifestEntry,
 } from '../../../types/manifest-manager';
 import {
-  NotionBlock,
-  NotionDatabaseEntryProperty,
-  NotionPageProperty,
-} from '../../../types/notion';
-import { TrackedBlockReferenceObject } from '../../../types/fetcher';
-import { MediaStrategy, MediaProcessingError } from '../../../types/strategy';
+  MediaStrategy,
+  MediaProcessingError,
+  StrategyInput,
+  StrategyOutput,
+} from '../../../types/strategy';
 import { isExternalUrl } from '../../../utils/notion';
+import {
+  extractReferenceUrl,
+  updateReferenceSourceUrl,
+} from '../../../utils/media/referenceUtils';
 
 export class UploadStrategy implements MediaStrategy {
   constructor(private config: UploadStrategyConfig) {
@@ -36,126 +39,150 @@ export class UploadStrategy implements MediaStrategy {
     );
   }
 
-  async process(
-    reference: TrackedBlockReferenceObject,
-    index?: number,
-  ): Promise<MediaInfo> {
-    const id = reference.id;
-    console.debug('[UploadStrategy] Processing reference:', id);
+  async process(input: StrategyInput): Promise<StrategyOutput> {
+    const { reference, index, refId, manifestManager, lastEditedTime } = input;
 
-    console.debug('[UploadStrategy] Extracting URL from reference');
-    let url: string | null = null;
+    console.debug(
+      '[UploadStrategy] Processing reference ID:',
+      refId,
+      'type:',
+      reference.type,
+    );
 
-    // Extract URL based on reference type
-    switch (reference.type) {
-      case 'block':
-        url = this.extractBlockUrl(reference.ref as NotionBlock);
-        break;
-      case 'database_property':
-        url = this.extractDatabasePropertyUrl(
-          reference.ref as NotionDatabaseEntryProperty,
-          index || 0,
+    const existingEntry = manifestManager.getEntry(refId);
+
+    if (existingEntry && existingEntry.lastEdited === lastEditedTime) {
+      console.debug(
+        `[UploadStrategy] Manifest entry exists and is unchanged for ${refId}`,
+      );
+      if (existingEntry.mediaInfo.uploadedUrl) {
+        console.debug(
+          `[UploadStrategy] Using existing uploaded URL: ${existingEntry.mediaInfo.uploadedUrl}. Skipping upload.`,
         );
-        break;
-      case 'page_property':
-        url = this.extractPagePropertyUrl(reference.ref as NotionPageProperty);
-        break;
+        const transformedPath = this.transform(existingEntry.mediaInfo);
+        const mediaInfo: MediaInfo = {
+          ...existingEntry.mediaInfo,
+          transformedPath,
+        };
+
+        updateReferenceSourceUrl(reference, index, mediaInfo);
+
+        return { mediaInfo: mediaInfo, needsManifestUpdate: false };
+      } else {
+        console.debug(
+          `[UploadStrategy] Manifest entry for ${refId} has no uploadedUrl, proceeding to upload.`,
+        );
+      }
+    } else {
+      console.debug(
+        `[UploadStrategy] No matching/unchanged manifest entry for ${refId}, proceeding to upload.`,
+      );
     }
+
+    console.debug(
+      '[UploadStrategy] Extracting original URL from reference:',
+      refId,
+    );
+    const url = extractReferenceUrl(reference, index);
 
     if (!url) {
-      console.debug('[UploadStrategy] No URL found in reference');
-      const error = new MediaProcessingError(
-        'No URL found in reference',
-        id,
-        'process',
-        new Error('URL extraction failed'),
-      );
-
+      console.debug('[UploadStrategy] No URL found in reference:', refId);
       if (!this.config.failForward) {
-        throw error;
+        throw new MediaProcessingError(
+          'No URL found in reference',
+          refId,
+          'process',
+          new Error('URL extraction failed'),
+        );
       }
-
-      console.error(error);
-      return {
-        type: MediaStrategyType.DIRECT,
-        originalUrl: '',
-        transformedPath: '',
-        sourceType: reference.type,
-      };
+      console.error(
+        `[UploadStrategy] Failed to extract URL for ${refId}, skipping.`,
+      );
+      return { mediaInfo: null, needsManifestUpdate: false };
     }
 
-    console.debug('[UploadStrategy] Extracted URL:', url);
+    console.debug('[UploadStrategy] Extracted original URL:', url);
 
-    // Handle external URLs preservation
     if (this.config.preserveExternalUrls && isExternalUrl(url)) {
-      console.debug('[UploadStrategy] Preserving external URL');
-      return {
+      console.debug('[UploadStrategy] Preserving external URL:', url);
+      const mediaInfo: MediaInfo = {
         type: MediaStrategyType.DIRECT,
         originalUrl: url,
         transformedPath: url,
         sourceType: reference.type,
+        propertyName: reference.propertyName,
+        propertyIndex: index,
       };
+
+      updateReferenceSourceUrl(reference, index, mediaInfo);
+
+      return { mediaInfo: mediaInfo, needsManifestUpdate: false };
     }
 
     try {
-      // Attempt upload
-      const uploadedUrl = await this.config.uploadHandler(url, id);
+      console.debug(
+        `[UploadStrategy] Calling upload handler for ${refId}, URL:`,
+        url,
+      );
+      const uploadedUrl = await this.config.uploadHandler(url, refId);
 
-      // Handle failed upload (handler returns falsy value)
       if (!uploadedUrl) {
-        const error = new MediaProcessingError(
-          'Upload handler returned invalid URL',
-          id,
-          'process',
-          new Error('Upload failed'),
+        console.warn(
+          `[UploadStrategy] Upload handler returned invalid/empty URL for ${refId}.`,
         );
-
         if (!this.config.failForward) {
-          throw error;
+          throw new MediaProcessingError(
+            'Upload handler returned invalid URL',
+            refId,
+            'process',
+            new Error('Upload failed or returned empty URL'),
+          );
         }
-
-        console.error(error);
-        return {
-          type: MediaStrategyType.DIRECT,
-          originalUrl: url,
-          transformedPath: url,
-          sourceType: reference.type,
-        };
+        return { mediaInfo: null, needsManifestUpdate: false };
       }
 
-      // Create media info with uploaded URL
-      const mediaInfo: MediaInfo = {
+      console.debug(
+        `[UploadStrategy] Upload successful for ${refId}. Uploaded URL:`,
+        uploadedUrl,
+      );
+
+      const uploadedMediaInfo: Omit<MediaInfo, 'transformedPath'> = {
         type: MediaStrategyType.UPLOAD,
         originalUrl: url,
         uploadedUrl,
-        transformedPath: this.transform({
-          type: MediaStrategyType.UPLOAD,
-          originalUrl: url,
-          uploadedUrl,
-        }),
         sourceType: reference.type,
+        propertyName: reference.propertyName,
+        propertyIndex: index,
       };
 
-      return mediaInfo;
+      const transformedPath = this.transform(uploadedMediaInfo as MediaInfo);
+
+      const finalMediaInfo: MediaInfo = {
+        ...uploadedMediaInfo,
+        transformedPath,
+      };
+
+      updateReferenceSourceUrl(reference, index, finalMediaInfo);
+
+      console.debug('[UploadStrategy] Media info created:', finalMediaInfo);
+      return { mediaInfo: finalMediaInfo, needsManifestUpdate: true };
     } catch (error) {
-      const processingError = new MediaProcessingError(
-        'Failed to upload media',
-        id,
-        'process',
+      console.debug(
+        `[UploadStrategy] Error during upload for ${refId}:`,
         error,
       );
-
       if (!this.config.failForward) {
-        throw processingError;
+        throw new MediaProcessingError(
+          `Failed to upload media for ${refId}`,
+          refId,
+          'process',
+          error,
+        );
       }
-
-      console.error(processingError);
-      return {
-        type: MediaStrategyType.DIRECT,
-        originalUrl: url,
-        transformedPath: url,
-        sourceType: reference.type,
-      };
+      console.error(
+        `[UploadStrategy] Failed to upload media for ${refId}, skipping due to failForward=true. Error: ${error instanceof Error ? error.message : error}`,
+      );
+      return { mediaInfo: null, needsManifestUpdate: false };
     }
   }
 
@@ -220,66 +247,6 @@ export class UploadStrategy implements MediaStrategy {
         );
         console.error(processingError);
       }
-    }
-  }
-
-  private extractBlockUrl(block: NotionBlock): string | null {
-    try {
-      if (!block || !('type' in block)) {
-        return null;
-      }
-
-      if (!['image', 'video', 'file', 'pdf'].includes(block.type)) {
-        return null;
-      }
-
-      // @ts-ignore
-      const mediaBlock = block[block.type];
-
-      if (!mediaBlock) {
-        return null;
-      }
-
-      return mediaBlock.type === 'external'
-        ? mediaBlock.external?.url
-        : mediaBlock.file?.url;
-    } catch {
-      return null;
-    }
-  }
-
-  private extractDatabasePropertyUrl(
-    property: NotionDatabaseEntryProperty,
-    index: number,
-  ): string | null {
-    if (
-      property.type !== 'files' ||
-      !property.files ||
-      !property.files[index]
-    ) {
-      return null;
-    }
-
-    const fileEntry = property.files[index];
-    if (fileEntry.type === 'external') {
-      return fileEntry.external?.url || null;
-    } else {
-      // Using optional chaining and typecasting to handle potential undefined
-      return (fileEntry as any).file?.url || null;
-    }
-  }
-
-  private extractPagePropertyUrl(property: NotionPageProperty): string | null {
-    if (property.type !== 'files' || !property.files || !property.files[0]) {
-      return null;
-    }
-
-    const fileEntry = property.files[0];
-    if (fileEntry.type === 'external') {
-      return fileEntry.external?.url || null;
-    } else {
-      // Using optional chaining and typecasting to handle potential undefined
-      return (fileEntry as any).file?.url || null;
     }
   }
 }

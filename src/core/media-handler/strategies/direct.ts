@@ -1,12 +1,34 @@
 import fetch from 'node-fetch';
 import { TrackedBlockReferenceObject } from '../../../types/fetcher';
 import { MediaInfo, MediaStrategyType } from '../../../types/manifest-manager';
-import { MediaStrategy, MediaProcessingError } from '../../../types/strategy';
+import {
+  MediaStrategy,
+  MediaProcessingError,
+  StrategyInput,
+  StrategyOutput,
+} from '../../../types/strategy';
 import {
   DirectStrategyConfig,
-  BufferOptions,
-  DirectStrategyBufferSupportedBlockType,
+  DirectStrategyBufferOptions,
+  DirectStrategyBufferReferenceType,
+  CustomBufferHandler,
+  NotionMediaBlockType,
 } from '../../../types/configuration';
+import {
+  NotionBlock,
+  NotionDatabaseEntryProperty,
+  NotionPageProperty,
+} from '../../../types/notion';
+import {
+  extractReferenceUrl,
+  updateReferenceSourceUrl,
+} from '../../../utils/media/referenceUtils';
+
+// Default reference types to buffer if buffer is enabled as `true`
+const DEFAULT_BUFFER_ENABLE_TYPES: DirectStrategyBufferReferenceType[] = [
+  'block',
+  'database_property',
+];
 
 /**
  * DirectStrategy handles media references by maintaining the original URLs
@@ -15,7 +37,9 @@ import {
 export class DirectStrategy implements MediaStrategy {
   private readonly failForward: boolean;
   private readonly bufferEnabled: boolean;
-  private readonly bufferOptions: BufferOptions | null;
+  private readonly bufferOptions: DirectStrategyBufferOptions | null;
+  private readonly bufferEnableFor: DirectStrategyBufferReferenceType[]; // Store enabled types
+  private readonly bufferIncludeBlockContentTypes?: NotionMediaBlockType[];
 
   constructor(private config: DirectStrategyConfig = {}) {
     console.debug('[DirectStrategy] Initializing with config:', config);
@@ -23,62 +47,118 @@ export class DirectStrategy implements MediaStrategy {
     this.failForward = config.failForward ?? true;
     this.bufferEnabled = !!config.buffer;
 
-    // Set buffer options if enabled
+    // Parse buffer options
     if (this.bufferEnabled && typeof config.buffer === 'object') {
       this.bufferOptions = config.buffer;
+      this.bufferEnableFor =
+        config.buffer.enableFor ?? DEFAULT_BUFFER_ENABLE_TYPES;
+      this.bufferIncludeBlockContentTypes =
+        config.buffer.includeBlockContentTypes;
+    } else if (this.bufferEnabled) {
+      // buffer === true
+      this.bufferOptions = {}; // Use empty object if true, no specific options
+      this.bufferEnableFor = DEFAULT_BUFFER_ENABLE_TYPES;
+      this.bufferIncludeBlockContentTypes = undefined;
     } else {
+      // buffer is false or undefined
       this.bufferOptions = null;
+      this.bufferEnableFor = [];
+      this.bufferIncludeBlockContentTypes = undefined;
     }
 
     console.debug('[DirectStrategy] Configuration applied:', {
       failForward: this.failForward,
       bufferEnabled: this.bufferEnabled,
-      bufferOptions: this.bufferOptions,
+      bufferEnableFor: this.bufferEnableFor,
+      bufferIncludeBlockContentTypes: this.bufferIncludeBlockContentTypes,
+      bufferOptions: this.bufferOptions, // Log the parsed options
     });
   }
 
-  async process(
-    reference: TrackedBlockReferenceObject,
-    index?: number,
-  ): Promise<MediaInfo> {
-    const id = reference.id;
-    console.debug('[DirectStrategy] Processing reference:', id);
+  async process(input: StrategyInput): Promise<StrategyOutput> {
+    const { reference, index, refId } = input;
+    console.debug(
+      '[DirectStrategy] Processing reference ID:',
+      refId,
+      'Type:',
+      reference.type,
+    );
 
     try {
-      // Extract URL from the reference
-      const url = this.extractUrl(reference, index);
+      const url = extractReferenceUrl(reference, index);
 
       if (!url) {
-        console.debug('[DirectStrategy] No URL found in reference:', id);
-        return {
-          type: MediaStrategyType.DIRECT,
-          originalUrl: '',
-          transformedPath: '',
-          sourceType: reference.type,
-        };
+        console.debug('[DirectStrategy] No URL found for reference:', refId);
+        return { mediaInfo: null, needsManifestUpdate: false };
       }
 
       console.debug('[DirectStrategy] Extracted URL:', url);
 
-      // Create basic media info
       const mediaInfo: MediaInfo = {
         type: MediaStrategyType.DIRECT,
         originalUrl: url,
         transformedPath: url,
         sourceType: reference.type,
+        propertyName: reference.propertyName,
+        propertyIndex: index,
       };
 
-      // Handle buffering if enabled
-      if (this.bufferEnabled) {
-        await this.handleBuffering(reference, url);
+      updateReferenceSourceUrl(reference, index, mediaInfo);
+
+      // Check if buffering is globally enabled AND enabled for this reference type
+      if (
+        this.bufferEnabled &&
+        this.bufferEnableFor.includes(
+          reference.type as DirectStrategyBufferReferenceType,
+        )
+      ) {
+        let skipBufferingForBlockType = false;
+        if (reference.type === 'block') {
+          const block = reference.ref as NotionBlock;
+          if (
+            this.bufferIncludeBlockContentTypes &&
+            'type' in block &&
+            block.type
+          ) {
+            if (
+              !this.bufferIncludeBlockContentTypes.includes(
+                block.type as NotionMediaBlockType,
+              )
+            ) {
+              console.debug(
+                `[DirectStrategy] Buffering skipped for block ${refId}: Type ${block.type} not in includeBlockContentTypes.`,
+              );
+              skipBufferingForBlockType = true;
+            }
+          }
+        }
+
+        if (!skipBufferingForBlockType) {
+          console.debug(
+            `[DirectStrategy] Buffering enabled for type: ${reference.type}`,
+          );
+          await this.handleBuffering(reference, index, url);
+        } else {
+          console.debug(
+            `[DirectStrategy] Buffering skipped for type: ${reference.type}`,
+          );
+        }
+      } else {
+        console.debug(
+          `[DirectStrategy] Buffering skipped for type: ${reference.type}`,
+        );
       }
 
-      return mediaInfo;
+      return { mediaInfo: mediaInfo, needsManifestUpdate: false };
     } catch (error) {
-      console.debug('[DirectStrategy] Error processing reference:', error);
+      console.debug(
+        '[DirectStrategy] Error processing reference:',
+        refId,
+        error,
+      );
       const processingError = new MediaProcessingError(
         'Failed to process media reference',
-        id,
+        refId,
         'process',
         error,
       );
@@ -88,12 +168,7 @@ export class DirectStrategy implements MediaStrategy {
       }
 
       console.error(processingError);
-      return {
-        type: MediaStrategyType.DIRECT,
-        originalUrl: '',
-        transformedPath: '',
-        sourceType: reference.type,
-      };
+      return { mediaInfo: null, needsManifestUpdate: false };
     }
   }
 
@@ -104,136 +179,75 @@ export class DirectStrategy implements MediaStrategy {
 
   async cleanup(): Promise<void> {
     // No cleanup needed for direct strategy
+    console.debug('[DirectStrategy] Cleanup called, no action needed.');
     return Promise.resolve();
-  }
-
-  private extractUrl(
-    reference: TrackedBlockReferenceObject,
-    index?: number,
-  ): string | null {
-    try {
-      switch (reference.type) {
-        case 'block': {
-          const block = reference.ref as any;
-          if (!('type' in block) || !block.type) return null;
-
-          if (!['image', 'video', 'file', 'pdf'].includes(block.type)) {
-            return null;
-          }
-
-          const mediaBlock = block[block.type];
-          if (!mediaBlock) return null;
-
-          return mediaBlock.type === 'external'
-            ? mediaBlock.external?.url
-            : mediaBlock.file?.url;
-        }
-        case 'database_property':
-        case 'page_property': {
-          const property = reference.ref as any;
-          if (property.type !== 'files' || !property.files) return null;
-
-          const fileIdx = index || 0;
-          if (!property.files[fileIdx]) return null;
-
-          const fileEntry = property.files[fileIdx];
-          return fileEntry.type === 'external'
-            ? fileEntry.external?.url
-            : fileEntry.file?.url;
-        }
-        default:
-          return null;
-      }
-    } catch (error) {
-      console.debug('[DirectStrategy] Error extracting URL:', error);
-      return null;
-    }
   }
 
   private async handleBuffering(
     reference: TrackedBlockReferenceObject,
+    index: number | undefined,
     url: string,
   ): Promise<void> {
     if (!url) return;
 
+    const refType = reference.type as DirectStrategyBufferReferenceType;
+
+    console.debug(
+      `[DirectStrategy] Buffering content for reference ${reference.id} (type: ${refType}, index: ${index})`,
+    );
+
     try {
-      const blockType = this.getBlockType(reference);
-
-      // Check if this block type should be buffered
-      if (!this.shouldBufferBlockType(blockType)) {
-        console.debug(
-          `[DirectStrategy] Skipping buffering for block type: ${blockType}`,
-        );
-        return;
-      }
-
-      console.debug(
-        `[DirectStrategy] Buffering content for ${blockType} block`,
-      );
-
-      // Use custom handler if available, otherwise use default
       let buffer: Buffer;
-      if (
-        this.bufferOptions?.blockHandlers &&
-        blockType &&
-        this.bufferOptions.blockHandlers[
-          blockType as DirectStrategyBufferSupportedBlockType
-        ]
-      ) {
-        const handler =
-          this.bufferOptions.blockHandlers[
-            blockType as DirectStrategyBufferSupportedBlockType
-          ];
-        buffer = await handler(reference.ref, url);
+      // Check for custom handler for this specific reference type
+      const customHandler: CustomBufferHandler | undefined =
+        this.bufferOptions?.handlers?.[refType];
+
+      if (customHandler) {
+        console.debug(
+          `[DirectStrategy] Using custom buffer handler for type: ${refType}`,
+        );
+        buffer = await customHandler(reference, index, url);
       } else {
+        console.debug(
+          `[DirectStrategy] Using default fetch handler for URL: ${url}`,
+        );
         buffer = await this.defaultFetchHandler(url);
       }
 
-      // Check buffer size limit if configured
-      const maxSize = this.bufferOptions?.maxBufferSize || 0;
+      // Check buffer size limit
+      const maxSize = this.bufferOptions?.maxBufferSize ?? 0;
       if (maxSize > 0 && buffer.length > maxSize) {
-        console.debug(
-          `[DirectStrategy] Buffer size ${buffer.length} exceeds limit ${maxSize}`,
+        console.warn(
+          `[DirectStrategy] Buffer size ${buffer.length} for ${reference.id} exceeds limit ${maxSize}. Buffer not attached.`,
         );
         return;
       }
 
-      // Attach buffer to the block
-      this.attachBufferToBlock(reference, buffer);
+      // Attach buffer to the appropriate part of the reference object
+      if (refType === 'block') {
+        this.attachBufferToBlock(reference, buffer);
+      } else if (
+        refType === 'database_property' ||
+        refType === 'page_property'
+      ) {
+        this.attachBufferToProperty(reference, index, buffer);
+      }
     } catch (error) {
-      console.debug('[DirectStrategy] Error during buffering:', error);
-      // Continue without buffering on error when failForward is true
+      console.error(
+        `[DirectStrategy] Error during buffering for ${reference.id}:`,
+        error,
+      );
+      // Continue without buffering on error if failForward is true
       if (!this.failForward) {
         throw new MediaProcessingError(
-          'Failed to buffer media content',
+          `Failed to buffer media content for ${reference.id}`,
           reference.id,
           'buffer',
           error,
         );
       }
+      // Logged error above, process continues without buffer
     }
-  }
-
-  private getBlockType(reference: TrackedBlockReferenceObject): string | null {
-    if (reference.type === 'block') {
-      const block = reference.ref as any;
-      return block.type;
-    }
-    return null;
-  }
-
-  private shouldBufferBlockType(blockType: string | null): boolean {
-    if (!blockType) return false;
-
-    // If no specific includeBlocks, buffer all supported types
-    if (!this.bufferOptions?.includeBlocks) {
-      return ['pdf', 'file', 'image', 'video'].includes(blockType);
-    }
-
-    // Otherwise, only buffer specified types
-    return this.bufferOptions.includeBlocks.includes(
-      blockType as DirectStrategyBufferSupportedBlockType,
-    );
   }
 
   private async defaultFetchHandler(url: string): Promise<Buffer> {
@@ -251,10 +265,75 @@ export class DirectStrategy implements MediaStrategy {
     reference: TrackedBlockReferenceObject,
     buffer: Buffer,
   ): void {
-    // Attach buffer directly to the block
-    (reference.ref as any).buffer = buffer;
-    console.debug(
-      `[DirectStrategy] Attached ${buffer.length} byte buffer to block: ${reference.id}`,
-    );
+    try {
+      const block = reference.ref as NotionBlock;
+      // Check if the block type is one that supports the buffer property in our NotionBlock type definition
+      if (
+        'type' in block &&
+        ['image', 'video', 'file', 'pdf'].includes(block.type)
+      ) {
+        // Type assertion is safer now after the check
+        (
+          block as Extract<
+            NotionBlock,
+            { type: 'image' | 'video' | 'file' | 'pdf' }
+          >
+        ).buffer = buffer;
+        console.debug(
+          `[DirectStrategy] Attached ${buffer.length} byte buffer to block: ${reference.id}`,
+        );
+      } else {
+        console.warn(
+          `[DirectStrategy] Cannot attach buffer: Block type ${'type' in block ? block.type : 'unknown'} does not support buffer property.`,
+        );
+      }
+    } catch (error) {
+      console.error(
+        `[DirectStrategy] Failed to attach buffer to block ${reference.id}`,
+        error,
+      );
+    }
+  }
+
+  /** Attaches the buffer to the specific file entry within a property reference */
+  private attachBufferToProperty(
+    reference: TrackedBlockReferenceObject,
+    index: number | undefined,
+    buffer: Buffer,
+  ): void {
+    try {
+      const property = reference.ref as
+        | NotionDatabaseEntryProperty
+        | NotionPageProperty;
+      if (property.type !== 'files' || !property.files) {
+        console.warn(
+          `[DirectStrategy] Cannot attach buffer: Property ${reference.propertyName} is not a files type or has no files.`,
+        );
+        return;
+      }
+
+      const fileIndex = index ?? 0;
+      if (!property.files[fileIndex]) {
+        console.warn(
+          `[DirectStrategy] Cannot attach buffer: Invalid file index ${fileIndex} for property ${reference.propertyName}.`,
+        );
+        return;
+      }
+
+      // Attach buffer to the file entry object within the property
+      // Note: This adds a non-standard 'buffer' property to the Notion file entry.
+      // Consumers (e.g., transformers) need to be aware of this.
+      const fileEntry = property.files[fileIndex] as any;
+      fileEntry.buffer = buffer;
+
+      console.debug(
+        `[DirectStrategy] Attached ${buffer.length} byte buffer to property ${reference.propertyName}, index ${fileIndex}`,
+      );
+    } catch (error) {
+      console.error(
+        `[DirectStrategy] Failed to attach buffer to property ${reference.propertyName} index ${index}`,
+        error,
+      );
+    }
   }
 }
