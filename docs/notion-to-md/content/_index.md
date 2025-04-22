@@ -1,5 +1,5 @@
 ---
-title: Notion To MD - Use Your Notion Content Anywhere
+title: Notion To MD - Programmatic Notion Content Conversion
 layout: hextra-home
 ---
 
@@ -19,12 +19,12 @@ layout: hextra-home
 
 <div class="hx-mt-6 hx-mb-6">
 {{< hextra/hero-headline >}}
-  Turn Notion into your&nbsp;<br class="sm:hx-block hx-hidden" />ultimate content source
+  Programmatically Convert&nbsp;<br class="sm:hx-block hx-hidden" />Notion Pages to Markdown & More
 {{< /hextra/hero-headline >}}
 </div>
 <div class="hx-mb-12">
 {{< hextra/hero-subtitle >}}
-  💪 Powerful Notion conversion engine that lets you write once in Notion&nbsp;<br class="sm:hx-block hx-hidden" />and seamlessly publish anywhere, in any format. Exactly how you want it 😉
+  A flexible Node.js library to fetch and transform Notion pages&nbsp;<br class="sm:hx-block hx-hidden" />into Markdown, HTML, or custom formats via a powerful plugin system.
 {{< /hextra/hero-subtitle >}}
 </div>
 
@@ -107,52 +107,52 @@ document.addEventListener('DOMContentLoaded', async function() {
 <div class="hx-mt-6"></div>
 {{< hextra/feature-grid >}}
   {{< hextra/feature-card
-    title="Works with your favorite CMS"
-    subtitle="Seamlessly feed your Notion content into WordPress, Webflow, Shopify or any other CMS without manual reformatting."
+    title="Integrate with Any System"
+    subtitle="Flexible architecture allows integration with any CMS (WordPress, Webflow, etc.) or backend by handling content conversion and media processing."
     class="hx-aspect-auto md:hx-aspect-[1.1/1] max-md:hx-min-h-[340px]"
     image="images/notion-cms.webp"
     imageClass="hx-top-[40%] hx-left-[24px] hx-w-[180%] sm:hx-w-[110%] dark:hx-opacity-80"
     style="background: radial-gradient(ellipse at 50% 80%,rgba(97,165,254,0.15),hsla(0,0%,100%,0));"
   >}}
   {{< hextra/feature-card
-    title="Export everywhere at once"
-    subtitle="Send your Notion content to your website, documentation, marketing materials, and more—all automatically."
+    title="Automate Publishing Workflows"
+    subtitle="Build automated pipelines to publish Notion content to multiple destinations like static sites, documentation platforms, or databases."
     class="hx-aspect-auto md:hx-aspect-[1.1/1] max-lg:hx-min-h-[340px]"
     image="images/notion-publish.webp"
     imageClass="hx-top-[40%] hx-left-[36px] hx-w-[180%] sm:hx-w-[110%] dark:hx-opacity-80"
     style="background: radial-gradient(ellipse at 50% 80%,rgba(142,53,74,0.15),hsla(0,0%,100%,0));"
   >}}
   {{< hextra/feature-card
-    title="Your content, your format"
-    subtitle="Need Markdown? HTML? Something else entirely? You decide exactly how your Notion content should look."
+    title="Customizable Output Formats"
+    subtitle="Extensible plugin system allows transformation to Markdown, HTML, plain text, or completely custom output formats tailored to your needs."
     class="hx-aspect-auto md:hx-aspect-[1.1/1] max-md:hx-min-h-[340px]"
     image="images/notion-format.webp"
     imageClass="hx-top-[40%] hx-left-[36px] hx-w-[110%] sm:hx-w-[110%] dark:hx-opacity-80"
     style="background: radial-gradient(ellipse at 50% 80%,rgba(59,130,246,0.15),hsla(0,0%,100%,0));"
   >}}
   {{< hextra/feature-card
-    title="Customize everything"
-    subtitle="Make your content look exactly how you want it with simple customization options—no coding required."
+    title="Highly Configurable"
+    subtitle="Tailor the conversion process with a rich plugin API and detailed configuration options for parsing, transformation, and media handling."
     icon="plugin-icon"
   >}}
   {{< hextra/feature-card
-    title="Images & files, handled automatically"
-    subtitle="Stop worrying about broken images or missing files. We take care of moving everything where it needs to go."
+    title="Robust Media Handling"
+    subtitle="Strategies to download, upload, or buffer Notion images and files, automatically updating links and managing cleanup."
     icon="media-icon"
   >}}
   {{< hextra/feature-card
-    title="Simple setup, powerful results"
-    subtitle="Get up and running in minutes with an intuitive setup that doesn't require a computer science degree."
+    title="Developer-Friendly API"
+    subtitle="Get started quickly with an intuitive API, while offering deep control and extensibility for complex use cases."
     icon="builder-icon"
   >}}
   {{< hextra/feature-card
-    title="Everything comes through perfectly"
-    subtitle="Tables, images, code blocks, embeds—everything in your Notion page appears exactly as it should."
+    title="Accurate Block Conversion"
+    subtitle="Parses and converts a wide range of Notion blocks, including text, lists, images, code blocks, callouts, databases, and more."
     icon="blocks-icon"
   >}}
   {{< hextra/feature-card
-    title="Works with your existing tools"
-    subtitle="Easily fits into your current workflow, whether you're using Next.js, WordPress, Hugo, or anything else."
+    title="Node.js Ecosystem Integration"
+    subtitle="Integrates smoothly into Node.js build processes, static site generators (Next.js, Hugo, Eleventy), or any backend application."
     icon="integration-icon"
   >}}
 {{< /hextra/feature-grid >}}
