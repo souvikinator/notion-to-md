@@ -192,7 +192,13 @@ interface FrontmatterConfig {
   include?: string[]; // Properties to include
   exclude?: string[]; // Properties to exclude
   rename?: Record<string, string>; // Rename properties
-  transform?: Record<string, (prop: any) => string>; // Transform functions
+  transform?: Record<
+    string,
+    (
+      property: NotionPageProperty,
+      allProperties: NotionPageProperties,
+    ) => string
+  >; // Transform functions
   defaults?: Record<string, any>; // Default values
 }
 
@@ -215,7 +221,7 @@ interface MDXRendererConfig {
 
 - **rename**: A mapping of original property names to new names. For example, `{ "Created time": "date" }` will rename the "Created time" property to "date" in the output.
 
-- **transform**: A mapping where keys are property names and values are functions `(property, allProperties) => string`. These functions receive the Notion property object and all page properties, returning a transformed string value for the frontmatter. Useful for formatting dates, generating slugs, etc.
+- **transform**: A mapping where keys are property names and values are functions `(property: NotionPageProperty, allProperties: NotionPageProperties) => string`. These functions receive the Notion property object and all page properties, and it should return a transformed string value for the frontmatter. Useful for formatting dates, generating slugs, etc.
 
 - **defaults**: Default values for properties that might be missing. These values will be used if the corresponding property doesn't exist or is empty.
 

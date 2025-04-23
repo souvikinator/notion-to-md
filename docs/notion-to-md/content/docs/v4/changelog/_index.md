@@ -4,9 +4,22 @@ description: History of changes for notion-to-md v4 releases.
 weight: 5
 ---
 
-# Changelog
-
 This page documents the changes made in notion-to-md v4 releases.
+
+> [!NOTE]
+> This is an early alpha release meant for testing and feedback. The API may change before the stable release.
+
+## [v4.0.0-alpha.5](./whats-new-in-v4-0-0-alpha-5/)
+
+_Released: April 24, 2025_
+
+### Key Highlights
+
+- **Enhanced Frontmatter Configuration:** Gain more control over how Notion properties translate into frontmatter metadata, including powerful value transformations. Learn more: [What's New in v4.0.0-alpha.5](./whats-new-in-v4-0-0-alpha-5/#enhanced-frontmatter-configuration).
+
+[Full Changelog](https://github.com/souvikinator/notion-to-md/compare/v4.0.0-alpha.4...v4.0.0-alpha.5)
+
+---
 
 ## [v4.0.0-alpha.4](https://github.com/souvikinator/notion-to-md/releases/tag/v4.0.0-alpha.4)
 
@@ -33,6 +46,8 @@ _Released: March 13, 2025_
   - "[How to handle embedded media/documents like pdf in Notion](https://docs.joinescape.org/notion-to-md/blog/how-to-handle-documents-in-notion-using/)"
 - Enabled comments on documentation pages
 - Updated Hugo configuration for better docs site functionality
+
+[Full Changelog](https://github.com/souvikinator/notion-to-md/compare/v4.0.0-alpha.3...v4.0.0-alpha.4)
 
 ---
 
@@ -87,8 +102,5 @@ This is the first alpha release of **notion-to-md v4.0.0**, a complete redesign 
 - **Robust Media Handling**: Multiple strategies for media content (direct URLs, download, upload to storage)
 - **Page References**: Automatic handling of Notion page links for proper cross-references
 - **Improved Performance**: Optimized block fetching with concurrency control
-
-> [!NOTE]
-> This is an early alpha release meant for testing and feedback. The API may change before the stable release.
 
 ---
