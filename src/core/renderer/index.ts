@@ -17,6 +17,7 @@ import {
   ContextMetadata,
   DatabasePropertyTransformer,
   TypedBlockTransformer,
+  TypedDatabasePropertyTransformer,
 } from '../../types/renderer';
 
 /**
@@ -162,25 +163,24 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
     return this;
   }
 
-  public createPropertyTransformer(
-    type: NotionDatabasePropertyType,
-    transformer: DatabasePropertyTransformer,
+  public createPropertyTransformer<T extends NotionDatabasePropertyType>(
+    type: T,
+    transformer: TypedDatabasePropertyTransformer<T>,
   ): this {
-    this.context.transformers.properties[type] = transformer;
+    this.context.transformers.properties[type] =
+      transformer as DatabasePropertyTransformer;
     return this;
   }
 
-  public createPropertyTransformers(
-    transformers: Partial<
-      Record<NotionDatabasePropertyType, DatabasePropertyTransformer>
-    >,
+  public createPropertyTransformers<T extends NotionDatabasePropertyType>(
+    transformers: Partial<Record<T, TypedDatabasePropertyTransformer<T>>>,
   ): this {
-    for (const [type, transformer] of Object.entries(transformers)) {
+    for (const [type, transformer] of Object.entries(transformers) as [
+      T,
+      TypedDatabasePropertyTransformer<T> | undefined,
+    ][]) {
       if (transformer) {
-        this.createPropertyTransformer(
-          type as NotionDatabasePropertyType,
-          transformer,
-        );
+        this.createPropertyTransformer(type, transformer);
       }
     }
     return this;
@@ -466,6 +466,14 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
       const transformer = context.transformers.properties[property.type];
 
       if (transformer) {
+        // Handle imports if they exist
+        const typedTransformer = transformer as DatabasePropertyTransformer & {
+          imports?: string[];
+        };
+        if (typedTransformer.imports?.length) {
+          this.addImports(...typedTransformer.imports);
+        }
+
         result[propName as NotionDatabasePropertyType] =
           await transformer.transform({
             property,

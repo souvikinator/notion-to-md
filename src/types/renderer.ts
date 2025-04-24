@@ -139,3 +139,43 @@ export interface BaseRendererUtils {
     context: RendererContext,
   ) => Promise<Partial<Record<NotionDatabasePropertyType, string>>>;
 }
+
+/**
+ * Helper type to extract the specific NotionDatabaseEntryProperty type for a given property type string.
+ * This leverages the built-in Extract utility type for better type safety.
+ *
+ * Example: GetPropertyByType<'select'> will extract the member of the NotionDatabaseEntryProperty union
+ *          that has { type: 'select' }.
+ */
+export type GetPropertyByType<T extends NotionDatabasePropertyType> = Extract<
+  NotionDatabaseEntryProperty,
+  { type: T }
+>;
+
+/**
+ * Type-safe DatabasePropertyContext when the property type is known.
+ * This provides a narrowed property type based on the generic parameter.
+ *
+ * Example: TypedDatabasePropertyContext<'select'> will have property typed as
+ * GetPropertyByType<'select'>, giving access to property.select.
+ */
+export interface TypedDatabasePropertyContext<
+  T extends NotionDatabasePropertyType,
+> extends Omit<DatabasePropertyContext, 'property'> {
+  property: GetPropertyByType<T>;
+}
+
+/**
+ * Type-safe DatabasePropertyTransformer for working with specific property types.
+ * When used with createPropertyTransformer, this automatically provides the correct
+ * property type inside the transform function based on the type string.
+ *
+ * Example: TypedDatabasePropertyTransformer<'select'> will have transform function with
+ * context.property typed as GetPropertyByType<'select'>, giving access to property.select.
+ */
+export interface TypedDatabasePropertyTransformer<
+  T extends NotionDatabasePropertyType,
+> {
+  transform: (context: TypedDatabasePropertyContext<T>) => Promise<string>;
+  imports?: string[];
+}
