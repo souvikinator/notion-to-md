@@ -1,18 +1,43 @@
 import { MediaInfo, MediaManifestEntry } from './manifest-manager';
 import { TrackedBlockReferenceObject } from './fetcher';
+import { MediaManifestManager } from '../utils/manifest-manager/media';
+
+/**
+ * Input data provided to a media strategy's process method.
+ */
+export interface StrategyInput {
+  reference: TrackedBlockReferenceObject;
+  index?: number; // Index for multi-file properties
+  refId: string; // Unique ID for manifest tracking
+  manifestManager: MediaManifestManager; // Access to manifest data
+  lastEditedTime: string; // Last edited time of the source block/property
+  potentialFilename: string; // Pre-generated filename hint (e.g., for download)
+}
+
+/**
+ * Output structure returned by a media strategy's process method.
+ */
+export interface StrategyOutput {
+  /** Media information result. Null if processing was skipped or failed silently. */
+  mediaInfo: MediaInfo | null;
+  /** Indicates if the media manifest needs to be updated for this entry. */
+  needsManifestUpdate: boolean;
+  /**
+   * Indicates if the strategy considered this reference processed for the purpose of cleanup tracking.
+   * - `true`: The reference was processed (successfully or failed-forward). It should NOT be cleaned up.
+   * - `false`: The reference was intentionally skipped due to configuration (e.g., `enableFor`, `preserveExternalUrls`). It MAY be cleaned up if missing from other runs.
+   */
+  isProcessed: boolean;
+}
 
 export interface MediaStrategy {
   /**
-   * Process media and return information about the processed media
-   * @param reference The reference object containing media to process
-   * @param index Optional index for database properties with multiple files
-   * @returns Promise resolving to MediaInfo with processing results
-   * @throws MediaProcessingError if processing fails
+   * Process media based on the provided input, deciding whether to act based on manifest state and strategy logic.
+   * @param input Input data containing reference, manifest access, IDs, etc.
+   * @returns Promise resolving to StrategyOutput containing the result and manifest update requirement.
+   * @throws MediaProcessingError if processing fails and failForward is not enabled.
    */
-  process(
-    reference: TrackedBlockReferenceObject,
-    index?: number,
-  ): Promise<MediaInfo>;
+  process(input: StrategyInput): Promise<StrategyOutput>;
 
   /**
    * Transform the processed media path/URL according to configuration

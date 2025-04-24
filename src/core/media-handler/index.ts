@@ -1,15 +1,18 @@
 import { MediaHandlerError } from '../errors';
 import { MediaManifestManager } from '../../utils/manifest-manager/media';
-import { MediaInfo } from '../../types/manifest-manager';
 import { ProcessorChainNode, ChainData } from '../../types/module';
-import { MediaStrategy } from '../../types/strategy';
+import {
+  MediaStrategy,
+  StrategyInput,
+  StrategyOutput,
+} from '../../types/strategy';
 import {
   NotionBlock,
   NotionDatabaseEntryProperty,
   NotionPageProperty,
 } from '../../types/notion';
 import { TrackedBlockReferenceObject } from '../../types/fetcher';
-import * as fs from 'fs/promises';
+import { generateFilename } from '../../utils/media/filename';
 
 export interface MediaHandlerConfig {
   strategy: MediaStrategy;
@@ -51,7 +54,7 @@ export class MediaHandler implements ProcessorChainNode {
   async process(data: ChainData): Promise<ChainData> {
     console.debug('[MediaHandler] Starting processing chain');
 
-    if (data.blockTree.mediaBlockReferences) {
+    if (data.blockTree.mediaBlockReferences?.length) {
       console.debug(
         '[MediaHandler] Found media references to process:',
         data.blockTree.mediaBlockReferences.length,
@@ -69,19 +72,19 @@ export class MediaHandler implements ProcessorChainNode {
       data.manifests = {};
     }
 
-    data.manifests.media = this.manifestManager; // enable access to media manifest data
+    data.manifests.media = this.manifestManager;
 
     return this.next ? this.next.process(data) : data;
   }
 
   /**
-   * Process all media references
+   * Process all media references concurrently.
    */
   async processMediaReferences(
     mediaRefs: TrackedBlockReferenceObject[],
   ): Promise<void> {
     console.debug(
-      '[MediaHandler] Starting batch processing of media references',
+      '[MediaHandler] Starting concurrent batch processing of media references',
     );
 
     if (!this.manifestManager) {
@@ -91,22 +94,44 @@ export class MediaHandler implements ProcessorChainNode {
       throw new MediaHandlerError('Manifest manager not initialized');
     }
 
-    // Reset tracking state for references
     this.processedReferences.clear();
     console.debug('[MediaHandler] Reset processed references tracking');
 
-    console.debug('[MediaHandler] Processing media references in parallel');
+    console.debug(
+      `[MediaHandler] Processing ${mediaRefs.length} media references concurrently`,
+    );
 
-    // Process all references
-    for (const ref of mediaRefs) {
-      await this.processMediaReference(ref);
-    }
+    const processingPromises = mediaRefs.map(async (ref) => {
+      try {
+        await this.processMediaReference(ref);
+      } catch (error) {
+        // Handle errors from individual reference processing based on failForward
+        console.debug(
+          `[MediaHandler] Error processing reference ${ref.id} during concurrent execution:`,
+          error,
+        );
+        if (!this.failForward) {
+          // Log critical error if not failing forward (though Promise.allSettled proceeds)
+          console.error(
+            `[MediaHandler] Critical error processing reference ${ref.id}. Processing stopped for this item. Error: ${error instanceof Error ? error.message : error}`,
+          );
+          // NOTE: We don't re-throw here to allow Promise.allSettled to complete fully.
+        }
+        // If failing forward, log the error and continue with others.
+        console.error(
+          `[MediaHandler] Failed to process reference ${ref.id}, but continuing due to failForward=true: ${error instanceof Error ? error.message : error}`,
+        );
+      }
+    });
+
+    await Promise.allSettled(processingPromises);
+    console.debug('[MediaHandler] All concurrent processing settled.');
 
     console.debug('[MediaHandler] Starting cleanup of removed references');
     await this.cleanupRemovedReferences();
 
     console.debug('[MediaHandler] Saving manifest');
-    await (this.manifestManager as MediaManifestManager).save();
+    await this.manifestManager.save();
     console.debug('[MediaHandler] Batch processing complete');
   }
 
@@ -123,219 +148,114 @@ export class MediaHandler implements ProcessorChainNode {
     // Different handling based on reference type
     switch (ref.type) {
       case 'block': {
-        await this.processSingleReference(ref);
+        await this.processReferenceItem(ref);
         break;
       }
 
-      case 'database_property': {
-        // Process each file in the database property
-        const dbProperty = ref.ref as NotionDatabaseEntryProperty;
-        if (
-          dbProperty.type === 'files' &&
-          dbProperty.files &&
-          dbProperty.files.length > 0
-        ) {
-          for (let i = 0; i < dbProperty.files.length; i++) {
-            await this.processSingleReference(ref, i);
-          }
+      case 'database_property':
+      case 'page_property': {
+        const property = ref.ref as
+          | NotionDatabaseEntryProperty
+          | NotionPageProperty;
+        if (property.type === 'files' && property.files?.length > 0) {
+          console.debug(
+            `[MediaHandler] Processing ${property.files.length} file(s) in property: ${ref.propertyName}`,
+          );
+          const fileProcessingPromises = property.files.map((_file, i) =>
+            this.processReferenceItem(ref, i),
+          );
+          await Promise.allSettled(fileProcessingPromises);
+        } else {
+          console.debug(
+            `[MediaHandler] Skipping non-file or empty file property: ${ref.propertyName}`,
+          );
         }
         break;
       }
 
-      case 'page_property': {
-        // Process the page property (typically a single file)
-        await this.processSingleReference(ref);
+      default:
+        console.warn(
+          `[MediaHandler] Encountered unknown reference type: ${ref.type}`,
+        );
         break;
-      }
     }
   }
 
-  private async processSingleReference(
+  /**
+   * Processes a single identifiable media item, either a block or a file within a property.
+   * Delegates the core logic and decision-making to the configured strategy.
+   */
+  private async processReferenceItem(
     ref: TrackedBlockReferenceObject,
     index?: number,
   ): Promise<void> {
-    // Generate a reference ID for manifest tracking
     const refId = this.getCompositeReferenceId(ref, index);
-    console.debug('[MediaHandler] Processing single reference:', refId);
+    console.debug('[MediaHandler] Processing item reference ID:', refId);
 
-    // Check for existing entry
-    const existingEntry = this.manifestManager.getEntry(refId);
+    const potentialFilename = generateFilename(ref, index);
     const lastEditedTime = this.getLastEditedTime(ref);
 
-    // Check if entry exists, is unchanged, and file exists
-    if (existingEntry && existingEntry.lastEdited === lastEditedTime) {
-      // Check if the file still exists
-      if (existingEntry.mediaInfo.localPath) {
-        try {
-          await fs.access(existingEntry.mediaInfo.localPath);
+    const strategyInput: StrategyInput = {
+      reference: ref,
+      index,
+      refId,
+      manifestManager: this.manifestManager,
+      lastEditedTime,
+      potentialFilename,
+    };
 
-          // File exists and is unchanged, just apply transform
-          console.debug(
-            '[MediaHandler] Reference unchanged and file exists, applying transform:',
-            refId,
-          );
-          const transformedPath = this.strategy.transform(
-            existingEntry.mediaInfo,
-          );
+    console.debug('[MediaHandler] Calling strategy process for:', refId);
+    const strategyOutput: StrategyOutput =
+      await this.strategy.process(strategyInput);
 
-          // Update URLs in source
-          this.updateReferenceMedia(
-            ref,
-            {
-              ...existingEntry.mediaInfo,
-              transformedPath,
-            },
-            index,
-          );
+    console.debug(
+      '[MediaHandler] Strategy process completed for:',
+      refId,
+      'Output:',
+      strategyOutput,
+    );
 
-          this.processedReferences.add(refId);
-          return;
-        } catch (error: unknown) {
-          console.error(error);
-          // File doesn't exist, continue to processing
-          console.debug(
-            '[MediaHandler] Local file missing, reprocessing:',
-            refId,
-          );
-        }
-      }
-    }
-
-    // Process reference with the strategy
-    try {
-      console.debug('[MediaHandler] Processing media for reference:', refId);
-      const mediaInfo = await this.strategy.process(ref, index);
-
-      console.debug('[MediaHandler] Updating reference media:', refId);
-      this.updateReferenceMedia(ref, mediaInfo, index);
-
-      if (mediaInfo.type !== 'DIRECT') {
-        console.debug(
-          '[MediaHandler] Updating manifest entry for reference:',
-          refId,
-        );
-        await this.manifestManager.updateEntry(refId, {
-          mediaInfo,
-          lastEdited: lastEditedTime,
-        });
-      }
-
-      this.processedReferences.add(refId);
-      console.debug('[MediaHandler] Reference processing complete:', refId);
-    } catch (error) {
-      console.debug('[MediaHandler] Error processing reference:', refId, error);
-      if (!this.failForward) {
-        throw error;
-      }
-      console.error(error);
-    }
-  }
-
-  /**
-   * Update media in the reference source
-   */
-  private updateReferenceMedia(
-    ref: TrackedBlockReferenceObject,
-    mediaInfo: MediaInfo,
-    index?: number,
-  ): void {
-    switch (ref.type) {
-      case 'block':
-        this.updateBlockMedia(ref.ref as NotionBlock, mediaInfo);
-        break;
-
-      case 'database_property':
-        this.updatePropertyMedia(
-          ref.ref as NotionDatabaseEntryProperty,
-          mediaInfo,
-          index || 0,
-        );
-        break;
-
-      case 'page_property':
-        this.updatePropertyMedia(ref.ref as NotionPageProperty, mediaInfo, 0);
-        break;
-    }
-  }
-
-  private updatePropertyMedia(
-    property: NotionDatabaseEntryProperty | NotionPageProperty,
-    mediaInfo: MediaInfo,
-    index: number,
-  ): void {
-    if (
-      property.type !== 'files' ||
-      !property.files ||
-      !property.files[index]
-    ) {
+    // Update manifest based on strategy output (unchanged)
+    if (strategyOutput.needsManifestUpdate && strategyOutput.mediaInfo) {
+      console.debug('[MediaHandler] Updating manifest entry for:', refId);
+      await this.manifestManager.updateEntry(refId, {
+        mediaInfo: strategyOutput.mediaInfo,
+        lastEdited: lastEditedTime,
+      });
+    } else {
       console.debug(
-        '[MediaHandler] Invalid property or missing file at index:',
-        index,
+        '[MediaHandler] Manifest update not required by strategy for:',
+        refId,
       );
-      return;
     }
 
-    const fileEntry = property.files[index];
-    console.debug(
-      '[MediaHandler] Updating property media URL, type:',
-      fileEntry.type,
-    );
-
-    if (fileEntry.type === 'external') {
-      fileEntry.external.url =
-        mediaInfo.transformedPath || mediaInfo.originalUrl;
-    } else if (fileEntry.type === 'file') {
-      fileEntry.file.url = mediaInfo.transformedPath || mediaInfo.originalUrl;
+    // Add to set only if strategy did not skip due to configuration.
+    if (strategyOutput.isProcessed) {
+      this.processedReferences.add(refId);
+      console.debug('[MediaHandler] Marked as processed (for cleanup):', refId);
+    } else {
+      console.debug(
+        '[MediaHandler] Marked as NOT processed (due to config skip):',
+        refId,
+      );
     }
-
-    console.debug(
-      '[MediaHandler] Updated property media URL to:',
-      mediaInfo.transformedPath,
-    );
-  }
-
-  /**
-   * Update block with processed media information
-   */
-  private updateBlockMedia(block: NotionBlock, mediaInfo: MediaInfo): void {
-    console.debug(
-      '[MediaHandler] Updating media information for block:',
-      block.id,
-    );
-
-    if (!('type' in block)) {
-      console.debug('[MediaHandler] Invalid block structure, skipping update');
-      return;
-    }
-
-    const blockType = block.type as string;
-    if (!['image', 'video', 'file', 'pdf'].includes(blockType)) {
-      console.debug('[MediaHandler] Unsupported block type:', blockType);
-      return;
-    }
-
-    // @ts-ignore
-    const urlType = block[blockType].type;
-    console.debug(
-      '[MediaHandler] Updating URL for block type:',
-      blockType,
-      'URL type:',
-      urlType,
-    );
-
-    // @ts-ignore
-    block[blockType][urlType].url = mediaInfo.transformedPath;
-    console.debug(
-      '[MediaHandler] Updated block media URL to:',
-      mediaInfo.transformedPath,
-    );
   }
 
   private async cleanupRemovedReferences(): Promise<void> {
     console.debug('[MediaHandler] Starting cleanup of removed references');
     const manifestData = this.manifestManager.getManifest();
+    if (!manifestData?.mediaEntries) {
+      console.debug('[MediaHandler] No manifest entries found for cleanup.');
+      return;
+    }
 
-    // Find entries for references that no longer exist and clean them up
+    if (typeof this.strategy.cleanup !== 'function') {
+      console.debug(
+        '[MediaHandler] Current strategy does not implement cleanup method. Skipping cleanup phase.',
+      );
+      return;
+    }
+
     for (const [refId, entry] of Object.entries(manifestData.mediaEntries)) {
       if (!this.processedReferences.has(refId)) {
         console.debug('[MediaHandler] Cleaning up removed reference:', refId);
@@ -343,17 +263,18 @@ export class MediaHandler implements ProcessorChainNode {
           await this.strategy.cleanup(entry);
           this.manifestManager.removeEntry(refId);
           console.debug(
-            '[MediaHandler] Successfully cleaned up reference:',
+            '[MediaHandler] Successfully cleaned up and removed manifest entry for:',
             refId,
           );
         } catch (error) {
-          // Cleanup errors are always logged but don't stop processing
           console.debug(
             '[MediaHandler] Error during cleanup for reference:',
             refId,
             error,
           );
-          console.warn(error);
+          console.warn(
+            `[MediaHandler] Failed to cleanup media for reference ${refId}. Manifest entry retained. Error: ${error instanceof Error ? error.message : error}`,
+          );
         }
       }
     }
@@ -370,25 +291,37 @@ export class MediaHandler implements ProcessorChainNode {
         return ref.id;
 
       case 'database_property':
-        // For DB properties, include index to track each file separately
-        return `${ref.parentId}_${ref.propertyName || 'unnamed'}_${index || 0}`;
+      case 'page_property': {
+        const propIndex = index ?? 0;
+        const propName = ref.propertyName || 'unknown_prop';
+        const parentId = ref.parentId || ref.id;
+        return `${parentId}_${propName}_${propIndex}`;
+      }
 
-      case 'page_property':
-        // For page properties, don't need index (typically one file)
-        return `${ref.parentId}_${ref.propertyName || 'unnamed'}`;
-
-      default:
-        return `unknown_${ref.id}`;
+      default: {
+        console.warn(
+          `[MediaHandler] Generating fallback composite ID for unknown type: ${ref.type}`,
+        );
+        const unknownIndex = index ?? 0;
+        return `unknown_${ref.id}_${unknownIndex}`;
+      }
     }
   }
 
-  // Get last edited time from the reference
+  // Get last edited time from the reference source
   private getLastEditedTime(ref: TrackedBlockReferenceObject): string {
-    if (ref.type === 'block') {
+    if (ref.type === 'block' && 'last_edited_time' in ref.ref) {
       return (ref.ref as NotionBlock).last_edited_time;
     }
 
-    // For properties, just use the current time
+    if ('last_edited_time' in ref.ref) {
+      // @ts-ignore
+      return ref.ref.last_edited_time;
+    }
+
+    console.warn(
+      `[MediaHandler] Could not determine last_edited_time for ref ${ref.id}. Falling back to current time.`,
+    );
     return new Date().toISOString();
   }
 }

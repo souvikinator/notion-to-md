@@ -2,29 +2,38 @@ import fetch from 'node-fetch';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { isExternalUrl } from '../../../utils/notion';
-import { DownloadStrategyConfig } from '../../../types/configuration';
+import {
+  DownloadStrategyConfig,
+  MediaReferenceType,
+} from '../../../types/configuration';
 import {
   MediaInfo,
   MediaStrategyType,
   MediaManifestEntry,
 } from '../../../types/manifest-manager';
-import { MediaStrategy, MediaProcessingError } from '../../../types/strategy';
 import {
-  NotionBlock,
-  NotionDatabaseEntryProperty,
-  NotionPageProperty,
-} from '../../../types/notion';
-import { TrackedBlockReferenceObject } from '../../../types/fetcher';
-import { generateFilename } from '../../../utils/media';
+  MediaStrategy,
+  MediaProcessingError,
+  StrategyInput,
+  StrategyOutput,
+} from '../../../types/strategy';
+import {
+  extractReferenceUrl,
+  updateReferenceSourceUrl,
+} from '../../../utils/media/referenceUtils';
+
+// Default types for DownloadStrategy if not specified
+const DEFAULT_DOWNLOAD_ENABLE_TYPES: MediaReferenceType[] = [
+  'block',
+  'database_property',
+  'page_property',
+];
 
 export class DownloadStrategy implements MediaStrategy {
+  private readonly enabledTypes: MediaReferenceType[];
   constructor(private config: DownloadStrategyConfig) {
     console.debug('[DownloadStrategy] Initializing with config:', config);
-    // Constructor validation always throws since it's a configuration error
     if (!config.outputDir) {
-      console.debug(
-        '[DownloadStrategy] Initialization failed: missing outputDir',
-      );
       throw new MediaProcessingError(
         'Configuration Error',
         'constructor',
@@ -32,208 +41,221 @@ export class DownloadStrategy implements MediaStrategy {
         new Error('outputDir is required for DownloadStrategy'),
       );
     }
-
-    // Set default for failForward if not provided
     this.config.failForward = config.failForward ?? true;
-    console.debug(
-      '[DownloadStrategy] Initialized successfully. failForward:',
-      this.config.failForward,
-    );
+    this.enabledTypes = config.enableFor ?? DEFAULT_DOWNLOAD_ENABLE_TYPES;
+    console.debug('[DownloadStrategy] Initialized successfully:', {
+      failForward: this.config.failForward,
+      enabledTypes: this.enabledTypes,
+    });
   }
 
-  async process(
-    reference: TrackedBlockReferenceObject,
-    index?: number,
-  ): Promise<MediaInfo> {
-    const id = reference.id;
-    console.debug(
-      '[DownloadStrategy] Processing reference:',
-      id,
-      'type:',
-      reference.type,
-    );
+  async process(input: StrategyInput): Promise<StrategyOutput> {
+    const {
+      reference,
+      index,
+      refId,
+      manifestManager,
+      lastEditedTime,
+      potentialFilename,
+    } = input;
 
-    console.debug(
-      '[DownloadStrategy] Extracting media URL from reference:',
-      id,
-    );
-    const url = this.extractReferenceUrl(reference, index);
-    if (!url) {
-      console.debug('[DownloadStrategy] No media URL found in reference:', id);
-      const error = new MediaProcessingError(
-        'No media URL found in reference',
-        id,
-        'process',
-        new Error('URL extraction failed'),
+    const refType = reference.type as MediaReferenceType;
+    if (!this.enabledTypes.includes(refType)) {
+      console.debug(
+        `[DownloadStrategy] Skipping reference ${refId}: Type '${refType}' not enabled.`,
       );
-
-      if (!this.config.failForward) {
-        throw error;
-      }
-
-      console.error(error);
+      // Skipped due to config
       return {
-        type: MediaStrategyType.DIRECT,
-        originalUrl: '',
-        transformedPath: '',
-        sourceType: reference.type,
+        mediaInfo: null,
+        needsManifestUpdate: false,
+        isProcessed: false,
       };
     }
 
-    console.debug('[DownloadStrategy] Extracted media URL:', url);
+    console.debug(
+      '[DownloadStrategy] Processing reference ID:',
+      refId,
+      'type:',
+      refType,
+    );
 
-    // Handle external URLs - this is always allowed regardless of failForward
+    const url = extractReferenceUrl(reference, index);
+    if (!url) {
+      console.error(
+        `[DownloadStrategy] Failed to extract URL for ${refId}, skipping.`,
+      );
+      if (!this.config.failForward) {
+        throw new MediaProcessingError(
+          'No media URL found in reference',
+          refId,
+          'process',
+          new Error('URL extraction failed'),
+        );
+      }
+      // Failed forward during URL extraction
+      return { mediaInfo: null, needsManifestUpdate: false, isProcessed: true };
+    }
+
     if (this.config.preserveExternalUrls && isExternalUrl(url)) {
-      console.debug('[DownloadStrategy] Preserving external URL:', url);
+      console.debug(
+        `[DownloadStrategy] Preserving external URL for ${refId}: ${url}`,
+      );
+      // Skipped due to config. We don't update the source URL, just return.
       return {
-        type: MediaStrategyType.DIRECT,
-        originalUrl: url,
-        transformedPath: url,
-        sourceType: reference.type,
-        propertyName: reference.propertyName,
-        propertyIndex:
-          reference.type === 'database_property' ? index : undefined,
+        mediaInfo: null,
+        needsManifestUpdate: false,
+        isProcessed: false,
       };
+    }
+
+    const existingEntry = manifestManager.getEntry(refId);
+    if (existingEntry && existingEntry.lastEdited === lastEditedTime) {
+      if (existingEntry.mediaInfo.localPath) {
+        try {
+          await fs.access(existingEntry.mediaInfo.localPath);
+          console.debug(
+            `[DownloadStrategy] Using existing unchanged local file for ${refId}.`,
+          );
+          const transformedPath = this.transform(existingEntry.mediaInfo);
+          const mediaInfo: MediaInfo = {
+            ...existingEntry.mediaInfo,
+            transformedPath,
+          };
+          updateReferenceSourceUrl(reference, index, mediaInfo);
+          // Processed successfully using cache/local file
+          return {
+            mediaInfo: mediaInfo,
+            needsManifestUpdate: false,
+            isProcessed: true,
+          };
+        } catch (error) {
+          // Error accessing the local file (could be missing, permissions, etc.)
+          console.debug(
+            `[DownloadStrategy] Failed to access local file path for ${refId} (${existingEntry.mediaInfo.localPath}). Error: ${error instanceof Error ? error.message : error}. Proceeding to download.`,
+          );
+        }
+      } else {
+        console.debug(
+          `[DownloadStrategy] Manifest entry for ${refId} has no local path, proceeding to download.`,
+        );
+      }
+    } else {
+      console.debug(
+        `[DownloadStrategy] No matching/unchanged manifest entry for ${refId}, proceeding to download.`,
+      );
     }
 
     try {
-      console.debug('[DownloadStrategy] Downloading file from:', url);
-
-      // Generate filename based on reference type
-      const filename = generateFilename(reference, index);
-
-      const localPath = await this.downloadFile(url, filename);
-
+      if (!potentialFilename) {
+        throw new Error('Filename generation failed.');
+      }
       console.debug(
-        '[DownloadStrategy] File downloaded successfully. Local path:',
+        `[DownloadStrategy] Attempting download for ${refId} from:`,
+        url,
+      );
+      const localPath = await this.downloadFile(url, potentialFilename);
+      console.debug(
+        `[DownloadStrategy] File downloaded for ${refId} to:`,
         localPath,
       );
 
-      const mediaInfo: MediaInfo = {
+      const downloadedMediaInfo: Omit<MediaInfo, 'transformedPath'> = {
         type: MediaStrategyType.DOWNLOAD,
         originalUrl: url,
         localPath,
-        sourceType: reference.type,
+        sourceType: refType,
         propertyName: reference.propertyName,
-        propertyIndex:
-          reference.type === 'database_property' ? index : undefined,
-        transformedPath: this.transform({
-          type: MediaStrategyType.DOWNLOAD,
-          originalUrl: url,
-          localPath,
-          sourceType: reference.type,
-        }),
+        propertyIndex: index,
+      };
+      const transformedPath = this.transform(downloadedMediaInfo as MediaInfo);
+      const finalMediaInfo: MediaInfo = {
+        ...downloadedMediaInfo,
+        transformedPath,
       };
 
-      console.debug('[DownloadStrategy] Media info created:', mediaInfo);
-      return mediaInfo;
+      updateReferenceSourceUrl(reference, index, finalMediaInfo);
+      // Processed successfully by downloading
+      return {
+        mediaInfo: finalMediaInfo,
+        needsManifestUpdate: true,
+        isProcessed: true,
+      };
     } catch (error) {
-      console.debug('[DownloadStrategy] Error processing reference:', error);
-      const processingError = new MediaProcessingError(
-        'Failed to download media',
-        id,
-        'process',
+      console.error(
+        `[DownloadStrategy] Error downloading/processing for ${refId}:`,
         error,
       );
-
       if (!this.config.failForward) {
-        throw processingError;
+        throw new MediaProcessingError(
+          `Failed to download media for ${refId}`,
+          refId,
+          'process',
+          error,
+        );
       }
-
-      console.error(processingError);
-      return {
-        type: MediaStrategyType.DIRECT,
-        originalUrl: url,
-        transformedPath: url,
-        sourceType: reference.type,
-        propertyName: reference.propertyName,
-        propertyIndex:
-          reference.type === 'database_property' ? index : undefined,
-      };
+      // Failed forward during download/processing
+      return { mediaInfo: null, needsManifestUpdate: false, isProcessed: true };
     }
   }
 
   transform(mediaInfo: MediaInfo): string {
     if (mediaInfo.type === MediaStrategyType.DIRECT) {
-      console.debug(
-        '[DownloadStrategy] Direct media type, returning original URL',
-      );
       return mediaInfo.originalUrl;
     }
-
     if (!mediaInfo.localPath) {
-      console.debug('[DownloadStrategy] Missing local path in media info');
-      const error = new MediaProcessingError(
-        'Missing local path for downloaded file',
-        'unknown',
-        'transform',
-        new Error('Local path required for transformation'),
+      // This case should ideally not happen if process logic is correct, but handle defensively
+      console.error(
+        `[DownloadStrategy] Transform error: Missing local path for media: ${mediaInfo.originalUrl}`,
       );
-
       if (!this.config.failForward) {
-        throw error;
+        throw new MediaProcessingError(
+          'Missing local path for downloaded file',
+          mediaInfo.originalUrl,
+          'transform',
+          new Error('Local path required'),
+        );
       }
-
-      console.error(error);
-      return mediaInfo.originalUrl;
+      return mediaInfo.originalUrl; // Fallback
     }
 
     try {
-      if (this.config.transformPath) {
-        console.debug('[DownloadStrategy] Applying custom path transformation');
-        return this.config.transformPath(mediaInfo.localPath);
-      }
-
-      console.debug('[DownloadStrategy] Using default path');
-      return mediaInfo.localPath;
+      return this.config.transformPath
+        ? this.config.transformPath(mediaInfo.localPath)
+        : mediaInfo.localPath;
     } catch (error) {
-      console.debug(
-        '[DownloadStrategy] Error during path transformation:',
+      console.error(
+        `[DownloadStrategy] Error during path transformation for ${mediaInfo.localPath}:`,
         error,
       );
-      const processingError = new MediaProcessingError(
-        'Failed to transform path',
-        'unknown',
-        'transform',
-        error,
-      );
-
       if (!this.config.failForward) {
-        throw processingError;
+        throw new MediaProcessingError(
+          'Failed to transform path',
+          mediaInfo.localPath,
+          'transform',
+          error,
+        );
       }
-
-      console.error(processingError);
-      return mediaInfo.originalUrl;
+      return mediaInfo.originalUrl; // Fallback
     }
   }
 
   async cleanup(entry: MediaManifestEntry): Promise<void> {
-    console.debug(
-      '[DownloadStrategy] Starting cleanup for media at: ',
-      entry.mediaInfo.localPath,
-    );
-    // Cleanup always fails forward regardless of config
-    // This prevents cleanup errors from breaking the entire process
     if (
       entry.mediaInfo.type === MediaStrategyType.DOWNLOAD &&
       entry.mediaInfo.localPath
     ) {
       try {
         console.debug(
-          '[DownloadStrategy] Deleting file:',
-          entry.mediaInfo.localPath,
+          `[DownloadStrategy] Deleting file: ${entry.mediaInfo.localPath}`,
         );
         await fs.unlink(entry.mediaInfo.localPath);
         console.debug('[DownloadStrategy] File deleted successfully');
       } catch (error) {
-        console.debug('[DownloadStrategy] Error during cleanup:', error);
-        const processingError = new MediaProcessingError(
-          'Failed to cleanup file',
-          entry.mediaInfo.localPath,
-          'cleanup',
+        // Log error but don't throw, cleanup should be best-effort
+        console.error(
+          `[DownloadStrategy] Failed to cleanup file ${entry.mediaInfo.localPath}:`,
           error,
         );
-        console.error(processingError);
       }
     } else {
       console.debug('[DownloadStrategy] Nothing to cleanup for entry');
@@ -243,125 +265,15 @@ export class DownloadStrategy implements MediaStrategy {
   private async downloadFile(url: string, filename: string): Promise<string> {
     const response = await fetch(url);
     if (!response.ok) {
-      console.debug(
-        '[DownloadStrategy] Download failed with status:',
-        response.status,
+      throw new Error(
+        `Download failed (${response.status}): ${response.statusText} for URL: ${url}`,
       );
-      throw new Error(`Failed to download file: ${response.statusText}`);
     }
 
     await fs.mkdir(this.config.outputDir, { recursive: true });
-    console.debug(
-      '[DownloadStrategy] Created output directory:',
-      this.config.outputDir,
-    );
-
     const localPath = path.join(this.config.outputDir, filename);
-    console.debug('[DownloadStrategy] Generated local path:', localPath);
-
     const buffer = await response.buffer();
     await fs.writeFile(localPath, buffer);
-    console.debug('[DownloadStrategy] File written successfully');
-
     return localPath;
-  }
-
-  private extractReferenceUrl(
-    reference: TrackedBlockReferenceObject,
-    index: number = 0,
-  ): string | null {
-    try {
-      switch (reference.type) {
-        case 'block':
-          return this.extractBlockUrl(reference.ref as NotionBlock);
-
-        case 'database_property':
-          return this.extractDatabasePropertyUrl(
-            reference.ref as NotionDatabaseEntryProperty,
-            index,
-          );
-
-        case 'page_property':
-          return this.extractPagePropertyUrl(
-            reference.ref as NotionPageProperty,
-          );
-
-        default:
-          return null;
-      }
-    } catch (error) {
-      console.debug(
-        '[DownloadStrategy] Error extracting reference URL:',
-        error,
-      );
-      return null;
-    }
-  }
-
-  private extractBlockUrl(block: NotionBlock): string | null {
-    try {
-      if (!block || !('type' in block)) {
-        console.debug('[DownloadStrategy] Invalid block structure');
-        return null;
-      }
-
-      if (!['image', 'video', 'file', 'pdf'].includes(block.type)) {
-        console.debug('[DownloadStrategy] Unsupported block type:', block.type);
-        return null;
-      }
-
-      // @ts-ignore
-      const mediaBlock = block[block.type];
-
-      if (!mediaBlock) {
-        console.debug('[DownloadStrategy] No media block found');
-        return null;
-      }
-
-      const url =
-        mediaBlock.type === 'external'
-          ? mediaBlock.external?.url
-          : mediaBlock.file?.url;
-
-      return url;
-    } catch (error) {
-      console.debug('[DownloadStrategy] Error extracting block URL:', error);
-      return null;
-    }
-  }
-
-  private extractDatabasePropertyUrl(
-    property: NotionDatabaseEntryProperty,
-    index: number,
-  ): string | null {
-    if (
-      property.type !== 'files' ||
-      !property.files ||
-      !property.files[index]
-    ) {
-      return null;
-    }
-
-    const fileEntry = property.files[index];
-    if (fileEntry.type === 'external') {
-      return fileEntry.external?.url || null;
-    } else {
-      // Using optional chaining to handle potential undefined
-      return (fileEntry as any).file?.url || null;
-    }
-  }
-
-  private extractPagePropertyUrl(property: NotionPageProperty): string | null {
-    if (property.type !== 'files' || !property.files || !property.files[0]) {
-      return null;
-    }
-
-    const fileEntry = property.files[0];
-    if (fileEntry.type === 'external') {
-      return fileEntry.external?.url || null;
-    } else {
-      // Using optional chaining and typecasting to handle potential undefined
-      return (fileEntry as any).file?.url || null;
-    }
   }
 }

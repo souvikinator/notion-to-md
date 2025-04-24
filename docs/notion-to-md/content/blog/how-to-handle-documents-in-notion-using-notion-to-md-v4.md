@@ -14,6 +14,7 @@ tags:
   - renderer plugin
   - pdf
   - media handler
+  - buffer
 excludeSearch: true
 comments: true
 ---
@@ -28,44 +29,157 @@ Embedded PDFs or any media in Notion present several unique challenges:
 
 ## Media Handling Strategies
 
-The first step in working with PDFs or any media is ensuring the files themselves are properly handled. notion-to-md v4 offers three approaches:
+notion-to-md v4 offers three approaches:
 
-1. Direct Strategy
+1. Direct Strategy (Default)
+   - Simple: Uses original Notion URLs
+   - Advanced: Buffers media in memory for processing
 2. Download Strategy
+   - Saves files to your local filesystem
 3. Upload Strategy
+   - Uploads files to external storage (S3, Cloudinary, etc.)
 
-To know more about each strategy, refer to the [Media Handling Strategies](../../docs/v4/concepts/media-handler) guide.
+To know more about each strategy, refer to the [Media Handling Strategies](../../docs/v4/concepts/configuration/#media-handling-configuration) guide.
 
-In this guide we are going to use the download strategy to store the pdfs locally.
+In this guide, we'll explore both the Direct Strategy (with buffering) and Download Strategy to process PDFs. Each approach has its advantages:
+
+- **Direct Strategy with Buffering**: Perfect for processing PDFs in memory without saving them to disk. Proves to be useful in serverless environment.
+- **Download Strategy**: Ideal when you need permanent local copies of the files.
 
 ## Processing PDF Content
 
-If you need to extract and include text from PDFs into your content, you can modify the **PDF block transformer**. This method is extremely helpful for **enhancing search optimization**, improving accessibility, and creating **automatic content summaries**. By extracting text from PDFs, you ensure that vital information is indexed and easily searchable inside your documentation or website.
+Let's look at both approaches for extracting and processing PDF content.
 
 Here is what our target page looks like:
 
 ![notion page with pdf embedded](/images/notion-page-with-pdf-embedded.png)
 
-{{% details title="Code to process PDF content" closed="true"  %}}
+### Approach 1: Using Direct Strategy with Buffering
+
+This approach processes PDFs directly in memory without saving them to disk:
+
+{{% details title="Code using Direct Strategy with buffering" closed="true" %}}
 
 ```typescript
-import { Client } from "@notionhq/client";
-import { NotionConverter } from "notion-to-md";
-import { DefaultExporter } from "notion-to-md/plugins/exporter";
-import { MDXRenderer } from "notion-to-md/plugins/renderer";
-import pdf from "pdf-parse";
-import fs from "fs/promises";
-import path from "path";
+import { Client } from '@notionhq/client';
+import { NotionConverter } from 'notion-to-md';
+import { DefaultExporter } from 'notion-to-md/plugins/exporter';
+import { MDXRenderer } from 'notion-to-md/plugins/renderer';
+import pdf from 'pdf-parse';
 
 // Initialize Notion client
 const notion = new Client({
-  auth: "your-notion-api-key",
+  auth: 'your-notion-api-key',
 });
 
 const renderer = new MDXRenderer();
 
 // Customize how PDF blocks are processed
-renderer.createBlockTransformer("pdf", {
+renderer.createBlockTransformer('pdf', {
+  transform: async ({ block, utils }) => {
+    // Access the buffer directly from the block
+    if (block.buffer) {
+      try {
+        // Parse PDF directly from buffer
+        const data = await pdf(block.buffer);
+
+        // Extract first 1000 characters for preview
+        const preview = data.text.slice(0, 1000).trim();
+
+        // Get caption if available
+        const caption =
+          block.pdf.caption.length > 0
+            ? block.pdf.caption[0].plain_text
+            : 'Document Preview';
+
+        // Format as collapsible preview with original URL
+        return `
+<details>
+<summary>${caption}</summary>
+
+\`\`\`text
+${preview}...
+\`\`\`
+
+[View Full Document](${
+          block.pdf.type === 'external'
+            ? block.pdf.external.url
+            : block.pdf.file.url
+        })
+</details>`;
+      } catch (error) {
+        console.error('Failed to process PDF:', error);
+        return '[PDF Processing Failed]';
+      }
+    }
+
+    // Fallback to URL if buffer is unavailable
+    const pdfUrl =
+      block.pdf.type === 'external'
+        ? block.pdf.external.url
+        : block.pdf.file.url;
+
+    return `[PDF Document](${pdfUrl})`;
+  },
+});
+
+const n2m = new NotionConverter(notion)
+  .configureFetcher({
+    fetchComments: true,
+    fetchPageProperties: true,
+  })
+  // Configure Direct Strategy with buffering
+  .useDirectStrategy({
+    buffer: {
+      enableFor: ['block'],
+      includeBlockContentTypes: ['pdf'],
+      maxBufferSize: 10 * 1024 * 1024, // 10MB limit
+    },
+  })
+  .withRenderer(renderer)
+  .withExporter(
+    new DefaultExporter({
+      outputType: 'file',
+      outputPath: './output.md',
+    }),
+  );
+
+(async () => {
+  try {
+    await n2m.convert('page-id');
+    console.log('✓ Successfully converted page with buffered PDF processing!');
+  } catch (error) {
+    console.error('Conversion failed:', error);
+  }
+})();
+```
+
+{{% /details %}}
+
+### Approach 2: Using Download Strategy
+
+When you need to save PDFs locally and process them:
+
+{{% details title="Code using Download Strategy" closed="true"  %}}
+
+```typescript
+import { Client } from '@notionhq/client';
+import { NotionConverter } from 'notion-to-md';
+import { DefaultExporter } from 'notion-to-md/plugins/exporter';
+import { MDXRenderer } from 'notion-to-md/plugins/renderer';
+import pdf from 'pdf-parse';
+import fs from 'fs/promises';
+import path from 'path';
+
+// Initialize Notion client
+const notion = new Client({
+  auth: 'your-notion-api-key',
+});
+
+const renderer = new MDXRenderer();
+
+// Customize how PDF blocks are processed
+renderer.createBlockTransformer('pdf', {
   transform: async ({ block, manifest }) => {
     // @ts-ignore
     const pdfBlock = block.pdf;
@@ -82,7 +196,7 @@ renderer.createBlockTransformer("pdf", {
     if (!localPath) {
       return `[PDF File Not Found]`;
     }
-    console.log(mediaEntry, path.basename(localPath || ""));
+    console.log(mediaEntry, path.basename(localPath || ''));
 
     // Read and parse the PDF
     const dataBuffer = await fs.readFile(localPath);
@@ -94,7 +208,7 @@ renderer.createBlockTransformer("pdf", {
     // Format as collapsible preview with link
     return `
 <details>
-<summary>${pdfBlock.caption.length > 0 ? pdfBlock.caption[0].plain_text : "Document Preview"}</summary>
+<summary>${pdfBlock.caption.length > 0 ? pdfBlock.caption[0].plain_text : 'Document Preview'}</summary>
 
 \`\`\`text
 ${preview}...
@@ -112,23 +226,23 @@ const n2m = new NotionConverter(notion)
     fetchPageProperties: true,
   })
   .downloadMediaTo({
-    outputDir: "./public/documents",
+    outputDir: './public/documents',
     transformPath: (localPath) => `/documents/${path.basename(localPath)}`,
   })
   .withRenderer(renderer)
   .withExporter(
     new DefaultExporter({
-      outputType: "file",
-      outputPath: "./output.md",
+      outputType: 'file',
+      outputPath: './output.md',
     }),
   );
 
 (async () => {
   try {
-    await n2m.convert("page-id");
-    console.log("✓ Successfully converted page with comments as footnotes!");
+    await n2m.convert('page-id');
+    console.log('✓ Successfully converted page with downloaded PDFs!');
   } catch (error) {
-    console.error("Conversion failed:", error);
+    console.error('Conversion failed:', error);
   }
 })();
 ```
@@ -136,15 +250,13 @@ const n2m = new NotionConverter(notion)
 {{% /details %}}
 
 > [!TIP]
-> It's not necessary to use the download strategy or media handler, you can directly get the original notion URL from `mediaEntry.mediaInfo.originalUrl`, read the PDF content and do as your usecase requires.
+> Choose the Direct Strategy with buffering when you only need to process the PDF content and don't need to store the files. Use the Download Strategy when you need permanent local copies or want to serve the PDFs from your own server.
 
 {{% details title="Markdown Output" closed="true"  %}}
 
 ![notion page with pdf converted using notion to md v4](https://gist.github.com/user-attachments/assets/b38564b4-3abc-433e-a415-605842191011)
 
 {{% /details %}}
-
-Further efforts can be put into formatting the content of the PDF.
 
 ## Embedding PDFs
 
@@ -165,27 +277,39 @@ export function PDFViewer({ url }: { url: string }) {
 }
 ```
 
-and we use that in our mdx file
+You can use this component with either strategy:
 
-```typescript {filename="src/app/example/page.mdx"}
+```typescript
 renderer.createBlockTransformer('pdf', {
-  transform: async ({ block, manifest }) => {
-    const pdfBlock = block.pdf;
-    const mediaEntry = manifest.media?.getEntry(block.id);
-
-    if (!mediaEntry) {
-      return `[PDF File Not Found]`;
+  transform: async ({ block, manifest, utils }) => {
+    // For Direct Strategy with buffering
+    if (block.buffer) {
+      // You could convert the buffer to a data URL
+      const base64 = block.buffer.toString('base64');
+      return `
+<PDFViewer url="data:application/pdf;base64,${base64}" />
+`;
     }
 
-    const { transformedUrl } = mediaEntry.mediaInfo;
+    // For Download Strategy
+    const mediaEntry = manifest.media?.getEntry(block.id);
+    if (mediaEntry?.mediaInfo.transformedPath) {
+      return `
+<PDFViewer url="${mediaEntry.mediaInfo.transformedPath}" />
+`;
+    }
+
+    // Fallback to original URL
+    const pdfUrl =
+      block.pdf.type === 'external'
+        ? block.pdf.external.url
+        : block.pdf.file.url;
 
     return `
-<PDFViewer url="${transformedUrl}" />
+<PDFViewer url="${pdfUrl}" />
 `;
   },
-  imports: [
-    `import { PDFViewer } from '@/components/PDFViewer';` // import the component
-  ]
+  imports: [`import { PDFViewer } from '@/components/PDFViewer';`],
 });
 ```
 
@@ -196,46 +320,45 @@ Here is your output MDX content:
 
 ```markdown
 ---
-Created: "2025-01-04T02:17:00.000Z"
-Tags: ["V4", "notion to md", "test"]
-PublishURL: "/page-1"
-Name: "Handling PDF using Notion to md v4"
+Created: '2025-01-04T02:17:00.000Z'
+Tags: ['V4', 'notion to md', 'test']
+PublishURL: '/page-1'
+Name: 'Handling PDF using Notion to md v4'
 ---
 
 import { PDFViewer } from '@/components/PDFViewer';
 
 # Embedded pdf
 
-I’ll put up my resume for this example (I’m looking for opportunities 😅)
+I'll put up my resume for this example (I'm looking for opportunities 😅)
 
-<PDFViewer url="/documents/1b54171b-8be6-8019-9f53-cc63c3e7ae2f.pdf" />
+<PDFViewer url="data:application/pdf;base64,JVBERi0xLjcKCjEgMCBvYmogICUgZW50..." />
 ```
 
 and this is how it'll show up in browser:
 
 ![notion page embedded pdf output renderer using notion-to-md](https://gist.github.com/user-attachments/assets/4e463d4d-fb0d-4122-a4b0-940088686f47)
 
-
 ## Conclusion:
 
 With **notion-to-md v4**, managing PDFs is more flexible than ever. You can:
 
-1. Use media handlers to effectively store and manage files.
-2. Extract content from PDF blocks and integrate it smoothly into your workflow.
-3. Use MDX to embed rich documents and create a more dynamic experience.
+1. Use the Direct Strategy with buffering for efficient in-memory processing
+2. Use the Download Strategy for permanent local storage
+3. Extract content from PDFs for better SEO and accessibility
+4. Create interactive PDF experiences in your web content
 
-Whether you require **improved searchability through content extraction** or **an interactive PDF viewer for your website**, you may choose what works best for you.
-
-Best of all, you're not restricted to simply HTML,JSX,TSX,etc; you may also use **shortcodes** provided by your static site generator for even more personalization.
+Whether you need quick in-memory processing or permanent local storage, notion-to-md v4 provides the tools to handle PDFs effectively.
 
 > [!NOTE]
+>
 > ## Share Your Use Case and Work
 >
 > Have you created an interesting customization or workflow with notion-to-md?
 > We'd love to hear about it! Consider sharing your experience by:
 >
 > 1. Creating a blog post in the [notion-to-md blog](/notion-to-md/blog/) section
-> 2. Adding an entry to our [plugin catalog](/notion-to-md/catalogue/) if you've built a > reusable plugin
+> 2. Adding an entry to our [plugin catalog](/notion-to-md/catalogue/) if you've built a reusable plugin
 > 3. Joining our community discussions on GitHub
 >
 > Your real-world examples can help others unlock the full potential of using Notion as a content source!

@@ -32,7 +32,7 @@ export const createFrontmatterResolver = (): VariableResolver => {
     const frontmatterObj: Record<string, any> = {};
 
     // Process properties according to configuration
-    for (const [key, value] of Object.entries(properties)) {
+    for (const [key, property] of Object.entries(properties)) {
       // Skip if explicitly excluded
       if (config.exclude?.includes(key)) {
         continue;
@@ -45,7 +45,23 @@ export const createFrontmatterResolver = (): VariableResolver => {
 
       // Apply property name mapping or use original
       const propertyName = config.rename?.[key] || key;
-      frontmatterObj[propertyName] = extractPropertyValue(value);
+
+      // Apply transformation function if specified
+      if (config.transform?.[key]) {
+        try {
+          frontmatterObj[propertyName] = config.transform[key](
+            property,
+            properties,
+          );
+        } catch (error) {
+          console.error(`Error transforming property ${key}:`, error);
+          // Fallback to extracted value
+          frontmatterObj[propertyName] = extractPropertyValue(property);
+        }
+      } else {
+        // Use standard extraction
+        frontmatterObj[propertyName] = extractPropertyValue(property);
+      }
     }
 
     // Apply any provided defaults
@@ -92,6 +108,8 @@ export function getDefaultFrontmatterConfig(): FrontmatterConfig {
     rename: undefined,
     // No default values
     defaults: undefined,
+    // No transform functions
+    transform: undefined,
   };
 }
 

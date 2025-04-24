@@ -4,12 +4,23 @@ import { annotationTransformers } from './transformers/annotations';
 import { createDefaultVariableResolvers } from './resolvers';
 import { databasePropertyTransformers } from './transformers/database-properties';
 import { formatAsMarkdownTable, transformDatabaseToTable } from './helpers';
+import {
+  NotionPageProperties,
+  NotionPageProperty,
+} from '../../../types/notion';
 
 export interface FrontmatterConfig {
   include?: string[];
   exclude?: string[];
   rename?: Record<string, string>;
   defaults?: Record<string, any>;
+  transform?: Record<
+    string,
+    (
+      property: NotionPageProperty,
+      allProperties: NotionPageProperties,
+    ) => string
+  >;
 }
 
 export type FrontmatterOptions = boolean | FrontmatterConfig;

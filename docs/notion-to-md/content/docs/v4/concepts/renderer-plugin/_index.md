@@ -11,11 +11,10 @@ This guide is a must read for anyone looking to customize existing plugins or cr
 ## Core Components
 
 {{< cards >}}
-  {{< card link="./variables-and-templates" title="Variables and Templates" icon="variables-icon" >}}
-  {{< card link="./block-transformer" title="Block Transformers" icon="block-transformers-icon" >}}
-  {{< card link="./annotation-transformer" title="Annotation Transformers" icon="annotation-transformers-icon" >}}
+{{< card link="./variables-and-templates" title="Variables and Templates" icon="variables-icon" >}}
+{{< card link="./block-transformer" title="Block Transformers" icon="block-transformers-icon" >}}
+{{< card link="./annotation-transformer" title="Annotation Transformers" icon="annotation-transformers-icon" >}}
 {{< /cards >}}
-
 
 Every renderer plugin consists of four essential components:
 
@@ -33,7 +32,6 @@ graph TD
     style D fill:#fed7d7,stroke:#e53e3e,color:#000000
     style E fill:#f0f4f8,stroke:#4a5568,color:#000000
 ```
-
 
 ## Renderer Lifecycle and Flow
 
@@ -117,11 +115,11 @@ Throughout the rendering process, components have access to a comprehensive [con
 
 ```typescript
 interface RendererContext {
-  pageId: string;                // The Notion page ID
+  pageId: string; // The Notion page ID
   pageProperties: PageProperties; // Notion page properties
-  metadata: ContextMetadata;     // Additional metadata
-  block: Block;                  // Current block (during transforms)
-  blockTree: Block[];            // All blocks
+  metadata: ContextMetadata; // Additional metadata
+  block: Block; // Current block (during transforms)
+  blockTree: Block[]; // All blocks
   variableData: VariableCollector; // Collected variable data
   transformers: {
     blocks: Record<BlockType, BlockTransformer>;
@@ -166,6 +164,5 @@ const n2m = new NotionConverter(notionClient);
 
 // Using a custom renderer
 const htmlRenderer = new HTMLRenderer();
-const n2m = new NotionConverter(notionClient)
-  .withRenderer(htmlRenderer);
+const n2m = new NotionConverter(notionClient).withRenderer(htmlRenderer);
 ```
