@@ -1,6 +1,6 @@
 ---
 title: v4-0-0-alpha.5
-date: 2025-04-25
+date: 2025-04-24
 description: Overview of the key improvements and features introduced in notion-to-md v4.0.0-alpha.5.
 tags:
   - changelog
