@@ -22,15 +22,15 @@ We also install the official `@notionhq/client` which is needed to interact with
 
 Before you begin, ensure you have:
 
-1.  **A Notion Integration:** Set up an integration in your Notion workspace ([Notion Documentation](https://developers.notion.com/docs/create-a-notion-integration)).
-2.  **Your Integration Token:** Copy the "Internal Integration Token". Keep it secure!
-3.  **Shared Page:** Share the specific Notion page(s) you want to convert with your newly created integration.
+1. **A Notion Integration:** Set up an integration in your Notion workspace ([Notion Documentation](https://developers.notion.com/docs/create-a-notion-integration)).
+2. **Your Integration Token:** Copy the "Internal Integration Token". Keep it secure!
+3. **Shared Page:** Share the specific Notion page(s) you want to convert with your newly created integration.
 
 ## 1. Basic Conversion
 
 The simplest way to use `notion-to-md` is to convert a page and get the Markdown content directly.
 
-```javascript
+```typescript
 import { Client } from '@notionhq/client';
 import { NotionConverter } from 'notion-to-md';
 
@@ -64,7 +64,12 @@ async function convertPage() {
 convertPage();
 ```
 
-This code fetches the Notion page, converts its content to Markdown, and prints it to the console. The `convert()` method returns a `ConversionResult` object containing the `content` string, along with the raw `blocks`, page `properties`, and other metadata.
+This code fetches the Notion page, converts its content to Markdown, and prints it to the console. The `convert()` method returns a `ConversionResult` object containing:
+
+- `content`: The Markdown string
+- `blocks`: Raw Notion blocks
+- `properties`: Page properties
+- `metadata`: Additional page metadata
 
 ## 2. Saving Markdown to a File
 
@@ -72,10 +77,10 @@ While getting the Markdown directly is useful, you often want to save it. `notio
 
 Here's how to save the output to a file:
 
-```javascript
+```typescript
 import { Client } from '@notionhq/client';
 import { NotionConverter } from 'notion-to-md';
-import { DefaultExporter } from 'notion-to-md/plugins/exporter'; // Import the exporter
+import { DefaultExporter } from 'notion-to-md/plugins/exporter';
 import * as path from 'path';
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
@@ -84,13 +89,11 @@ async function convertAndSavePage() {
   try {
     const pageId = 'your-notion-page-id';
     const outputDir = './output'; // Define where to save the file
-    const outputPath = path.join(outputDir, `${pageId}.md`);
 
     // Configure the DefaultExporter to save to a file
     const exporter = new DefaultExporter({
       outputType: 'file',
-      outputPath: outputPath,
-      outputDir: outputDir, // Ensure the directory exists
+      outputPath: path.join(outputDir, `${pageId}.md`),
     });
 
     // Create the converter and attach the exporter
@@ -99,7 +102,9 @@ async function convertAndSavePage() {
     // Convert the page (the exporter handles saving)
     await n2m.convert(pageId);
 
-    console.log(`✓ Successfully converted page and saved to ${outputPath}`);
+    console.log(
+      `✓ Successfully converted page and saved to ${outputDir}/${pageId}.md`,
+    );
   } catch (error) {
     console.error('Conversion failed:', error);
   }
@@ -109,19 +114,22 @@ convertAndSavePage();
 ```
 
 {{< callout type="info" >}}
-The `DefaultExporter` also supports `outputType: 'stdout'` (prints to console) and `outputType: 'buffer'` (stores in an object). You can also [create custom exporters](../concepts/exporter-plugin/) to send content anywhere (e.g., CMS, database).
+The `DefaultExporter` supports three output types:
+
+- `outputType: 'file'` - Saves to a file (as shown above)
+- `outputType: 'stdout'` - Prints to console
+- `outputType: 'buffer'` - Stores in memory
+
+You can also create your own custom exporter to export content to mutiple places. Refer the [Exporter Plugin documentation](../concepts/exporter-plugin/).
 {{< /callout >}}
 
 ## 3. Handling Media (Images, Files)
 
 Notion uses temporary URLs for media files, which expire. To make your media permanent, you need a **Media Handling Strategy**.
 
-- **Problem:** Notion's image/file URLs in the basic Markdown output will eventually break.
-- **Solution:** Use a media strategy to download or upload media files and update the links.
-
 The simplest strategy for local use is downloading:
 
-```javascript
+```typescript
 import { Client } from '@notionhq/client';
 import { NotionConverter } from 'notion-to-md';
 import { DefaultExporter } from 'notion-to-md/plugins/exporter';
@@ -134,12 +142,10 @@ async function convertWithMedia() {
     const pageId = 'your-notion-page-id';
     const outputDir = './output'; // For markdown file
     const mediaDir = path.join(outputDir, 'media'); // For downloaded media
-    const outputPath = path.join(outputDir, `${pageId}.md`);
 
     const exporter = new DefaultExporter({
       outputType: 'file',
-      outputPath: outputPath,
-      outputDir: outputDir,
+      outputPath: path.join(outputDir, `${pageId}.md`),
     });
 
     const n2m = new NotionConverter(notion)
@@ -153,7 +159,7 @@ async function convertWithMedia() {
 
     await n2m.convert(pageId);
 
-    console.log(`✓ Converted page to ${outputPath}`);
+    console.log(`✓ Converted page to ${outputDir}/${pageId}.md`);
     console.log(`✓ Downloaded media to ${mediaDir}`);
   } catch (error) {
     console.error('Conversion failed:', error);
@@ -163,8 +169,23 @@ async function convertWithMedia() {
 convertWithMedia();
 ```
 
-This configuration downloads all media files from the Notion page into the `./output/media` directory and updates the Markdown links (e.g., `![alt text](/media/image.png)`) to point to these local files.
+This configuration:
 
-{{< callout type="info" >}}
-`
+1. Downloads all media files from the Notion page into the `./output/media` directory
+2. Updates the Markdown links to point to these local files (e.g., `![alt text](/media/image.png)`)
+3. Creates a self-contained output that works offline
+
+{{< callout type="tip" >}}
+The `transformPath` function is crucial - it converts local file paths into web-accessible URLs. Make sure the output paths match how your web server or static site generator will serve the files.
 {{< /callout >}}
+
+## Next Steps
+
+Now that you have the basics down, you can explore more advanced features:
+
+- [Media Handling Strategies](../../../blog/mastering-media-handling-in-notion-to-md-v4/) - Learn about all available media strategies
+- [Exporter Plugin](../concepts/exporter-plugin/) - Customize how your content is saved
+- [Renderer Plugin](../concepts/renderer-plugin/) - Control how blocks are converted to Markdown
+- [Configuration Options](../concepts/configuration/) - Fine-tune the converter's behavior
+
+For practical examples and common use cases, check out our [Guides section](../guides/) and [blog](../../../blog).

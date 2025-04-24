@@ -15,7 +15,7 @@ _Released: April 24, 2025_
 
 ### Key Highlights
 
-- **Enhanced Frontmatter Configuration:** Gain more control over how Notion properties translate into frontmatter metadata, including powerful value transformations. Learn more: [What's New in v4.0.0-alpha.5](./whats-new-in-v4-0-0-alpha-5/#enhanced-frontmatter-configuration).
+- **Enhanced Frontmatter Configuration:** Gain more control over how Notion properties translate into frontmatter metadata, including powerful value transformations. Learn more: [What's New in v4.0.0-alpha.5](./v4-0-0-alpha-5/#enhanced-frontmatter-configuration).
 
 [Full Changelog](https://github.com/souvikinator/notion-to-md/compare/v4.0.0-alpha.4...v4.0.0-alpha.5)
 
