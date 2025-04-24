@@ -16,6 +16,7 @@ import {
   VariableResolver,
   ContextMetadata,
   DatabasePropertyTransformer,
+  TypedBlockTransformer,
 } from '../../types/renderer';
 
 /**
@@ -189,12 +190,24 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
    * Creates a single block transformer with proper type inference.
    * Note: Block level imports are stored with the transformer, not added to import variable immediately.
    * Only added when the transformer is actually used.
+   *
+   * Example usage with automatic type inference:
+   * ```typescript
+   * renderer.createBlockTransformer('image', {
+   *   transform: async ({ block, utils }) => {
+   *     const url = block.image.type === 'external'
+   *       ? block.image.external.url
+   *       : block.image.file.url;
+   *     return `![${await utils.transformRichText(block.image.caption)}](${url})`;
+   *   }
+   * });
+   * ```
    */
   public createBlockTransformer<T extends NotionBlockType>(
     type: T,
-    transformer: BlockTransformer,
+    transformer: TypedBlockTransformer<T>,
   ): this {
-    this.context.transformers.blocks[type] = transformer;
+    this.context.transformers.blocks[type] = transformer as BlockTransformer;
     return this;
   }
 
@@ -206,7 +219,8 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
   ): this {
     for (const [type, transformer] of Object.entries(transformers)) {
       if (transformer) {
-        this.createBlockTransformer(type as NotionBlockType, transformer);
+        const blockType = type as NotionBlockType;
+        this.context.transformers.blocks[blockType] = transformer;
       }
     }
     return this;
