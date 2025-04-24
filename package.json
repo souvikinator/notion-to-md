@@ -1,81 +1,18 @@
 {
   "name": "notion-to-md",
-  "version": "4.0.0-alpha.5",
+  "version": "3.1.1",
   "engines": {
     "node": ">=12"
   },
-  "main": "./build/index.js",
-  "module": "./build/index.mjs",
+  "main": "./build",
   "types": "./build/index.d.ts",
   "scripts": {
-    "prepare": "husky",
-    "build": "tsup",
+    "prepare": "npm run build",
+    "build": "tsc",
     "prebuild": "npm run clean",
     "clean": "rm -rf ./build",
-    "test": "jest --coverage --verbose",
-    "test:watch": "jest -w",
-    "lint": "eslint \"src/**/*.ts\"",
-    "format": "prettier --write ."
-  },
-  "peerDependencies": {
-    "@notionhq/client": "^2.0.0"
-  },
-  "lint-staged": {
-    "*.ts": [
-      "eslint --fix",
-      "prettier --write"
-    ]
-  },
-  "exports": {
-    ".": {
-      "types": "./build/index.d.ts",
-      "import": "./build/index.js",
-      "require": "./build/index.js"
-    },
-    "./core": {
-      "types": "./build/core/index.d.ts",
-      "import": "./build/core/index.js",
-      "require": "./build/core/index.js"
-    },
-    "./plugins/renderer": {
-      "types": "./build/plugins/renderer/index.d.ts",
-      "import": "./build/plugins/renderer/index.js",
-      "require": "./build/plugins/renderer/index.js"
-    },
-    "./plugins/exporter": {
-      "types": "./build/plugins/exporter/index.d.ts",
-      "import": "./build/plugins/exporter/index.js",
-      "require": "./build/plugins/exporter/index.js"
-    },
-    "./utils": {
-      "types": "./build/utils/index.d.ts",
-      "import": "./build/utils/index.js",
-      "require": "./build/utils/index.js"
-    },
-    "./types": {
-      "types": "./build/types/index.d.ts",
-      "import": "./build/types/index.js",
-      "require": "./build/types/index.js"
-    }
-  },
-  "typesVersions": {
-    "*": {
-      "plugins/exporter": [
-        "./build/plugins/exporter/index.d.ts"
-      ],
-      "plugins/renderer": [
-        "./build/plugins/renderer/index.d.ts"
-      ],
-      "types": [
-        "./build/types/index.d.ts"
-      ],
-      "utils": [
-        "./build/utils/index.d.ts"
-      ],
-      "core": [
-        "./build/core/index.d.ts"
-      ]
-    }
+    "test": "jest",
+    "test:watch": "jest -w"
   },
   "keywords": [
     "notion",
@@ -84,14 +21,10 @@
     "notion",
     "notion-api",
     "notion-to-md",
-    "notion2md",
-    "notion-export",
-    "notion-exporter",
-    "notion-convert",
-    "export"
+    "notion2md"
   ],
-  "author": "Souvik Kar Mahapatra <souvikat001@gmail.com>",
-  "license": "MIT",
+  "author": "Souvik Kar Mahapatra <souvikat001+chitchat@gmail.com>",
+  "license": "ISC",
   "files": [
     "build/**"
   ],
@@ -103,31 +36,17 @@
     "url": "https://github.com/souvikinator/notion-to-md/issues"
   },
   "homepage": "https://github.com/souvikinator/notion-to-md#readme",
-  "description": "Convert notion pages, block and list of blocks to markdown, html, jsx, latex, pdf and literally anything and export anywhere, compatible with any content workflow",
+  "description": "convert notion pages, block and list of blocks to markdown (supports nesting)",
   "devDependencies": {
-    "@eslint/js": "^9.22.0",
-    "@notionhq/client": "^2.0.0",
-    "@types/download": "^8.0.5",
+    "@notionhq/client": "^2.2.15",
     "@types/jest": "^27.4.1",
-    "@types/mime": "^3.0.0",
-    "@types/mime-types": "^2.1.4",
-    "@typescript-eslint/eslint-plugin": "^8.23.0",
-    "@typescript-eslint/parser": "^8.24.0",
-    "eslint": "^9.22.0",
-    "eslint-config-prettier": "^10.0.1",
-    "eslint-plugin-prettier": "^5.2.3",
-    "husky": "^9.1.7",
+    "@types/markdown-table": "^2.0.0",
     "jest": "^27.4.7",
-    "jiti": "^2.4.2",
-    "lint-staged": "^15.4.3",
-    "prettier": "^3.4.2",
     "ts-jest": "^27.1.3",
-    "tsup": "^8.4.0",
-    "typescript": "^4.9.5",
-    "typescript-eslint": "^8.26.1"
+    "typescript": "^4.5.4"
   },
   "dependencies": {
-    "mime": "^3.0.0",
-    "node-fetch": "^2.7.0"
+    "markdown-table": "^2.0.0",
+    "node-fetch": "2"
   }
 }

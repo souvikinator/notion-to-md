@@ -1,1 +1,1 @@
-export { NotionConverter } from './notion-convert';
+export * from "./notion-to-md";
