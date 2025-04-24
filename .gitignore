@@ -12,6 +12,7 @@ tester
 
 demo.md
 demo.js
+.notion-to-md
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
@@ -144,3 +145,5 @@ package-lock.json
 demo.ts
 test.md
 test.json
+docs/notion-to-md/public
+public
