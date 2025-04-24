@@ -111,19 +111,13 @@ const renderer = new MDXRenderer({
   frontmatter: {
     transform: {
       // Format dates in ISO format (YYYY-MM-DD)
-      date: (
-        property: NotionPageProperty,
-        _allProperties: NotionPageProperties,
-      ): string => {
+      date: (property, _allProperties): string => {
         if (property.type !== 'date' || !property.date?.start) return '';
         return new Date(property.date.start).toISOString().split('T')[0];
       },
 
       // Convert tags to lowercase and return as JSON array string
-      tags: (
-        property: NotionPageProperty,
-        _allProperties: NotionPageProperties,
-      ): string => {
+      tags: (property, _allProperties): string => {
         if (property.type !== 'multi_select') return '';
         return JSON.stringify(
           property.multi_select.map((tag) => tag.name.toLowerCase()),
@@ -131,10 +125,7 @@ const renderer = new MDXRenderer({
       },
 
       // Generate slug from title property (assuming property named 'Name')
-      slug: (
-        _property: NotionPageProperty,
-        allProperties: NotionPageProperties,
-      ): string => {
+      slug: (_property, allProperties): string => {
         const titleProp = allProperties['Name'];
         if (!titleProp || titleProp.type !== 'title') return '';
         const title = titleProp.title.map((t) => t.plain_text).join('');

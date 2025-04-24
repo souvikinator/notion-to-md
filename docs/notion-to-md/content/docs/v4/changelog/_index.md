@@ -15,7 +15,10 @@ _Released: April 24, 2025_
 
 ### Key Highlights
 
+- **Enhanced Database Querying:** Powerful database filtering and sorting capabilities using Notion's native query system. Learn more: [How to Modify Notion Database](../guides/how-to-modify-notion-database/#filtering-and-sorting-database-content).
 - **Enhanced Frontmatter Configuration:** Gain more control over how Notion properties translate into frontmatter metadata, including powerful value transformations. Learn more: [What's New in v4.0.0-alpha.5](./v4-0-0-alpha-5/#enhanced-frontmatter-configuration).
+- **Improved Property Transformers:** Detailed documentation and examples for customizing property rendering. See our [Property Transformer Guide](../concepts/renderer-plugin/property-transformer/).
+- **Frontmatter Transformer Updates:** Clearer documentation and practical examples for converting Notion properties to frontmatter. Check out the [Frontmatter Transformer Guide](../concepts/renderer-plugin/frontmatter-transformer/).
 
 [Full Changelog](https://github.com/souvikinator/notion-to-md/compare/v4.0.0-alpha.4...v4.0.0-alpha.5)
 
