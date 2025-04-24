@@ -180,21 +180,29 @@ Imports defined within your property transformers are automatically collected an
 
 ## Customizing Overall Database Layout
 
-You can completely change how the child database is rendered by creating a [custom block transformer](../../concepts/renderer-plugin/block-transformer/) for the database block just like you do for any other block:
+You can completely change how the child database is rendered by creating a [custom block transformer](../../concepts/renderer-plugin/block-transformer/) for the database block. The child database block provides additional fields in its type:
+
+- `schema`: The database schema containing property configurations
+- `entries`: The database entries (rows) with their properties
+
+Here's how to create a custom layout:
 
 ```typescript
 renderer.createBlockTransformer('child_database', {
-  transform: async ({ block, utils, manifest }) => {
-    const rows = await utils.getDatabaseRows(block.id);
+  transform: async ({ block }) => {
+    // Access database schema and entries from the extended child_database type
+    const { schema, entries } = block.child_database;
 
     // Create a custom card-based layout
     return `
 <div class="task-board">
-  ${rows
-    .map((row) => {
-      const title = utils.getPropertyValue(row, 'Name');
-      const status = utils.getPropertyValue(row, 'Status');
-      const priority = utils.getPropertyValue(row, 'Priority');
+  ${entries
+    .map((entry) => {
+      const title =
+        entry.properties['Name']?.title[0]?.plain_text || 'Untitled';
+      const status = entry.properties['Status']?.status?.name || 'No Status';
+      const priority =
+        entry.properties['Priority']?.select?.name || 'No Priority';
 
       return `
   <div class="task-card ${status.toLowerCase()}">
@@ -214,3 +222,37 @@ renderer.createBlockTransformer('child_database', {
   imports: [`import { TaskBoard } from '@/components/TaskBoard';`],
 });
 ```
+
+For convenience, you can use the helper function `extractPropertyValue` to safely extract values from properties:
+
+```typescript
+renderer.createBlockTransformer('child_database', {
+  transform: async ({ block, utils }) => {
+    const { entries } = block.child_database;
+
+    return `
+<div class="task-board">
+  ${entries
+    .map((entry) => {
+      const title = utilsextractPropertyValue(entry.properties['Name']);
+      const status = utilsextractPropertyValue(entry.properties['Status']);
+      const priority = utilsextractPropertyValue(entry.properties['Priority']);
+
+      return `
+  <div class="task-card ${String(status).toLowerCase()}">
+    <h3>${title}</h3>
+    <div class="meta">
+      <span class="status">${status}</span>
+      <span class="priority">${priority}</span>
+    </div>
+  </div>
+    `;
+    })
+    .join('\n')}
+</div>
+    `;
+  },
+});
+```
+
+The `extractPropertyValue` helper handles all Notion property types safely and returns appropriate values based on the property type.

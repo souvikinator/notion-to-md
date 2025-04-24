@@ -9,9 +9,9 @@ This page documents the changes made in notion-to-md v4 releases.
 > [!NOTE]
 > This is an early alpha release meant for testing and feedback. The API may change before the stable release.
 
-## [v4.0.0-alpha.5](./whats-new-in-v4-0-0-alpha-5/)
+## [v4.0.0-alpha.5](./v4-0-0-alpha-5/)
 
-_Released: April 24, 2025_
+_Released: April 25, 2025_
 
 ### Key Highlights
 
