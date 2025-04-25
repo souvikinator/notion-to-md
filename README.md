@@ -46,6 +46,7 @@
 ## 🗒️ Recent posts
 
 <!-- feed start -->
+- Apr 23 - [Mastering Media Handling in notion-to-md v4 - Download, Upload, and Direct Strategies](https://notionconvert.com/blog/mastering-media-handling-in-notion-to-md-v4/)
 - Mar 12 - [How to Convert Notion Properties to Frontmatter with notion-to-md v4](https://notionconvert.com/blog/how-to-convert-notion-properties-to-frontmatter/)
 - Mar 12 - [How to Handle Documents in Notion Using notion-to-md v4](https://notionconvert.com/blog/how-to-handle-documents-in-notion-using-notion-to-md-v4/)
 - Mar 11 - [How to Convert Notion Comments to Markdown Footnotes with notion-to-md v4](https://notionconvert.com/blog/how-to-use-notion-comments-as-footnotes-in-markdown/)
