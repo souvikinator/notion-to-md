@@ -142,7 +142,7 @@ export class NotionToMarkdown {
             nestingLevel,
           );
 
-          const formattedContent = mdstr.parent
+          const formattedContent = (mdstr.parent ?? mdstr[pageIdentifier])
             .split("\n")
             .map((line) => (line.trim() ? `> ${line}` : ">"))
             .join("\n")
