@@ -13,21 +13,15 @@
   <br>
 </h1>
 
-<div align="center">
+<div align="center" style="display: flex; justify-content: center; align-items: center; gap: 20px; flex-wrap: wrap; margin: 20px 0;">
   <a href="https://notionconvert.com/notion-to-md/docs/v4/getting-started/">
-    <img src="https://i.ibb.co/4Zv3dzRd/Group-52-1.png" />
+    <img src="https://i.ibb.co/WW9zvyhD/Group-98.png"  height="50" style="border-radius: 8px; object-fit: contain;" />
   </a>
-</div>
-
-<div align="center">
   <a href="https://discord.gg/drWw5Ya535">
-    <img src="https://i.ibb.co/ZTk7QCW/Group-186.png" />
+    <img src="https://i.ibb.co/nsdt7ZV3/Group-99.png" width="140" height="50" style="border-radius: 8px; object-fit: contain;" />
   </a>
-</div>
-
-<div align="center">
   <a href="https://www.reddit.com/r/notion_to_md/">
-    <img src="https://i.ibb.co/vBN5Cgz/Frame-4.png" />
+    <img src="https://i.ibb.co/1Gm9ztvy/Group-87.png" width="140" height="50" style="border-radius: 8px; object-fit: contain;" />
   </a>
 </div>
 
@@ -42,6 +36,9 @@
 <img src="https://img.shields.io/twitter/follow/souvikinator?color=blue&logo=x&style=flat" alt="twitter" />
 <img src="https://komarev.com/ghpvc/?username=notion-to-md&abbreviated=true&label=REPO+VIEWS" alt="repo views" />
 </p>
+
+## Sponsored
+[![Sponsored by GitAds](https://gitads.dev/v1/ad-serve?source=souvikinator/notion-to-md@github)](https://gitads.dev/v1/ad-track?source=souvikinator/notion-to-md@github)
 
 ## 🗒️ Recent posts
 
