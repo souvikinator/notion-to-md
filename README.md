@@ -14,7 +14,7 @@
 </h1>
 
 <div align="center" style="display: flex; justify-content: center; align-items: center; gap: 20px; flex-wrap: wrap; margin: 20px 0;">
-  <a href="https://notionconvert.com/notion-to-md/docs/v4/getting-started/">
+  <a href="https://notionconvert.com/docs/v4/getting-started?utm_source=github.com&utm_medium=readme">
     <img src="https://i.ibb.co/WW9zvyhD/Group-98.png"  height="50" style="border-radius: 8px; object-fit: contain;" />
   </a>
   <a href="https://discord.gg/drWw5Ya535">
