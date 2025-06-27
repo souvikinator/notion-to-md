@@ -16,6 +16,8 @@ import {
 import * as md from "./utils/md";
 import { getBlockChildren } from "./utils/notion";
 
+type LinkTransformer = (text: string, href: string) => Promise<string>;
+
 /**
  * Converts a Notion page to Markdown.
  */
@@ -37,11 +39,19 @@ export class NotionToMarkdown {
 
   setCustomTransformer(
     type: BlockType,
-    transformer: CustomTransformer,
+    transformer: CustomTransformer
   ): NotionToMarkdown {
     this.customTransformers[type] = transformer;
 
     return this;
+  }
+
+  setLinkTransformer(fn: LinkTransformer) {
+    this.linkTransformer = fn;
+  }
+
+  async linkTransformer(text: string, href: string) {
+    return md.link(text, href);
   }
 
   /**
@@ -53,7 +63,7 @@ export class NotionToMarkdown {
   toMarkdownString(
     mdBlocks: MdBlock[] = [],
     pageIdentifier: string = "parent",
-    nestingLevel: number = 0,
+    nestingLevel: number = 0
   ): MdStringObject {
     let mdOutput: MdStringObject = {};
 
@@ -80,7 +90,7 @@ export class NotionToMarkdown {
           // add extra line breaks non list blocks
           mdOutput[pageIdentifier] += `\n${md.addTabSpace(
             mdBlocks.parent,
-            nestingLevel,
+            nestingLevel
           )}\n\n`;
         } else {
           // initialize if key doesn't exist
@@ -88,7 +98,7 @@ export class NotionToMarkdown {
 
           mdOutput[pageIdentifier] += `${md.addTabSpace(
             mdBlocks.parent,
-            nestingLevel,
+            nestingLevel
           )}\n`;
         }
       }
@@ -120,26 +130,27 @@ export class NotionToMarkdown {
             mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
             if (mdstr[childPageTitle]) {
               // child page heading followed by child page content
-              mdOutput[pageIdentifier] +=
-                `\n${childPageTitle}\n${mdstr[childPageTitle]}`;
+              mdOutput[
+                pageIdentifier
+              ] += `\n${childPageTitle}\n${mdstr[childPageTitle]}`;
             }
           }
         } else if (mdBlocks.type === "toggle") {
           // convert children md object to md string
           const toggle_children_md_string = this.toMarkdownString(
-            mdBlocks.children,
+            mdBlocks.children
           );
 
           mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
           mdOutput[pageIdentifier] += md.toggle(
             mdBlocks.parent,
-            toggle_children_md_string["parent"],
+            toggle_children_md_string["parent"]
           );
         } else if (mdBlocks.type === "quote") {
           let mdstr = this.toMarkdownString(
             mdBlocks.children,
             pageIdentifier,
-            nestingLevel,
+            nestingLevel
           );
 
           const formattedContent = (mdstr.parent ?? mdstr[pageIdentifier])
@@ -159,12 +170,11 @@ export class NotionToMarkdown {
           mdOutput[pageIdentifier] += "\n";
         } else if (mdBlocks.type === "callout") {
           // do nothing the callout block is already processed
-        }
-         else {
+        } else {
           let mdstr = this.toMarkdownString(
             mdBlocks.children,
             pageIdentifier,
-            nestingLevel + 1,
+            nestingLevel + 1
           );
 
           mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
@@ -188,11 +198,11 @@ export class NotionToMarkdown {
    */
   async pageToMarkdown(
     id: string,
-    totalPage: number | null = null,
+    totalPage: number | null = null
   ): Promise<MdBlock[]> {
     if (!this.notionClient) {
       throw new Error(
-        "notion client is not provided, for more details check out https://github.com/souvikinator/notion-to-md",
+        "notion client is not provided, for more details check out https://github.com/souvikinator/notion-to-md"
       );
     }
     const blocks = await getBlockChildren(this.notionClient, id, totalPage);
@@ -212,11 +222,11 @@ export class NotionToMarkdown {
   async blocksToMarkdown(
     blocks?: ListBlockChildrenResponseResults,
     totalPage: number | null = null,
-    mdBlocks: MdBlock[] = [],
+    mdBlocks: MdBlock[] = []
   ): Promise<MdBlock[]> {
     if (!this.notionClient) {
       throw new Error(
-        "notion client is not provided, for more details check out https://github.com/souvikinator/notion-to-md",
+        "notion client is not provided, for more details check out https://github.com/souvikinator/notion-to-md"
       );
     }
 
@@ -244,7 +254,7 @@ export class NotionToMarkdown {
         let child_blocks = await getBlockChildren(
           this.notionClient,
           block_id,
-          totalPage,
+          totalPage
         );
 
         // Push this block to mdBlocks.
@@ -265,7 +275,7 @@ export class NotionToMarkdown {
           await this.blocksToMarkdown(
             child_blocks,
             totalPage,
-            mdBlocks[l - 1].children,
+            mdBlocks[l - 1].children
           );
         }
 
@@ -289,7 +299,9 @@ export class NotionToMarkdown {
    * @param {ListBlockChildrenResponseResult} block - single notion block
    * @returns {string} corresponding markdown string of the passed block
    */
-  async blockToMarkdown(block: ListBlockChildrenResponseResult) {
+  async blockToMarkdown(
+    block: ListBlockChildrenResponseResult
+  ): Promise<string> {
     if (typeof block !== "object" || !("type" in block)) return "";
 
     let parsedData = "";
@@ -332,7 +344,7 @@ export class NotionToMarkdown {
           return await md.image(
             image_title,
             link,
-            this.config.convertImagesToBase64,
+            this.config.convertImagesToBase64
           );
         }
         break;
@@ -370,12 +382,12 @@ export class NotionToMarkdown {
               title = caption;
             } else if (link) {
               const matches = link.match(
-                /[^\/\\&\?]+\.\w{3,4}(?=([\?&].*$|$))/,
+                /[^\/\\&\?]+\.\w{3,4}(?=([\?&].*$|$))/
               );
               title = matches ? matches[0] : type;
             }
 
-            return md.link(title, link);
+            return await this.linkTransformer(title, link);
           }
         }
         break;
@@ -399,7 +411,8 @@ export class NotionToMarkdown {
             };
           }
 
-          if (blockContent) return md.link(title, blockContent.url);
+          if (blockContent)
+            return await this.linkTransformer(title, blockContent.url);
         }
         break;
 
@@ -430,7 +443,7 @@ export class NotionToMarkdown {
           const tableRows = await getBlockChildren(this.notionClient, id, 100);
           let rowsPromise = tableRows?.map(async (row) => {
             const { type } = row as any;
-            if (type !== 'table_row') return
+            if (type !== "table_row") return;
             const cells = (row as any).table_row["cells"];
 
             /**
@@ -443,7 +456,7 @@ export class NotionToMarkdown {
                 await this.blockToMarkdown({
                   type: "paragraph",
                   paragraph: { rich_text: cell },
-                } as ListBlockChildrenResponseResult),
+                } as ListBlockChildrenResponseResult)
             );
 
             const cellStringArr = await Promise.all(cellStringPromise);
@@ -478,10 +491,10 @@ export class NotionToMarkdown {
         // In this case typescript is not able to index the types properly, hence ignoring the error
         // @ts-ignore
         let blockContent = block[type].text || block[type].rich_text || [];
-        blockContent.map((content: Text | Equation) => {
+
+        for (const content of blockContent) {
           if (content.type === "equation") {
             parsedData += md.inlineEquation(content.equation.expression);
-            return;
           }
 
           const annotations = content.annotations;
@@ -490,19 +503,24 @@ export class NotionToMarkdown {
           plain_text = this.annotatePlainText(plain_text, annotations);
 
           if (content["href"])
-            plain_text = md.link(plain_text, content["href"]);
+            plain_text = await this.linkTransformer(
+              plain_text,
+              content["href"]
+            );
 
           parsedData += plain_text;
-        });
+        }
       }
     }
 
     switch (type) {
       case "code":
         {
-            const codeContent = block.code.rich_text.map((t: any) => t.plain_text).join("\n");
-            const language = block.code.language || "plaintext";
-            parsedData = md.codeBlock(codeContent, language);
+          const codeContent = block.code.rich_text
+            .map((t: any) => t.plain_text)
+            .join("\n");
+          const language = block.code.language || "plaintext";
+          parsedData = md.codeBlock(codeContent, language);
         }
         break;
 
@@ -542,12 +560,12 @@ export class NotionToMarkdown {
           const callout_children_object = await getBlockChildren(
             this.notionClient,
             id,
-            100,
+            100
           );
 
           // // parse children blocks to md object
           const callout_children = await this.blocksToMarkdown(
-            callout_children_object,
+            callout_children_object
           );
 
           callout_string += `${parsedData}\n`;
