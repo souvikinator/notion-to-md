@@ -313,6 +313,61 @@ const result = n2m.blockToMarkdown(block);
 // Result will now only use custom parser if the embed url matches a specific url
 ```
 
+## Link Transformers
+
+The `linkTransformer` functionality allows you to customize how links are transformed when converting Notion blocks to Markdown. This is particularly useful if you want to modify the appearance or behavior of links in the generated Markdown.
+
+### Usage
+
+To use a link transformer, you can define a custom function that takes a link block and returns a string. This function can be set using the `setLinkTransformer` method.
+
+### Example
+
+```javascript
+const { Client } = require("@notionhq/client");
+const { NotionToMarkdown } = require("notion-to-md");
+
+const notion = new Client({
+  auth: "your integration token",
+});
+
+const n2m = new NotionToMarkdown({ notionClient: notion });
+
+// Set a custom link transformer
+n2m.setLinkTransformer((text, href) => {
+  // Custom HTML link with additional attributes
+  return `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
+});
+
+// Or use it to modify the link behavior
+n2m.setLinkTransformer((text, href) => {
+  // Add custom tracking or modify URLs
+  const trackingUrl = `${href}?utm_source=notion&utm_medium=markdown`;
+  return `[${text}](${trackingUrl})`;
+});
+
+(async () => {
+  const mdblocks = await n2m.pageToMarkdown("target_page_id");
+  const mdString = n2m.toMarkdownString(mdblocks);
+  console.log(mdString.parent);
+})();
+```
+
+**Default behavior** (without custom transformer):
+```
+[Link text](https://example.com)
+```
+
+**With custom HTML transformer**:
+```
+<a href="https://example.com" target="_blank" rel="noopener">Link text</a>
+```
+
+**With custom tracking transformer**:
+```
+[Link text](https://example.com?utm_source=notion&utm_medium=markdown)
+```
+
 ## Contribution
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
