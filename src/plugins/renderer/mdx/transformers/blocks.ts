@@ -286,9 +286,9 @@ export const blockTransformers: Partial<
       // If no children, return just a basic toggle
       if (!block.children?.length) {
         return `<details>
-  <summary>
-  ${text}
-  </summary>
+<summary>
+${text}
+</summary>
 </details>\n\n`;
       }
 
@@ -298,11 +298,11 @@ export const blockTransformers: Partial<
       );
 
       return `<details>
-  <summary>
-  ${text}
-  </summary>
+<summary>
+${text}
+</summary>
 
-  ${childrenContent.join('\n')}
+${childrenContent.join('\n')}
 
 </details>\n\n`;
     },
