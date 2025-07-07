@@ -276,7 +276,20 @@ const n2m = new NotionConverter(notionClient).uploadMediaUsing({
 ## Page Reference Configuration
 
 The Page Reference handler manages links between Notion pages, ensuring they work properly in the output. This is especially important for websites or knowledge bases built from Notion content.
-You are required to provide URL where the page will be live once published. That will be used as reference for page links.
+
+You are required to provide a Notion property that contains the **full published URL** for each page. This will be used as the reference for all page links.
+
+### Property Requirements
+
+- The property referenced by `UrlPropertyNameNotion` **must contain the full published URL** for the page (not just a slug or path segment). For example, `https://example.com/docs/getting-started`.
+- **Supported property types:**
+  - Text (plain text property)
+  - Formula (the final computed value must be a string URL)
+  - URL (URL property or formula that returns a URL)
+- Set `UrlPropertyNameNotion` in your config to the exact name of this property.
+- This property must be consistent across all pages that will be referenced.
+
+> **Note:** The Page Reference Handler will extract the value from this property and expects it to be a valid, full URL. If you use a formula, ensure the result is a string containing the full URL.
 
 {{< callout type="info" >}}
 Read more about [how to use page reference builder utility](/notion-to-md/docs/v4/concepts/page-reference-handler).
@@ -284,27 +297,25 @@ Read more about [how to use page reference builder utility](/notion-to-md/docs/v
 
 ```typescript
 interface PageRefConfig {
-  UrlPropertyNameNotion?: string; // Property containing page URL
-  baseUrl?: string; // Base URL for page references
-  transformUrl?: (url: string) => string; // Custom URL transformation
+  UrlPropertyNameNotion: string; // Property containing the full published URL (required)
+  transformUrl?: (url: string) => string; // Custom URL transformation (optional)
+  failForward?: boolean; // Continue on errors (default: true)
 }
 ```
 
 ### Field Explanations
 
-- **UrlPropertyNameNotion**: The name of a Notion page property that contains the URL or slug for the page. If provided, this property's value will be used instead of generating a URL from the page ID.
-
-- **baseUrl**: The base URL that will be prepended to page references. For example, `https://example.com/blog` will transform references to `https://example.com/blog/page-slug`.
-
+- **UrlPropertyNameNotion**: The name of a Notion page property that contains the **full published URL** for the page. This property must be of type text, formula (final value string), or URL. This is required.
 - **transformUrl**: A function that customizes how URLs are generated or transformed. Useful for implementing custom slug generation, URL normalization, or adding path prefixes.
+- **failForward**: When `true` (default), continues processing even if a reference fails to resolve. When `false`, errors will halt the conversion.
 
 ### Example
 
 ```javascript
 const n2m = new NotionConverter(notionClient).withPageReferences({
-  UrlPropertyNameNotion: 'slug',
-  baseUrl: 'https://example.com/blog',
+  UrlPropertyNameNotion: 'url', // The property must contain the full published URL
   transformUrl: (url) => url.toLowerCase().replace(/\s+/g, '-'),
+  failForward: true,
 });
 ```
 
