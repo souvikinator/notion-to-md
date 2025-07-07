@@ -11,26 +11,96 @@ import {
 } from '../../types/notion';
 import { RateLimiter } from '../rate-limiter/index';
 
+const VALID_NOTION_HOST = [
+  'notion.so',
+  'www.notion.so',
+  'notion.com',
+  'www.notion.com',
+];
+
 export function isMediaBlock(block: NotionBlock): boolean {
   return ['image', 'video', 'file', 'pdf'].includes(block.type);
+}
+
+export function isRawUUID(input: string): boolean {
+  return /^[a-f0-9]{32}$/i.test(input);
+}
+
+/**
+ * Determines whether a given URL string refers to a Notion page.
+ *
+ * ⚠️ This accounts for Notion’s inconsistent behavior where:
+ * - Links to internal pages may appear as **relative paths** like `/uuid`
+ * - Full shared links may appear as `https://www.notion.so/Page-Title-<uuid>`
+ * - Mention blocks may return URLs under `link_preview.url` or `text.link.url`
+ *
+ * ## Detection Logic:
+ * 1. If the string starts with `/` and the rest is a 32-character hex UUID → ✅ Notion page
+ * (possible that this might not be a Notion page, in that care there will be no entry in the manifest so it'll be ignored)
+ * 2. If the string is an absolute URL with hostname `notion.so` or `notion.com`:
+ *    - Split the last segment of the path by `-`
+ *    - If the last part is a 32-character hex UUID → ✅ Notion page
+ * 3. Else → ❌ Not a Notion page
+ */
+export function isNotionPageUrl(url: string): boolean {
+  if (!url) return false;
+
+  // Case 1: Relative Notion page path e.g. "/some-page-uuid"
+  if (url.startsWith('/') && isRawUUID(url.slice(1))) return true;
+
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+
+    // Case 2: Notion hostnames check for absolute URLs
+    if (VALID_NOTION_HOST.includes(hostname)) {
+      // path is usually of the form "/Page-Title-<uuid>" or "/<uuid>"
+      // Extract slug part and get the last part after splitting by "-"
+      const segments = parsed.pathname.split('/');
+      const lastSegment = segments.filter(Boolean).pop() || '';
+      const lastPart = lastSegment.split('-').pop() || '';
+
+      if (isRawUUID(lastPart)) {
+        return true;
+      }
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
 }
 
 export function isPageRefBlock(block: NotionBlock): boolean {
   const blockTypeObject = (block as any)[block.type];
 
-  switch (block.type) {
-    case 'link_to_page':
-    case 'child_page':
-      return true;
-    default:
-      if (blockTypeObject.rich_text) {
-        return blockTypeObject.rich_text.some(
-          (text: any) =>
-            text.type === 'mention' && text.mention?.type === 'page',
-        );
-      }
-      return false;
+  if (block.type === 'link_to_page' || block.type === 'child_page') {
+    return true;
   }
+
+  if (blockTypeObject?.rich_text) {
+    return blockTypeObject.rich_text.some((text: any) => {
+      if (text.type === 'mention' && text.mention?.type === 'page') {
+        return true;
+      }
+
+      if (
+        text.type === 'mention' &&
+        text.mention?.type === 'link_preview' &&
+        isNotionPageUrl(text.mention.link_preview?.url || '')
+      ) {
+        return true;
+      }
+
+      if (text.type === 'text' && isNotionPageUrl(text.text?.link?.url || '')) {
+        return true;
+      }
+
+      return false;
+    });
+  }
+
+  return false;
 }
 
 // checks if database property is a media property
