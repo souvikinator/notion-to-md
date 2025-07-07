@@ -11,9 +11,9 @@ export interface NotionDatabaseConfig {
 }
 
 export interface PageRefConfig {
-  UrlPropertyNameNotion?: string;
-  baseUrl?: string;
+  UrlPropertyNameNotion: string;
   transformUrl?: (url: string) => string;
+  failForward?: boolean;
 }
 
 export interface BlockFetcherConfig {

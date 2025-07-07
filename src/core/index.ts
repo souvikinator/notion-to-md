@@ -7,6 +7,5 @@ export { DownloadStrategy } from './media-handler/strategies/download';
 export { UploadStrategy } from './media-handler/strategies/upload';
 
 export { PageReferenceHandler } from './page-ref-handler';
-export type { PageRefConfig } from './page-ref-handler';
 
 export { BaseRendererPlugin } from './renderer';
