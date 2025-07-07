@@ -154,21 +154,3 @@ const sitemap = Object.entries(allPages).map(([pageId, entry]) => ({
   lastUpdated: entry.lastUpdated,
 }));
 ```
-
-<!--
-### Handling Private Pages
-
-Notion has complex access rules, and some pages might be private or inaccessible to your integration. The Page Reference Handler gracefully handles these cases:
-
-```javascript
-.withPageReferences({
-  UrlPropertyNameNotion: 'slug',
-  // Optionally provide fallback handling for private pages
-  transformUrl: (url, pageId, isAccessible) => {
-    if (!isAccessible) {
-      return `/login?redirect=${encodeURIComponent(url)}`;
-    }
-    return url;
-  }
-})
-```

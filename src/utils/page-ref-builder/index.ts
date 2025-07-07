@@ -6,7 +6,6 @@ import { PageReferenceHandlerError } from '../../core/errors';
 interface PageRefBuilderConfig {
   urlPropertyNameNotion: string;
   concurrency?: number;
-  baseUrl?: string;
 }
 
 export class PageReferenceManifestBuilder {
@@ -162,9 +161,6 @@ export class PageReferenceManifestBuilder {
       url = urlProperty.rich_text[0]?.plain_text;
     }
 
-    if (!url?.startsWith('http') && this.config.baseUrl) {
-      url = `${this.config.baseUrl}${url}`;
-    }
     return url;
   }
 

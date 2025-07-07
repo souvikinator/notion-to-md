@@ -36,7 +36,7 @@ export function isRawUUID(input: string): boolean {
  *
  * ## Detection Logic:
  * 1. If the string starts with `/` and the rest is a 32-character hex UUID → ✅ Notion page
- * (possible that this might not be a Notion page, in that care there will be no entry in the manifest so it'll be ignored)
+ * (possible that the UUID might not belong to Notion page, in that care there will be no entry in the manifest as there is not such page, so it'll be ignored)
  * 2. If the string is an absolute URL with hostname `notion.so` or `notion.com`:
  *    - Split the last segment of the path by `-`
  *    - If the last part is a 32-character hex UUID → ✅ Notion page
@@ -101,6 +101,30 @@ export function isPageRefBlock(block: NotionBlock): boolean {
   }
 
   return false;
+}
+
+/**
+ * Extracts Notion page UUID from a valid Notion link (absolute or relative) and returns it normalized.
+ */
+export function extractNotionPageIdFromUrl(url: string): string | null {
+  if (!url) return null;
+
+  // Case 1: /<uuid> format
+  if (url.startsWith('/') && isRawUUID(url.slice(1))) {
+    return normalizeUUID(url.slice(1));
+  }
+
+  // Case 2: Absolute URL with Notion hostnames
+  // e.g. https://www.notion.so/Page-Title-<uuid>
+  try {
+    const parsed = new URL(url);
+    const lastSegment = parsed.pathname.split('/').filter(Boolean).pop() || '';
+    const uuidCandidate = lastSegment.split('-').pop() || '';
+
+    return isRawUUID(uuidCandidate) ? normalizeUUID(uuidCandidate) : null;
+  } catch {
+    return null;
+  }
 }
 
 // checks if database property is a media property

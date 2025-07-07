@@ -3,7 +3,6 @@ import { PageManifest, PageReferenceEntry } from '../../types/manifest-manager';
 import { BaseManifestManager } from './base';
 import {
   PageReferenceError,
-  PageReferenceNotFoundError,
   PageReferenceStateError,
   ManifestIOError,
   ManifestNotFoundError,
@@ -90,13 +89,10 @@ export class PageReferenceManifestManager extends BaseManifestManager {
    * @throws {PageReferenceStateError} If manager is not initialized
    * @throws {PageReferenceNotFoundError} If reference doesn't exist
    */
-  public getEntry(pageId: string): PageReferenceEntry {
+  public getEntry(pageId: string): PageReferenceEntry | null {
     this.ensureInitialized();
 
     const entry = this.manifest!.references[pageId];
-    if (!entry) {
-      throw new PageReferenceNotFoundError(pageId);
-    }
 
     return entry;
   }
