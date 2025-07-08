@@ -5,6 +5,7 @@ import {
 } from '../helpers';
 import type { NotionBlock, NotionBlocks } from '../../../../types/notion';
 import type { RendererContext } from '../../../../types/renderer';
+import { databasePropertyTransformers } from './database-properties';
 
 // Helper to indent content
 function indentJSX(content: string, level: number = 1): string {
@@ -453,6 +454,154 @@ export const blockTransformers = {
     },
   },
 
+  file: {
+    transform: async (context) => {
+      const config = context.metadata.config;
+      const className = generateJSXClassName(
+        'file',
+        config.styling?.classNamePrefix,
+        config.styling?.customClasses,
+      );
+      const captionClassName = generateJSXClassName(
+        'file-caption',
+        config.styling?.classNamePrefix,
+        config.styling?.customClasses,
+      );
+
+      const src = escapeJSXAttribute(
+        context.block.file?.file?.url ||
+          context.block.file?.external?.url ||
+          '',
+      );
+      const fileName = context.block.file?.name || 'File';
+      const alt = context.block.file?.caption
+        ? await context.utils.transformRichText(
+            context.block.file.caption,
+            context,
+            context.metadata,
+          )
+        : fileName;
+
+      let fileElement = `<a href="${src}" className="${className}" download>${escapeJSXContent(alt)}</a>`;
+
+      if (
+        context.block.file?.caption &&
+        context.block.file.caption.length > 0
+      ) {
+        const captionContent = await context.utils.transformRichText(
+          context.block.file.caption,
+          context,
+          context.metadata,
+        );
+        fileElement += `\n<figcaption className="${captionClassName}">${captionContent}</figcaption>`;
+
+        const figureClassName = generateJSXClassName(
+          'figure',
+          config.styling?.classNamePrefix,
+          config.styling?.customClasses,
+        );
+        fileElement = `<figure className="${figureClassName}">\n${fileElement}\n</figure>`;
+      }
+
+      return fileElement + '\n';
+    },
+  },
+
+  pdf: {
+    transform: async (context) => {
+      const config = context.metadata.config;
+      const className = generateJSXClassName(
+        'pdf',
+        config.styling?.classNamePrefix,
+        config.styling?.customClasses,
+      );
+      const captionClassName = generateJSXClassName(
+        'pdf-caption',
+        config.styling?.classNamePrefix,
+        config.styling?.customClasses,
+      );
+
+      const src = escapeJSXAttribute(
+        context.block.pdf?.file?.url || context.block.pdf?.external?.url || '',
+      );
+      const alt = context.block.pdf?.caption
+        ? await context.utils.transformRichText(
+            context.block.pdf.caption,
+            context,
+            context.metadata,
+          )
+        : 'PDF Document';
+
+      let pdfElement = `<a href="${src}" className="${className}" target="_blank" rel="noopener noreferrer">${escapeJSXContent(alt)}</a>`;
+
+      if (context.block.pdf?.caption && context.block.pdf.caption.length > 0) {
+        const captionContent = await context.utils.transformRichText(
+          context.block.pdf.caption,
+          context,
+          context.metadata,
+        );
+        pdfElement += `\n<figcaption className="${captionClassName}">${captionContent}</figcaption>`;
+
+        const figureClassName = generateJSXClassName(
+          'figure',
+          config.styling?.classNamePrefix,
+          config.styling?.customClasses,
+        );
+        pdfElement = `<figure className="${figureClassName}">\n${pdfElement}\n</figure>`;
+      }
+
+      return pdfElement + '\n';
+    },
+  },
+
+  embed: {
+    transform: async (context) => {
+      const config = context.metadata.config;
+      const className = generateJSXClassName(
+        'embed',
+        config.styling?.classNamePrefix,
+        config.styling?.customClasses,
+      );
+      const captionClassName = generateJSXClassName(
+        'embed-caption',
+        config.styling?.classNamePrefix,
+        config.styling?.customClasses,
+      );
+
+      const src = escapeJSXAttribute(context.block.embed?.url || '');
+      const alt = context.block.embed?.caption
+        ? await context.utils.transformRichText(
+            context.block.embed.caption,
+            context,
+            context.metadata,
+          )
+        : src;
+
+      let embedElement = `<iframe src="${src}" className="${className}" title="${escapeJSXAttribute(alt)}" frameBorder="0" allowFullScreen></iframe>`;
+
+      if (
+        context.block.embed?.caption &&
+        context.block.embed.caption.length > 0
+      ) {
+        const captionContent = await context.utils.transformRichText(
+          context.block.embed.caption,
+          context,
+          context.metadata,
+        );
+        embedElement += `\n<figcaption className="${captionClassName}">${captionContent}</figcaption>`;
+
+        const figureClassName = generateJSXClassName(
+          'figure',
+          config.styling?.classNamePrefix,
+          config.styling?.customClasses,
+        );
+        embedElement = `<figure className="${figureClassName}">\n${embedElement}\n</figure>`;
+      }
+
+      return embedElement + '\n';
+    },
+  },
+
   // Toggle block
   toggle: {
     transform: async (context) => {
@@ -485,18 +634,39 @@ export const blockTransformers = {
     },
   },
 
-  // Table block (basic JSX table rendering)
+  // Table block with customization support
   table: {
     transform: async (context) => {
       const config = context.metadata.config;
       if (!context.block.children || context.block.children.length === 0)
         return '';
+
+      // Get custom components from config
+      const customTable = config?.tableComponent;
+      const customTableHead = config?.propertyComponents?.tableHead;
+      const customTableBody = config?.propertyComponents?.tableBody;
+      const customTableRow = config?.propertyComponents?.tableRow;
+      const customTableCell = config?.propertyComponents?.tableCell;
+      const customTableHeader = config?.propertyComponents?.tableHeader;
+
       // Process all rows
       const processedRows = await Promise.all(
         context.block.children.map(async (row) => {
           if (!('table_row' in row)) return [];
           return Promise.all(
             row.table_row.cells.map(async (cell) => {
+              // Use property transformers for rich_text to respect overrides
+              const richTextProperty = { type: 'rich_text', rich_text: cell };
+              const transformer = context.transformers?.properties?.rich_text;
+              if (transformer) {
+                const content = await transformer.transform({
+                  property: richTextProperty,
+                  utils: context.utils,
+                  metadata: context.metadata,
+                });
+                return content.trim() || ' ';
+              }
+              // Fallback to direct rich text transformation
               const content = await context.utils.transformRichText(
                 cell,
                 context,
@@ -507,41 +677,85 @@ export const blockTransformers = {
           );
         }),
       );
-      // Build JSX table
+
+      // Build JSX table with customization
       const tableClass = generateJSXClassName(
         'table',
         config.styling?.classNamePrefix,
         config.styling?.customClasses,
       );
+
       let headerRow = '';
       let dataRows = '';
+
       if (
         context.block.table?.has_column_header ||
         context.block.table?.has_row_header
       ) {
         const header = processedRows[0];
-        headerRow = `<tr>${header.map((cell) => `<th>${cell}</th>`).join('')}</tr>`;
+        const headerCells = header.map((cell) => {
+          if (customTableHeader) {
+            return `<${customTableHeader} className="notion-table-header">${cell}</${customTableHeader}>`;
+          }
+          return `<th className="notion-table-header">${cell}</th>`;
+        });
+        headerRow = customTableRow
+          ? `<${customTableRow} className="notion-table-header-row">${headerCells.join('')}</${customTableRow}>`
+          : `<tr className="notion-table-header-row">${headerCells.join('')}</tr>`;
+
         dataRows = processedRows
           .slice(1)
-          .map(
-            (row) =>
-              `<tr>${row.map((cell) => `<td>${cell}</td>`).join('')}</tr>`,
-          )
+          .map((row) => {
+            const cells = row.map((cell) => {
+              if (customTableCell) {
+                return `<${customTableCell} className="notion-table-cell">${cell}</${customTableCell}>`;
+              }
+              return `<td className="notion-table-cell">${cell}</td>`;
+            });
+            return customTableRow
+              ? `<${customTableRow} className="notion-table-row">${cells.join('')}</${customTableRow}>`
+              : `<tr className="notion-table-row">${cells.join('')}</tr>`;
+          })
           .join('');
       } else {
         const columnCount = processedRows[0]?.length || 0;
         const headers = Array(columnCount)
           .fill('')
           .map((_, i) => `Column ${i + 1}`);
-        headerRow = `<tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr>`;
+
+        const headerCells = headers.map((h) => {
+          if (customTableHeader) {
+            return `<${customTableHeader} className="notion-table-header">${escapeJSXContent(h)}</${customTableHeader}>`;
+          }
+          return `<th className="notion-table-header">${escapeJSXContent(h)}</th>`;
+        });
+        headerRow = customTableRow
+          ? `<${customTableRow} className="notion-table-header-row">${headerCells.join('')}</${customTableRow}>`
+          : `<tr className="notion-table-header-row">${headerCells.join('')}</tr>`;
+
         dataRows = processedRows
-          .map(
-            (row) =>
-              `<tr>${row.map((cell) => `<td>${cell}</td>`).join('')}</tr>`,
-          )
+          .map((row) => {
+            const cells = row.map((cell) => {
+              if (customTableCell) {
+                return `<${customTableCell} className="notion-table-cell">${cell}</${customTableCell}>`;
+              }
+              return `<td className="notion-table-cell">${cell}</td>`;
+            });
+            return customTableRow
+              ? `<${customTableRow} className="notion-table-row">${cells.join('')}</${customTableRow}>`
+              : `<tr className="notion-table-row">${cells.join('')}</tr>`;
+          })
           .join('');
       }
-      return `<table className="${tableClass}"><thead>${headerRow}</thead><tbody>${dataRows}</tbody></table>\n`;
+
+      const tableContent =
+        customTableHead && customTableBody
+          ? `<${customTableHead} className="notion-table-head">${headerRow}</${customTableHead}><${customTableBody} className="notion-table-body">${dataRows}</${customTableBody}>`
+          : `<thead className="notion-table-head">${headerRow}</thead><tbody className="notion-table-body">${dataRows}</tbody>`;
+
+      return customTable
+        ? `<${customTable} className="${tableClass}">${tableContent}</${customTable}>\n`
+        : `<table className="${tableClass}">${tableContent}</table>\n`;
     },
   },
 
@@ -596,7 +810,7 @@ export const blockTransformers = {
     },
   },
 
-  // Child database
+  // Child database with customization support
   child_database: {
     transform: async (context) => {
       if (
@@ -605,22 +819,64 @@ export const blockTransformers = {
         !context.block.child_database
       )
         return '';
+
+      const config = context.metadata.config;
       const title = context.block.child_database.title;
+
+      // Get custom components from config
+      const customDatabase = config?.propertyComponents?.database;
+      const customDatabaseTitle = config?.propertyComponents?.databaseTitle;
+      const customTable = config?.tableComponent;
+      const customTableHead = config?.propertyComponents?.tableHead;
+      const customTableBody = config?.propertyComponents?.tableBody;
+      const customTableRow = config?.propertyComponents?.tableRow;
+      const customTableCell = config?.propertyComponents?.tableCell;
+      const customTableHeader = config?.propertyComponents?.tableHeader;
+
       if (
         !context.block.child_database.entries ||
         context.block.child_database.entries.length === 0
       ) {
-        return `<div className="notion-child-database"><h2>${escapeJSXContent(title)}</h2><em>No entries in database</em></div>\n`;
+        const titleElement = customDatabaseTitle
+          ? `<${customDatabaseTitle} className="notion-database-title">${escapeJSXContent(title)}</${customDatabaseTitle}>`
+          : `<h2 className="notion-database-title">${escapeJSXContent(title)}</h2>`;
+
+        return customDatabase
+          ? `<${customDatabase} className="notion-child-database">${titleElement}<em>No entries in database</em></${customDatabase}>\n`
+          : `<div className="notion-child-database">${titleElement}<em>No entries in database</em></div>\n`;
       }
-      // Get all entries with transformed properties
+
+      // Get all entries with transformed properties using our database property transformers
       const transformedEntries = await Promise.all(
         context.block.child_database.entries.map(async (entry) => {
-          return await context.utils.transformDatabaseProperties(
-            entry.properties,
-            context,
-          );
+          const transformedProps: Record<string, string> = {};
+
+          for (const [propName, property] of Object.entries(
+            entry.properties || {},
+          )) {
+            const typedProperty = property as any; // Type assertion for Notion property
+            const propertyType =
+              typedProperty.type as keyof typeof databasePropertyTransformers;
+            const transformer = databasePropertyTransformers[propertyType];
+
+            if (transformer) {
+              transformedProps[propName] = await transformer.transform({
+                property: typedProperty,
+                properties: entry.properties || {},
+                block: context.block,
+                utils: context.utils,
+                metadata: context.metadata,
+              });
+            } else {
+              // Fallback to string representation
+              transformedProps[propName] = JSON.stringify(typedProperty);
+            }
+          }
+
+          return transformedProps;
         }),
       );
+
       const propertyNames = [
         ...new Set(
           context.block.child_database.entries.flatMap((entry) =>
@@ -628,21 +884,59 @@ export const blockTransformers = {
           ),
         ),
       ] as string[];
+
       const rows = transformedEntries.map((entry) =>
-        propertyNames.map(
-          (propName: string) =>
-            (entry as Record<string, string>)[propName] || '',
-        ),
+        propertyNames.map((propName: string) => entry[propName] || ''),
       );
-      // Build a JSX table for the database
+
+      // Build JSX table with customization
+      const tableClass = generateJSXClassName(
+        'table',
+        config.styling?.classNamePrefix,
+        config.styling?.customClasses,
+      );
+
+      const headerCells = propertyNames.map((name) => {
+        if (customTableHeader) {
+          return `<${customTableHeader} className="notion-table-header">${escapeJSXContent(name)}</${customTableHeader}>`;
+        }
+        return `<th className="notion-table-header">${escapeJSXContent(name)}</th>`;
+      });
+
+      const headerRow = customTableRow
+        ? `<${customTableRow} className="notion-table-header-row">${headerCells.join('')}</${customTableRow}>`
+        : `<tr className="notion-table-header-row">${headerCells.join('')}</tr>`;
+
       const tableRows = rows
-        .map(
-          (row) =>
-            `<tr>${row.map((cell) => `<td>${escapeJSXContent(cell)} </td>`).join('')}</tr>`,
-        )
+        .map((row) => {
+          const cells = row.map((cell) => {
+            if (customTableCell) {
+              return `<${customTableCell} className="notion-table-cell">${cell}</${customTableCell}>`;
+            }
+            return `<td className="notion-table-cell">${cell}</td>`;
+          });
+          return customTableRow
+            ? `<${customTableRow} className="notion-table-row">${cells.join('')}</${customTableRow}>`
+            : `<tr className="notion-table-row">${cells.join('')}</tr>`;
+        })
         .join('');
-      const headerRow = `<tr>${propertyNames.map((name) => `<th>${escapeJSXContent(name)}</th>`).join('')}</tr>`;
-      return `<div className="notion-child-database"><h2>${escapeJSXContent(title)}</h2><table><thead>${headerRow}</thead><tbody>${tableRows}</tbody></table></div>\n`;
+
+      const tableContent =
+        customTableHead && customTableBody
+          ? `<${customTableHead} className="notion-table-head">${headerRow}</${customTableHead}><${customTableBody} className="notion-table-body">${tableRows}</${customTableBody}>`
+          : `<thead className="notion-table-head">${headerRow}</thead><tbody className="notion-table-body">${tableRows}</tbody>`;
+
+      const tableElement = customTable
+        ? `<${customTable} className="${tableClass}">${tableContent}</${customTable}>`
+        : `<table className="${tableClass}">${tableContent}</table>`;
+
+      const titleElement = customDatabaseTitle
+        ? `<${customDatabaseTitle} className="notion-database-title">${escapeJSXContent(title)}</${customDatabaseTitle}>`
+        : `<h2 className="notion-database-title">${escapeJSXContent(title)}</h2>`;
+
+      return customDatabase
+        ? `<${customDatabase} className="notion-child-database">${titleElement}${tableElement}</${customDatabase}>\n`
+        : `<div className="notion-child-database">${titleElement}${tableElement}</div>\n`;
     },
   },
 
