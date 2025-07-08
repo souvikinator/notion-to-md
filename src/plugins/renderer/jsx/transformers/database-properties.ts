@@ -210,10 +210,17 @@ export const databasePropertyTransformers: Partial<
     transform: async ({ property }) => {
       if (property.type !== 'created_by') return '';
 
-      // @ts-ignore - user objects have name property
-      return escapeJSXContent(
-        property.created_by?.name || property.created_by?.id || '',
-      );
+      // Handle both PartialUserObjectResponse and UserObjectResponse
+      const user = property.created_by;
+      if (!user) return '';
+
+      // Check if user has name property (UserObjectResponse)
+      if ('name' in user && user.name) {
+        return escapeJSXContent(user.name);
+      }
+
+      // Fallback to ID
+      return escapeJSXContent(user.id || '');
     },
   },
 
@@ -229,10 +236,17 @@ export const databasePropertyTransformers: Partial<
     transform: async ({ property }) => {
       if (property.type !== 'last_edited_by') return '';
 
-      // @ts-ignore - user objects have name property
-      return escapeJSXContent(
-        property.last_edited_by?.name || property.last_edited_by?.id || '',
-      );
+      // Handle both PartialUserObjectResponse and UserObjectResponse
+      const user = property.last_edited_by;
+      if (!user) return '';
+
+      // Check if user has name property (UserObjectResponse)
+      if ('name' in user && user.name) {
+        return escapeJSXContent(user.name);
+      }
+
+      // Fallback to ID
+      return escapeJSXContent(user.id || '');
     },
   },
 
