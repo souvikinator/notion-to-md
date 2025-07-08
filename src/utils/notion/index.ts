@@ -8,6 +8,7 @@ import {
   NotionDatabaseQueryOptions,
   NotionDatabaseSchema,
   NotionPageProperties,
+  NotionPageProperty,
 } from '../../types/notion';
 import { RateLimiter } from '../rate-limiter/index';
 
@@ -24,6 +25,60 @@ export function isMediaBlock(block: NotionBlock): boolean {
 
 export function isRawUUID(input: string): boolean {
   return /^[a-f0-9]{32}$/i.test(input);
+}
+
+export function isLinkToPageBlock(block: NotionBlock): boolean {
+  return (
+    block.type === 'link_to_page' &&
+    block.link_to_page?.type === 'page_id' &&
+    !!block.link_to_page.page_id
+  );
+}
+
+export function isChildPageBlock(block: NotionBlock): boolean {
+  return block.type === 'child_page' && !!block.child_page?.title;
+}
+
+export function isMentionPage(block: NotionBlock): boolean {
+  const blockTypeObject = (block as any)[block.type];
+
+  if (blockTypeObject?.rich_text) {
+    return blockTypeObject.rich_text.some(
+      (text: any) => text?.type === 'mention' && text.mention?.type === 'page',
+    );
+  }
+
+  return false;
+}
+
+export function isLinkPreviewMention(block: NotionBlock): boolean {
+  const blockTypeObject = (block as any)[block.type];
+
+  if (blockTypeObject?.rich_text) {
+    {
+      return blockTypeObject.rich_text.some(
+        (text: any) =>
+          text?.type === 'mention' &&
+          text.mention?.type === 'link_preview' &&
+          isNotionPageUrl(text.mention.link_preview?.url || ''),
+      );
+    }
+  }
+
+  return false;
+}
+
+export function isNotionLinkText(block: NotionBlock): boolean {
+  const blockTypeObject = (block as any)[block.type];
+
+  if (blockTypeObject?.rich_text) {
+    return blockTypeObject.rich_text.some(
+      (text: any) =>
+        text?.type === 'text' && isNotionPageUrl(text.text?.link?.url || ''),
+    );
+  }
+
+  return false;
 }
 
 /**
@@ -71,36 +126,53 @@ export function isNotionPageUrl(url: string): boolean {
   return false;
 }
 
+/**
+ *
+ * @param rawUrl The raw URL string to validate
+ * @returns
+ */
+export function isValidURL(rawUrl: string): string | null {
+  try {
+    return new URL(rawUrl).toString();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extracts a URL from a Notion page property of type: url, formula, or plain text
+ * The URL has to be a full URL (not slug/path) for it to be valid.
+ * @param property NotionPageProperties - The Notion page property to extract the URL from.
+ * @returns
+ */
+export function extractUrlFromNotionProperty(
+  property: NotionPageProperty,
+): string | null {
+  if ('url' in property) return property.url;
+
+  if ('formula' in property) {
+    const { formula } = property;
+    return formula.type === 'string' && formula.string?.startsWith('http')
+      ? formula.string
+      : null;
+  }
+
+  if ('rich_text' in property) {
+    const text = property.rich_text[0]?.plain_text;
+    return text?.startsWith('http') ? text : null;
+  }
+
+  return null;
+}
+
 export function isPageRefBlock(block: NotionBlock): boolean {
-  const blockTypeObject = (block as any)[block.type];
-
-  if (block.type === 'link_to_page' || block.type === 'child_page') {
-    return true;
-  }
-
-  if (blockTypeObject?.rich_text) {
-    return blockTypeObject.rich_text.some((text: any) => {
-      if (text.type === 'mention' && text.mention?.type === 'page') {
-        return true;
-      }
-
-      if (
-        text.type === 'mention' &&
-        text.mention?.type === 'link_preview' &&
-        isNotionPageUrl(text.mention.link_preview?.url || '')
-      ) {
-        return true;
-      }
-
-      if (text.type === 'text' && isNotionPageUrl(text.text?.link?.url || '')) {
-        return true;
-      }
-
-      return false;
-    });
-  }
-
-  return false;
+  return (
+    isLinkToPageBlock(block) ||
+    isChildPageBlock(block) ||
+    isMentionPage(block) ||
+    isLinkPreviewMention(block) ||
+    isNotionLinkText(block)
+  );
 }
 
 /**
@@ -138,21 +210,6 @@ export function isMediaProperty(
   );
 }
 
-// Checks if a property contains page mentions
-export function isPageRefProperty(
-  property: NotionDatabaseEntryProperty,
-): boolean {
-  // Only rich_text properties contain page mentions
-  if (property.type !== 'rich_text' || !Array.isArray(property.rich_text)) {
-    return false;
-  }
-
-  // Check each rich text item for page mentions
-  return property.rich_text.some(
-    (item) => item.type === 'mention' && item.mention?.type === 'page',
-  );
-}
-
 /**
  * Converts UUID without hyphens to the one with hyphens. If UUID with hyphens is given then return the same.
  *
@@ -174,6 +231,54 @@ export function normalizeUUID(uuid: string): string {
 export function isExternalUrl(url: string): boolean {
   return !url.includes('prod-files-secure.s3.us-west-2.amazonaws.com');
 }
+
+/**
+ * Extracts page ID from a block that references another page.
+ * Looks through link_to_page, mentions, and rich_text links.
+ */
+export function extractPageIdFromBlock(block: NotionBlock): string | null {
+  if (
+    isLinkToPageBlock(block) &&
+    block.type === 'link_to_page' &&
+    block.link_to_page.type === 'page_id'
+  ) {
+    return block.link_to_page.page_id;
+  }
+
+  const blockTypeObject = (block as any)[block.type];
+
+  if ('rich_text' in blockTypeObject) {
+    const richText = (blockTypeObject as { rich_text: any[] }).rich_text;
+
+    for (const text of richText) {
+      if (text.type === 'mention' && text.mention?.type === 'page') {
+        return text.mention.page.id;
+      }
+
+      if (
+        text?.type === 'mention' &&
+        text.mention?.type === 'link_preview' &&
+        text.mention.link_preview?.url
+      ) {
+        const id = extractNotionPageIdFromUrl(text.mention.link_preview.url);
+        if (id) return id;
+      }
+
+      if (
+        text?.type === 'text' &&
+        text.text?.link?.url &&
+        isNotionPageUrl(text.text.link.url)
+      ) {
+        const id = extractNotionPageIdFromUrl(text.text.link.url);
+        if (id) return id;
+      }
+    }
+  }
+
+  return null;
+}
+
+// block fetching utilities
 
 /**
  * Fetches all children blocks for a given block ID

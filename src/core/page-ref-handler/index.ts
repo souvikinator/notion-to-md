@@ -7,8 +7,10 @@ import { PageReferenceManifestManager } from '../../utils/manifest-manager';
 import { PageReferenceHandlerError } from '../errors';
 import { PageRefConfig } from '../../types/configuration';
 import {
-  extractNotionPageIdFromUrl,
+  extractPageIdFromBlock,
+  extractUrlFromNotionProperty,
   isNotionPageUrl,
+  isValidURL,
 } from '../../utils/notion';
 
 const DEFAULT_CONFIG: PageRefConfig = {
@@ -115,26 +117,7 @@ export class PageReferenceHandler implements ProcessorChainNode {
       return;
     }
 
-    // Extract URL value based on property type
-    const extractUrl = (): string | null => {
-      if ('url' in urlProperty) return urlProperty.url;
-
-      if ('formula' in urlProperty) {
-        const { formula } = urlProperty;
-        return formula.type === 'string' && formula.string?.startsWith('http')
-          ? formula.string
-          : null;
-      }
-
-      if ('rich_text' in urlProperty) {
-        const text = urlProperty.rich_text[0]?.plain_text;
-        return text?.startsWith('http') ? text : null;
-      }
-
-      return null;
-    };
-
-    const rawUrl = extractUrl();
+    const rawUrl = extractUrlFromNotionProperty(urlProperty);
     if (!rawUrl) {
       console.debug(
         `[PageRefHandler] No valid URL found in property '${this.config.UrlPropertyNameNotion}'`,
@@ -142,15 +125,14 @@ export class PageReferenceHandler implements ProcessorChainNode {
       return;
     }
 
-    // Validate and normalize URL
-    let validatedUrl: string;
-    try {
-      validatedUrl = new URL(rawUrl).toString();
-    } catch (error) {
+    // Validate url
+    const validatedUrl = isValidURL(rawUrl);
+    if (!validatedUrl) {
       this.handleError(
         `[PageRefHandler] Invalid URL value in property '${this.config.UrlPropertyNameNotion}': ${rawUrl}`,
-        error,
+        null,
       );
+
       return;
     }
 
@@ -181,7 +163,7 @@ export class PageReferenceHandler implements ProcessorChainNode {
     try {
       // Extract the block from the reference
       const block = reference.ref as NotionBlock;
-      const pageId = this.extractPageIdFromBlock(block);
+      const pageId = extractPageIdFromBlock(block);
       if (!pageId) {
         console.debug(
           '[PageRefHandler] No page ID found in block, skipping:',
@@ -209,75 +191,6 @@ export class PageReferenceHandler implements ProcessorChainNode {
     } catch (error) {
       this.handleError('[PageRefHandler] Block processing failed:', error);
     }
-  }
-
-  private async cleanupRemovedReferences(): Promise<void> {
-    console.debug('[PageRefHandler] Starting cleanup of removed references');
-
-    try {
-      // Find entries that weren't processed this time
-      const allEntries = this.manifestManager.getAllEntries();
-
-      for (const [pageId] of Object.entries(allEntries)) {
-        if (!this.processedRefs.has(pageId)) {
-          console.debug('[PageRefHandler] Removing unused reference:', pageId);
-          this.manifestManager.removeEntry(pageId);
-        }
-      }
-
-      console.debug('[PageRefHandler] References cleanup complete');
-    } catch (error) {
-      this.handleError('[PageRefHandler] Error during cleanup:', error);
-    }
-  }
-
-  /**
-   * Extracts page ID from link_to_page block and mention (page and link_preview) and regular links from any blocks.
-   * @param block
-   * @returns
-   */
-  private extractPageIdFromBlock(block: NotionBlock): string | null {
-    if (
-      block.type === 'link_to_page' &&
-      block.link_to_page?.type === 'page_id'
-    ) {
-      return block.link_to_page.page_id;
-    }
-
-    // @ts-ignore
-    const blockContent = block[block.type];
-    if (!blockContent?.rich_text) return null;
-
-    for (const text of blockContent.rich_text) {
-      // Case 2: Mention block with page reference
-      if (
-        text.type === 'mention' &&
-        text.mention?.type === 'page' &&
-        text.mention.page?.id
-      ) {
-        return text.mention.page.id;
-      }
-
-      // Case 3: Mention block with link preview
-      if (
-        text.type === 'mention' &&
-        text.mention?.type === 'link_preview' &&
-        text.mention.link_preview?.url
-      ) {
-        const url = text.mention.link_preview.url;
-        const pageId = extractNotionPageIdFromUrl(url);
-        if (pageId) return pageId;
-      }
-
-      // Case 4: Regular link block that happens to point to a Notion page
-      if (text.type === 'text' && text.text?.link?.url) {
-        const url = text.text.link.url;
-        const pageId = extractNotionPageIdFromUrl(url);
-        if (pageId) return pageId;
-      }
-    }
-
-    return null;
   }
 
   private transformUrl(url: string): string {
