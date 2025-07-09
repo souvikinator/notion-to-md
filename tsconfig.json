@@ -15,7 +15,8 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "types": ["node", "jest"]
+    "types": ["node", "jest"],
+    "noImplicitAny": false,
   },
   "exclude": ["node_modules", "*.spec.ts", "build"],
   "include": ["./src/**/*.ts"]

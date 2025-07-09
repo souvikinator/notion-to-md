@@ -128,6 +128,7 @@
   },
   "dependencies": {
     "mime": "^3.0.0",
-    "node-fetch": "^2.7.0"
+    "node-fetch": "^2.7.0",
+    "ts-node": "^10.9.2"
   }
 }
