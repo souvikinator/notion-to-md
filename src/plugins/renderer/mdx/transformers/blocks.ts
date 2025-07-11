@@ -513,7 +513,7 @@ export const blockTransformers: Partial<
     transform: async ({ block }) => {
       // @ts-ignore
       const expression = block.equation.expression;
-      return `\`\`\`math\n${expression}\n\`\`\`\n\n`;
+      return `$$\n${expression}\n$$\n\n`;
     },
   },
 
