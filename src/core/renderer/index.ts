@@ -319,9 +319,10 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
           item.equation &&
           this.context.transformers.annotations.equation
         ) {
+          // Use the equation.expression as the text for the annotation transformer
           text = await this.context.transformers.annotations.equation.transform(
             {
-              text,
+              text: item.equation.expression,
               metadata,
               manifest: this.context.manifest,
             },

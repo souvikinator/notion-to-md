@@ -1,5 +1,5 @@
-import { JSXRenderer } from '../src/plugins/renderer/jsx';
-import { NotionBlock } from '../src/types/notion';
+import { JSXRenderer } from '../../src/plugins/renderer/jsx';
+import { NotionBlock } from '../../src/types/notion';
 import { describe, it, expect } from '@jest/globals';
 
 const now = new Date().toISOString();

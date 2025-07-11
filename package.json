@@ -8,14 +8,18 @@
   "module": "./build/index.mjs",
   "types": "./build/index.d.ts",
   "scripts": {
-    "prepare": "husky",
-    "build": "tsup",
-    "prebuild": "npm run clean",
+    "build": "npm run clean && tsup",
     "clean": "rm -rf ./build",
-    "test": "jest --coverage --verbose",
-    "test:watch": "jest -w",
-    "lint": "eslint \"src/**/*.ts\"",
-    "format": "prettier --write ."
+    "test": "jest",
+    "test:all": "node test/run-all-tests.js",
+    "test:unit": "jest",
+    "test:integration": "node test/integration/test-math-issue-case.js",
+    "test:features": "node test/features/test-math-rendering.js && node test/features/test-nested-numbered-lists.js && node test/features/test-mdx-spacing.js",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky install"
   },
   "peerDependencies": {
     "@notionhq/client": "^2.0.0"

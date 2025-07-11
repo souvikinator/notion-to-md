@@ -134,76 +134,136 @@ export const blockTransformers: Partial<
 
   bulleted_list_item: {
     transform: async ({ block, utils, metadata = {} }) => {
-      // First, handle this block's own content
-      const text = await utils.transformRichText(
-        // @ts-ignore
-        block.bulleted_list_item.rich_text,
+      // Only render the list if this is the first in a group
+      if (metadata._renderedByGroup) return '';
+      // Find all consecutive bulleted_list_items at this level
+      const group = groupListItems(
+        block,
+        metadata.siblings,
+        'bulleted_list_item',
       );
       const currentLevel = metadata.listLevel || 0;
       const indent = INDENT.repeat(currentLevel);
-
-      // If no children, just return formatted content
-      if (!block.children?.length) {
-        return `${indent}- ${text}`;
+      const lines = [];
+      for (const item of group) {
+        const text = await utils.transformRichText(
+          item.bulleted_list_item.rich_text,
+        );
+        let childrenContent = '';
+        if (item.children?.length) {
+          // Group nested list items by type
+          const nestedBullets = item.children.filter(
+            (b) => b.type === 'bulleted_list_item',
+          );
+          const nestedNumbers = item.children.filter(
+            (b) => b.type === 'numbered_list_item',
+          );
+          if (nestedBullets.length) {
+            childrenContent +=
+              '\n' +
+              (await blockTransformers.bulleted_list_item.transform({
+                block: nestedBullets[0],
+                utils,
+                metadata: {
+                  ...metadata,
+                  listLevel: currentLevel + 1,
+                  _renderedByGroup: false,
+                },
+                siblings: nestedBullets,
+              }));
+          }
+          if (nestedNumbers.length) {
+            childrenContent +=
+              '\n' +
+              (await blockTransformers.numbered_list_item.transform({
+                block: nestedNumbers[0],
+                utils,
+                metadata: {
+                  ...metadata,
+                  listLevel: currentLevel + 1,
+                  _renderedByGroup: false,
+                },
+                siblings: nestedNumbers,
+              }));
+          }
+        }
+        lines.push(
+          `${indent}- ${text}${childrenContent ? '\n' + childrenContent : ''}`,
+        );
       }
-
-      // For blocks with children, we'll recursively handle them
-      const childMetadata = {
-        ...metadata,
-        listLevel: currentLevel + 1, // can be anything as per your use case
-      };
-
-      // Process each child block directly through processBlock
-      const childrenContent = await Promise.all(
-        block.children.map((childBlock) =>
-          utils.processBlock(childBlock, childMetadata),
-        ),
-      );
-
-      // Combine everything with proper formatting
-      return `${indent}- ${text}\n${childrenContent.join('\n')}\n`;
+      // Mark all items in this group as rendered
+      for (const item of group) {
+        item._renderedByGroup = true;
+      }
+      return lines.join('\n') + '\n';
     },
   },
 
   numbered_list_item: {
     transform: async ({ block, utils, metadata = {} }) => {
-      // Get the current nesting level
-      const currentLevel = metadata.listLevel || 0;
-
-      // The parent passes down the current number to its children
-      const currentNumber = metadata.currentNumber || 1;
-
-      // Create indentation based on level
-      const indent = INDENT.repeat(currentLevel);
-
-      // Process the item's text content
-      const text = await utils.transformRichText(
-        // @ts-ignore
-        block.numbered_list_item.rich_text,
+      // Only render the list if this is the first in a group
+      if (metadata._renderedByGroup) return '';
+      // Find all consecutive numbered_list_items at this level
+      const group = groupListItems(
+        block,
+        metadata.siblings,
+        'numbered_list_item',
       );
-
-      // Format this item with proper number
-      const formattedItem = `${indent}${currentNumber}. ${text}`;
-
-      // If no children, just return this item
-      if (!block.children?.length) {
-        return formattedItem;
+      const currentLevel = metadata.listLevel || 0;
+      const indent = INDENT.repeat(currentLevel);
+      const lines = [];
+      for (let idx = 0; idx < group.length; idx++) {
+        const item = group[idx];
+        const text = await utils.transformRichText(
+          item.numbered_list_item.rich_text,
+        );
+        let childrenContent = '';
+        if (item.children?.length) {
+          // Group nested list items by type
+          const nestedBullets = item.children.filter(
+            (b) => b.type === 'bulleted_list_item',
+          );
+          const nestedNumbers = item.children.filter(
+            (b) => b.type === 'numbered_list_item',
+          );
+          if (nestedBullets.length) {
+            childrenContent +=
+              '\n' +
+              (await blockTransformers.bulleted_list_item.transform({
+                block: nestedBullets[0],
+                utils,
+                metadata: {
+                  ...metadata,
+                  listLevel: currentLevel + 1,
+                  _renderedByGroup: false,
+                },
+                siblings: nestedBullets,
+              }));
+          }
+          if (nestedNumbers.length) {
+            childrenContent +=
+              '\n' +
+              (await blockTransformers.numbered_list_item.transform({
+                block: nestedNumbers[0],
+                utils,
+                metadata: {
+                  ...metadata,
+                  listLevel: currentLevel + 1,
+                  _renderedByGroup: false,
+                },
+                siblings: nestedNumbers,
+              }));
+          }
+        }
+        lines.push(
+          `${indent}${idx + 1}. ${text}${childrenContent ? '\n' + childrenContent : ''}`,
+        );
       }
-
-      // For items with children, process each child sequentially
-      // Each child starts with number 1 at its level
-      const childrenContent = [];
-      for (let i = 0; i < block.children.length; i++) {
-        const childContent = await utils.processBlock(block.children[i], {
-          ...metadata,
-          listLevel: currentLevel + 1,
-          currentNumber: i + 1, // Pass sequential numbers to siblings
-        });
-        childrenContent.push(childContent);
+      // Mark all items in this group as rendered
+      for (const item of group) {
+        item._renderedByGroup = true;
       }
-
-      // Combine this item with its children
-      return `${formattedItem}\n${childrenContent.join('\n')}\n`;
+      return lines.join('\n') + '\n';
     },
   },
 
@@ -453,7 +513,7 @@ export const blockTransformers: Partial<
     transform: async ({ block }) => {
       // @ts-ignore
       const expression = block.equation.expression;
-      return `\`\`\`math\n${expression}\n\`\`\`\n\n`;
+      return `$$\n${expression}\n$$\n\n`;
     },
   },
 
@@ -645,3 +705,73 @@ export const blockTransformers: Partial<
     transform: async () => '',
   },
 };
+
+// NOTE: The following is a fallback to the previous per-block logic due to lack of blockTree context in MDX renderer.
+// For future improvement, refactor to support grouping consecutive list items when blockTree context is available.
+
+blockTransformers.bulleted_list_item = {
+  transform: async ({ block, utils, metadata = {} }) => {
+    const text = await utils.transformRichText(
+      // @ts-ignore
+      block.bulleted_list_item.rich_text,
+    );
+    const currentLevel = metadata.listLevel || 0;
+    const indent = INDENT.repeat(currentLevel);
+
+    if (!block.children?.length) {
+      return `${indent}- ${text}`;
+    }
+    const childMetadata = {
+      ...metadata,
+      listLevel: currentLevel + 1,
+    };
+    const childrenContent = await Promise.all(
+      block.children.map((childBlock) =>
+        utils.processBlock(childBlock, childMetadata),
+      ),
+    );
+    return `${indent}- ${text}\n${childrenContent.join('\n')}\n`;
+  },
+};
+
+blockTransformers.numbered_list_item = {
+  transform: async ({ block, utils, metadata = {} }) => {
+    const currentLevel = metadata.listLevel || 0;
+    const currentNumber = metadata.currentNumber || 1;
+    const indent = INDENT.repeat(currentLevel);
+    const text = await utils.transformRichText(
+      // @ts-ignore
+      block.numbered_list_item.rich_text,
+    );
+    const formattedItem = `${indent}${currentNumber}. ${text}`;
+    if (!block.children?.length) {
+      return formattedItem;
+    }
+    const childrenContent: string[] = [];
+    for (let i = 0; i < block.children.length; i++) {
+      const childContent = await utils.processBlock(block.children[i], {
+        ...metadata,
+        listLevel: currentLevel + 1,
+        currentNumber: i + 1,
+      });
+      childrenContent.push(childContent);
+    }
+    return `${formattedItem}\n${childrenContent.join('\n')}\n`;
+  },
+};
+
+function groupListItems(block, siblings, type) {
+  // Find all consecutive list items of the same type at the same parent
+  const startIdx = siblings.findIndex((b) => b.id === block.id);
+  const group = [];
+  for (
+    let i = startIdx;
+    i < siblings.length &&
+    siblings[i].type === type &&
+    siblings[i].parent?.id === block.parent?.id;
+    i++
+  ) {
+    group.push(siblings[i]);
+  }
+  return group;
+}
