@@ -68,7 +68,7 @@ export function isLinkPreviewMention(block: NotionBlock): boolean {
   return false;
 }
 
-export function isNotionLinkText(block: NotionBlock): boolean {
+export function isTextLinkedToNotionPage(block: NotionBlock): boolean {
   const blockTypeObject = (block as any)[block.type];
 
   if (blockTypeObject?.rich_text) {
@@ -98,13 +98,20 @@ export function isNotionLinkText(block: NotionBlock): boolean {
  * 3. Else → ❌ Not a Notion page
  */
 export function isNotionPageUrl(url: string): boolean {
-  if (!url) return false;
+  if (url.length === 0) return false;
 
   // Case 1: Relative Notion page path e.g. "/some-page-uuid"
-  if (url.startsWith('/') && isRawUUID(url.slice(1))) return true;
+  if (url.startsWith('/')) {
+    // remove query and fragment if any
+    const pathPart = url.slice(1).split('?')[0].split('#')[0];
+    if (isRawUUID(pathPart)) return true;
+  }
 
   try {
-    const parsed = new URL(url);
+    const parsed = isValidURL(url);
+
+    if (!parsed) return false;
+
     const hostname = parsed.hostname.toLowerCase();
 
     // Case 2: Notion hostnames check for absolute URLs
@@ -131,9 +138,9 @@ export function isNotionPageUrl(url: string): boolean {
  * @param rawUrl The raw URL string to validate
  * @returns
  */
-export function isValidURL(rawUrl: string): string | null {
+export function isValidURL(rawUrl: string): URL | null {
   try {
-    return new URL(rawUrl).toString();
+    return new URL(rawUrl);
   } catch {
     return null;
   }
@@ -171,7 +178,7 @@ export function isPageRefBlock(block: NotionBlock): boolean {
     isChildPageBlock(block) ||
     isMentionPage(block) ||
     isLinkPreviewMention(block) ||
-    isNotionLinkText(block)
+    isTextLinkedToNotionPage(block)
   );
 }
 
@@ -179,11 +186,13 @@ export function isPageRefBlock(block: NotionBlock): boolean {
  * Extracts Notion page UUID from a valid Notion link (absolute or relative) and returns it normalized.
  */
 export function extractNotionPageIdFromUrl(url: string): string | null {
-  if (!url) return null;
+  if (!isNotionPageUrl(url)) return null;
 
   // Case 1: /<uuid> format
-  if (url.startsWith('/') && isRawUUID(url.slice(1))) {
-    return normalizeUUID(url.slice(1));
+  if (url.startsWith('/')) {
+    // remove query and fragment if any
+    const pathPart = url.slice(1).split('?')[0].split('#')[0];
+    return isRawUUID(pathPart) ? normalizeUUID(pathPart) : null;
   }
 
   // Case 2: Absolute URL with Notion hostnames
@@ -191,6 +200,7 @@ export function extractNotionPageIdFromUrl(url: string): string | null {
   try {
     const parsed = new URL(url);
     const lastSegment = parsed.pathname.split('/').filter(Boolean).pop() || '';
+
     const uuidCandidate = lastSegment.split('-').pop() || '';
 
     return isRawUUID(uuidCandidate) ? normalizeUUID(uuidCandidate) : null;
@@ -228,8 +238,8 @@ export function normalizeUUID(uuid: string): string {
   return uuid.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5');
 }
 
-export function isExternalUrl(url: string): boolean {
-  return !url.includes('prod-files-secure.s3.us-west-2.amazonaws.com');
+export function isNotionS3Url(url: string): boolean {
+  return url.includes('prod-files-secure.s3.us-west-2.amazonaws.com');
 }
 
 /**
@@ -282,15 +292,39 @@ export function extractPageIdFromBlock(block: NotionBlock): string | null {
 export function isPageRefProperty(
   property: NotionDatabaseEntryProperty,
 ): boolean {
-  // Only rich_text properties contain page mentions
+  // Only rich_text properties can contain page references
   if (property.type !== 'rich_text' || !Array.isArray(property.rich_text)) {
     return false;
   }
 
-  // Check each rich text item for page mentions
-  return property.rich_text.some(
-    (item) => item.type === 'mention' && item.mention?.type === 'page',
-  );
+  // Check each rich text item for page references
+  return property.rich_text.some((item) => {
+    // Case 1: Direct page mention
+    if (item.type === 'mention' && item.mention?.type === 'page') {
+      return true;
+    }
+
+    // Case 2: Link preview mention with Notion URL
+    if (
+      item.type === 'mention' &&
+      item.mention?.type === 'link_preview' &&
+      item.mention.link_preview?.url &&
+      isNotionPageUrl(item.mention.link_preview.url)
+    ) {
+      return true;
+    }
+
+    // Case 3: Text with link to Notion page
+    if (
+      item.type === 'text' &&
+      item.text?.link?.url &&
+      isNotionPageUrl(item.text.link.url)
+    ) {
+      return true;
+    }
+
+    return false;
+  });
 }
 
 // block fetching utilities
