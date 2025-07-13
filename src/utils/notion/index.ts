@@ -278,6 +278,21 @@ export function extractPageIdFromBlock(block: NotionBlock): string | null {
   return null;
 }
 
+// Checks if a Notion Database property contains page mentions
+export function isPageRefProperty(
+  property: NotionDatabaseEntryProperty,
+): boolean {
+  // Only rich_text properties contain page mentions
+  if (property.type !== 'rich_text' || !Array.isArray(property.rich_text)) {
+    return false;
+  }
+
+  // Check each rich text item for page mentions
+  return property.rich_text.some(
+    (item) => item.type === 'mention' && item.mention?.type === 'page',
+  );
+}
+
 // block fetching utilities
 
 /**
