@@ -5,7 +5,8 @@ import path from 'path';
 export default defineConfig({
   test: {
     coverage: {
-      reporter: ['text', 'html'],
+      reporter: ['text'],
+      include: ['src/**/*.ts'],
     },
   },
   resolve: {
