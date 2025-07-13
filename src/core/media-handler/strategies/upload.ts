@@ -13,7 +13,7 @@ import {
   StrategyInput,
   StrategyOutput,
 } from '../../../types/strategy';
-import { isExternalUrl } from '../../../utils/notion';
+import { isNotionS3Url } from '../../../utils/notion';
 import {
   extractReferenceUrl,
   updateReferenceSourceUrl,
@@ -89,7 +89,7 @@ export class UploadStrategy implements MediaStrategy {
       return { mediaInfo: null, needsManifestUpdate: false, isProcessed: true };
     }
 
-    if (this.config.preserveExternalUrls && isExternalUrl(url)) {
+    if (this.config.preserveExternalUrls && !isNotionS3Url(url)) {
       console.debug(
         `[UploadStrategy] Preserving external URL for ${refId}: ${url}`,
       );

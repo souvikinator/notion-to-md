@@ -143,7 +143,7 @@ export class PageReferenceHandler implements ProcessorChainNode {
       );
 
       await this.manifestManager.updateEntry(this.pageId, {
-        url: validatedUrl,
+        url: validatedUrl.toString(),
         source: PageReferenceEntryType.PROPERTY,
         lastUpdated: new Date().toISOString(),
       });
