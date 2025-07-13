@@ -12,12 +12,16 @@
     "sourceMap": true,
     "outDir": "./build",
     "inlineSources": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "types": ["node", "jest"],
-    "noImplicitAny": false,
+    "types": ["node", "vitest"],
+    "noImplicitAny": false
   },
   "exclude": ["node_modules", "*.spec.ts", "build"],
-  "include": ["./src/**/*.ts"]
+  "include": ["./src/**/*.ts", "tests/**/*.ts", "eslint.config.ts"]
 }
