@@ -9,7 +9,7 @@ import {
   isTextLinkedToNotionPage,
   isNotionPageUrl,
   isValidURL,
-  extractUrlFromNotionProperty,
+  extractFinalReferenceUrlFromNotionProperty,
   isPageRefBlock,
   extractNotionPageIdFromUrl,
   normalizeUUID,
@@ -321,7 +321,9 @@ describe('Notion Utils', () => {
   describe('extractUrlFromNotionProperty', () => {
     it('should extract URL from a URL property', () => {
       const prop = { type: 'url', url: 'https://example.com' } as any;
-      expect(extractUrlFromNotionProperty(prop)).toBe('https://example.com');
+      expect(extractFinalReferenceUrlFromNotionProperty(prop)).toBe(
+        'https://example.com',
+      );
     });
 
     it('should extract URL from a formula property', () => {
@@ -329,7 +331,9 @@ describe('Notion Utils', () => {
         type: 'formula',
         formula: { type: 'string', string: 'https://example.com' },
       } as any;
-      expect(extractUrlFromNotionProperty(prop)).toBe('https://example.com');
+      expect(extractFinalReferenceUrlFromNotionProperty(prop)).toBe(
+        'https://example.com',
+      );
     });
 
     it('should extract URL from a rich_text property', () => {
@@ -337,21 +341,26 @@ describe('Notion Utils', () => {
         type: 'rich_text',
         rich_text: [{ plain_text: 'https://example.com' }],
       } as any;
-      expect(extractUrlFromNotionProperty(prop)).toBe('https://example.com');
+      expect(extractFinalReferenceUrlFromNotionProperty(prop)).toBe(
+        'https://example.com',
+      );
     });
 
     it('should return null for empty/null values', () => {
       expect(
-        extractUrlFromNotionProperty({ type: 'url', url: null } as any),
+        extractFinalReferenceUrlFromNotionProperty({
+          type: 'url',
+          url: null,
+        } as any),
       ).toBe(null);
       expect(
-        extractUrlFromNotionProperty({
+        extractFinalReferenceUrlFromNotionProperty({
           type: 'rich_text',
           rich_text: [],
         } as any),
       ).toBe(null);
       expect(
-        extractUrlFromNotionProperty({
+        extractFinalReferenceUrlFromNotionProperty({
           type: 'formula',
           formula: { type: 'string', string: null },
         } as any),
@@ -360,19 +369,19 @@ describe('Notion Utils', () => {
 
     it('should return null for non-http URLs', () => {
       expect(
-        extractUrlFromNotionProperty({
+        extractFinalReferenceUrlFromNotionProperty({
           type: 'url',
           url: '/relative-path',
         } as any),
       ).toBe('/relative-path');
       expect(
-        extractUrlFromNotionProperty({
+        extractFinalReferenceUrlFromNotionProperty({
           type: 'rich_text',
           rich_text: [{ plain_text: 'just text' }],
         } as any),
       ).toBe(null);
       expect(
-        extractUrlFromNotionProperty({
+        extractFinalReferenceUrlFromNotionProperty({
           type: 'formula',
           formula: { type: 'string', string: 'not a url' },
         } as any),
@@ -381,7 +390,7 @@ describe('Notion Utils', () => {
 
     it('should return null for different formula types other than string', () => {
       expect(
-        extractUrlFromNotionProperty({
+        extractFinalReferenceUrlFromNotionProperty({
           type: 'formula',
           formula: { type: 'number', number: 123 },
         } as any),

@@ -152,7 +152,7 @@ export function isValidURL(rawUrl: string): URL | null {
  * @param property NotionPageProperties - The Notion page property to extract the URL from.
  * @returns
  */
-export function extractUrlFromNotionProperty(
+export function extractFinalReferenceUrlFromNotionProperty(
   property: NotionPageProperty,
 ): string | null {
   if ('url' in property) return property.url;
