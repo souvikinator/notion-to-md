@@ -8,13 +8,12 @@ import { PageReferenceHandlerError } from '../errors';
 import { PageRefConfig } from '../../types/configuration';
 import {
   extractPageIdFromBlock,
-  extractUrlFromNotionProperty,
+  extractFinalReferenceUrlFromNotionProperty,
   isNotionPageUrl,
   isValidURL,
 } from '../../utils/notion';
 
-const DEFAULT_CONFIG: PageRefConfig = {
-  UrlPropertyNameNotion: 'URL', // will be overridden by user config
+const DEFAULT_CONFIG: Partial<PageRefConfig> = {
   transformUrl: undefined,
   failForward: true,
 };
@@ -29,8 +28,14 @@ export class PageReferenceHandler implements ProcessorChainNode {
     private config: PageRefConfig,
     private readonly manifestManager: PageReferenceManifestManager,
   ) {
+    if (config.UrlPropertyNameNotion) {
+      throw new PageReferenceHandlerError(
+        'Please provide a final URL property name in the config object for the page reference handler to point to. More info: https://notionconvert.com/docs/v4/concepts/page-reference-handler/#page-reference-builder',
+      );
+    }
+
     this.config = { ...DEFAULT_CONFIG, ...config };
-    console.debug('[PageRefHandler] Initializing with config:', config);
+    console.debug('[PageRefHandler] Initializing with config:', this.config);
   }
 
   private handleError(message: string, error: unknown): void {
@@ -117,7 +122,7 @@ export class PageReferenceHandler implements ProcessorChainNode {
       return;
     }
 
-    const rawUrl = extractUrlFromNotionProperty(urlProperty);
+    const rawUrl = extractFinalReferenceUrlFromNotionProperty(urlProperty);
     if (!rawUrl) {
       console.debug(
         `[PageRefHandler] No valid URL found in property '${this.config.UrlPropertyNameNotion}'`,
