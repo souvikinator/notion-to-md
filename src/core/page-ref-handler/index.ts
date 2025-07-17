@@ -28,7 +28,7 @@ export class PageReferenceHandler implements ProcessorChainNode {
     private config: PageRefConfig,
     private readonly manifestManager: PageReferenceManifestManager,
   ) {
-    if (config.UrlPropertyNameNotion) {
+    if (!config.UrlPropertyNameNotion) {
       throw new PageReferenceHandlerError(
         'Please provide a final URL property name in the config object for the page reference handler to point to. More info: https://notionconvert.com/docs/v4/concepts/page-reference-handler/#page-reference-builder',
       );
