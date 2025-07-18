@@ -42,6 +42,43 @@ const createMockParagraphBlock = (id: string): NotionBlock =>
     children: [],
   }) as NotionBlock;
 
+const createMockLinkToPageBlock = (id: string, pageId: string): NotionBlock =>
+  ({
+    object: 'block',
+    id,
+    parent: { type: 'page_id', page_id: 'parent-page-id' },
+    created_time: '2022-01-01T00:00:00.000Z',
+    last_edited_time: '2022-01-01T00:00:00.000Z',
+    created_by: { object: 'user', id: 'user-1' },
+    last_edited_by: { object: 'user', id: 'user-1' },
+    has_children: false,
+    in_trash: false,
+    archived: false,
+    type: 'link_to_page',
+    link_to_page: {
+      type: 'page_id',
+      page_id: pageId,
+    },
+  }) as NotionBlock;
+
+const createMockChildPageBlock = (id: string, title: string): NotionBlock =>
+  ({
+    object: 'block',
+    id,
+    parent: { type: 'page_id', page_id: 'parent-page-id' },
+    created_time: '2022-01-01T00:00:00.000Z',
+    last_edited_time: '2022-01-01T00:00:00.000Z',
+    created_by: { object: 'user', id: 'user-1' },
+    last_edited_by: { object: 'user', id: 'user-1' },
+    has_children: false,
+    in_trash: false,
+    archived: false,
+    type: 'child_page',
+    child_page: {
+      title,
+    },
+  }) as NotionBlock;
+
 const createMockTrackedBlock = (
   id: string,
   ref: NotionBlock,
@@ -300,8 +337,8 @@ describe('PageReferenceHandler', () => {
     const config: PageRefConfig = {
       UrlPropertyNameNotion: URL_PROP_NAME,
     };
-    const referencedPageId = 'ref-page-1';
-    const finalUrl = 'https://example.com/final-url-for-ref-page-1';
+    const referencedPageId = '1107e9d7-682d-4552-8711-3965a3979313';
+    const finalUrl = 'https://example.com/final-url-for-ref-page';
 
     beforeEach(() => {
       const manifestEntry: PageReferenceEntry = {
@@ -312,6 +349,55 @@ describe('PageReferenceHandler', () => {
       mockManifestManager.getEntry
         .calledWith(referencedPageId)
         .mockReturnValue(manifestEntry);
+    });
+
+    it('should update block with link_to_page', async () => {
+      const handler = new PageReferenceHandler(
+        pageId,
+        config,
+        mockManifestManager,
+      );
+      const linkToPageBlock = createMockTrackedBlock(
+        'link-to-page-block-1',
+        createMockLinkToPageBlock('link-to-page-block-1', referencedPageId),
+      );
+
+      const chainData = createMockChainData({
+        blockTree: createMockBlockTree({
+          pageRefBlockReferences: [linkToPageBlock],
+        }),
+      });
+
+      await handler.process(chainData);
+
+      const updatedBlock = chainData.blockTree.pageRefBlockReferences![0]
+        .ref as any;
+      expect(updatedBlock.link_to_page.url).toBe(finalUrl);
+    });
+
+    it('should update block with child_page', async () => {
+      const handler = new PageReferenceHandler(
+        pageId,
+        config,
+        mockManifestManager,
+      );
+      // NOTE: The pageId for a child_page block *is* its blockId.
+      const childPageBlock = createMockTrackedBlock(
+        referencedPageId,
+        createMockChildPageBlock(referencedPageId, 'A sub-page title'),
+      );
+
+      const chainData = createMockChainData({
+        blockTree: createMockBlockTree({
+          pageRefBlockReferences: [childPageBlock],
+        }),
+      });
+
+      await handler.process(chainData);
+
+      const updatedBlock = chainData.blockTree.pageRefBlockReferences![0]
+        .ref as any;
+      expect(updatedBlock.child_page.url).toBe(finalUrl);
     });
 
     it('should update block with page mention', async () => {
@@ -343,6 +429,90 @@ describe('PageReferenceHandler', () => {
       const updatedBlock = chainData.blockTree.pageRefBlockReferences![0]
         .ref as any;
       expect(updatedBlock.paragraph.rich_text[0].href).toBe(finalUrl);
+    });
+
+    it('should update block with link_preview mention', async () => {
+      const handler = new PageReferenceHandler(
+        pageId,
+        config,
+        mockManifestManager,
+      );
+      const notionPageUrl = `https://www.notion.so/refpage-${referencedPageId.replace(
+        /-/g,
+        '',
+      )}`;
+      const linkPreviewBlock = createMockTrackedBlock('link-preview-block-1', {
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [
+            {
+              type: 'mention',
+              mention: {
+                type: 'link_preview',
+                link_preview: { url: notionPageUrl },
+              },
+            },
+          ],
+        },
+      } as NotionBlock);
+
+      const chainData = createMockChainData({
+        blockTree: createMockBlockTree({
+          pageRefBlockReferences: [linkPreviewBlock],
+        }),
+      });
+
+      await handler.process(chainData);
+
+      const updatedBlock = chainData.blockTree.pageRefBlockReferences![0]
+        .ref as any;
+      expect(updatedBlock.paragraph.rich_text[0].mention.link_preview.url).toBe(
+        finalUrl,
+      );
+      expect(updatedBlock.paragraph.rich_text[0].href).toBe(finalUrl);
+    });
+
+    it('should update block with a text link to a notion page', async () => {
+      const handler = new PageReferenceHandler(
+        pageId,
+        config,
+        mockManifestManager,
+      );
+      const notionPageUrl = `https://www.notion.so/some-slug-here-${referencedPageId.replace(
+        /-/g,
+        '',
+      )}`;
+      const textLinkBlock = createMockTrackedBlock('text-link-block-1', {
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [
+            {
+              type: 'text',
+              href: notionPageUrl,
+              plain_text: 'a link',
+              text: {
+                content: 'a link',
+                link: {
+                  url: notionPageUrl,
+                },
+              },
+            },
+          ],
+        },
+      } as NotionBlock);
+
+      const chainData = createMockChainData({
+        blockTree: createMockBlockTree({
+          pageRefBlockReferences: [textLinkBlock],
+        }),
+      });
+
+      await handler.process(chainData);
+
+      const updatedBlock = chainData.blockTree.pageRefBlockReferences![0]
+        .ref as any;
+      expect(updatedBlock.paragraph.rich_text[0].href).toBe(finalUrl);
+      expect(updatedBlock.paragraph.rich_text[0].text.link.url).toBe(finalUrl);
     });
 
     it('should not update block if manifest has no record', async () => {

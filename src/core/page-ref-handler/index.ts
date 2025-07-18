@@ -263,7 +263,9 @@ export class PageReferenceHandler implements ProcessorChainNode {
           // Regular links that point to Notion pages
           if (text.type === 'text' && isNotionPageUrl(text.href)) {
             text.href = url;
-            text.text.link = url;
+            if (text.text.link) {
+              text.text.link.url = url;
+            }
           }
         }
       }

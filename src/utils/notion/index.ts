@@ -255,6 +255,10 @@ export function extractPageIdFromBlock(block: NotionBlock): string | null {
     return block.link_to_page.page_id;
   }
 
+  if (isChildPageBlock(block)) {
+    return block.id;
+  }
+
   const blockTypeObject = (block as any)[block.type];
 
   if ('rich_text' in blockTypeObject) {
