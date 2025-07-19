@@ -2,6 +2,7 @@ import type { Client } from '@notionhq/client';
 import { PageReferenceManifestManager } from '../../utils/manifest-manager';
 import { PageReferenceEntryType } from '../../types/manifest-manager';
 import { PageReferenceHandlerError } from '../../core/errors';
+import { extractFinalReferenceUrlFromNotionProperty } from '../notion';
 
 interface PageRefBuilderConfig {
   urlPropertyNameNotion: string;
@@ -122,7 +123,12 @@ export class PageReferenceManifestBuilder {
 
     console.debug(`Processing database page ${page.id}`);
     try {
-      const url = await this.extractPublishedUrl(page.properties);
+      const urlProperty = page.properties[this.config.urlPropertyNameNotion];
+      if (!urlProperty) {
+        console.debug(`No url property found for page ${page.id}`);
+        return;
+      }
+      const url = extractFinalReferenceUrlFromNotionProperty(urlProperty);
       if (!url) {
         console.debug(`No valid URL for page ${page.id}`);
         return;
@@ -141,27 +147,6 @@ export class PageReferenceManifestBuilder {
         `Failed processing page ${page.id}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-  }
-
-  private async extractPublishedUrl(
-    properties: Record<string, any>,
-  ): Promise<string | null> {
-    const urlProperty = properties[this.config.urlPropertyNameNotion];
-    if (!urlProperty) return null;
-
-    let url: string | null = null;
-
-    if ('url' in urlProperty) {
-      url = urlProperty.url;
-    } else if (
-      'rich_text' in urlProperty &&
-      Array.isArray(urlProperty.rich_text) &&
-      urlProperty.rich_text.length > 0
-    ) {
-      url = urlProperty.rich_text[0]?.plain_text;
-    }
-
-    return url;
   }
 
   getManifestManager(): PageReferenceManifestManager {

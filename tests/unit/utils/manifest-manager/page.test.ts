@@ -439,6 +439,57 @@ describe('PageReferenceManifestManager', () => {
       const manifest = manager.getManifest();
       expect(manifest.lastUpdated).toBe('2023-01-01T00:00:00.000Z');
     });
+
+    it('should preserve existing manifest entries when adding new ones and saving', async () => {
+      const existingManifest = {
+        lastUpdated: '2023-10-26T10:00:00.000Z',
+        references: {
+          'page-1': {
+            url: 'https://example.com/page-1',
+            source: PageReferenceEntryType.PROPERTY,
+            lastUpdated: '2023-10-26T10:00:00.000Z',
+          },
+          'page-2': {
+            url: 'https://example.com/page-2',
+            source: PageReferenceEntryType.PROPERTY,
+            lastUpdated: '2023-10-26T10:00:00.000Z',
+          },
+        },
+      };
+
+      mockFs.mkdir.mockResolvedValue(undefined);
+      mockFs.readFile.mockResolvedValue(JSON.stringify(existingManifest));
+      mockFs.writeFile.mockResolvedValue(undefined);
+
+      await manager.initialize(); // Loads existing manifest
+
+      // Add a new entry
+      const newEntry: PageReferenceEntry = {
+        url: 'https://example.com/new-page',
+        source: PageReferenceEntryType.PROPERTY,
+        lastUpdated: new Date().toISOString(),
+      };
+      await manager.updateEntry('new-page-3', newEntry);
+
+      // Save the updated manifest
+      await manager.save();
+
+      expect(mockFs.writeFile).toHaveBeenCalledOnce();
+
+      // Verify the content written to the file
+      const savedContent = mockFs.writeFile.mock.calls[0][1] as string;
+      const savedManifest = JSON.parse(savedContent);
+
+      // Check that all entries (old and new) are present
+      expect(Object.keys(savedManifest.references)).toHaveLength(3);
+      expect(savedManifest.references['page-1']).toEqual(
+        existingManifest.references['page-1'],
+      );
+      expect(savedManifest.references['page-2']).toEqual(
+        existingManifest.references['page-2'],
+      );
+      expect(savedManifest.references['new-page-3']).toEqual(newEntry);
+    });
   });
 
   describe('error handling edge cases', () => {

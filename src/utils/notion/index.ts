@@ -155,18 +155,21 @@ export function isValidURL(rawUrl: string): URL | null {
 export function extractFinalReferenceUrlFromNotionProperty(
   property: NotionPageProperty,
 ): string | null {
-  if ('url' in property) return property.url;
+  let rawUrl: string | null = null;
 
-  if ('formula' in property) {
-    const { formula } = property;
-    return formula.type === 'string' && formula.string?.startsWith('http')
-      ? formula.string
-      : null;
+  if (property.type === 'url') {
+    rawUrl = property.url;
+  } else if (
+    property.type === 'formula' &&
+    property.formula.type === 'string'
+  ) {
+    rawUrl = property.formula.string;
+  } else if (property.type === 'rich_text') {
+    rawUrl = property.rich_text[0]?.plain_text ?? null;
   }
 
-  if ('rich_text' in property) {
-    const text = property.rich_text[0]?.plain_text;
-    return text?.startsWith('http') ? text : null;
+  if (rawUrl && isValidURL(rawUrl)) {
+    return rawUrl;
   }
 
   return null;

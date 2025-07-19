@@ -373,7 +373,7 @@ describe('Notion Utils', () => {
           type: 'url',
           url: '/relative-path',
         } as any),
-      ).toBe('/relative-path');
+      ).toBe(null);
       expect(
         extractFinalReferenceUrlFromNotionProperty({
           type: 'rich_text',
