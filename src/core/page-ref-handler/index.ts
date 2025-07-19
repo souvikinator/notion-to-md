@@ -5,68 +5,79 @@ import { TrackedBlockReferenceObject } from '../../types/fetcher';
 
 import { PageReferenceManifestManager } from '../../utils/manifest-manager';
 import { PageReferenceHandlerError } from '../errors';
+import { PageRefConfig } from '../../types/configuration';
+import {
+  extractPageIdFromBlock,
+  extractFinalReferenceUrlFromNotionProperty,
+  isNotionPageUrl,
+  isValidURL,
+} from '../../utils/notion';
 
-export interface PageRefConfig {
-  UrlPropertyNameNotion?: string;
-  baseUrl?: string;
-  transformUrl?: (url: string) => string;
-  failForward?: boolean;
-}
+const DEFAULT_CONFIG: Partial<PageRefConfig> = {
+  transformUrl: undefined,
+  failForward: true,
+};
 
 export class PageReferenceHandler implements ProcessorChainNode {
   next?: ProcessorChainNode;
-  private pageId: string;
   private processedRefs: Set<string> = new Set();
   private pageProperties: NotionPageProperties | null = null;
-  private manifestManager: PageReferenceManifestManager;
-  private readonly failForward: boolean;
 
   constructor(
-    pageId: string,
-    private config: PageRefConfig = {},
-    manifestManager: PageReferenceManifestManager,
+    private readonly pageId: string,
+    private config: PageRefConfig,
+    private readonly manifestManager: PageReferenceManifestManager,
   ) {
-    console.debug('[PageRefHandler] Initializing with config:', config);
+    if (!config.UrlPropertyNameNotion) {
+      throw new PageReferenceHandlerError(
+        'Please provide a final URL property name in the config object for the page reference handler to point to. More info: https://notionconvert.com/docs/v4/concepts/page-reference-handler/#page-reference-builder',
+      );
+    }
 
-    if (!pageId) throw new PageReferenceHandlerError('Page ID is required');
-    if (!manifestManager)
-      throw new PageReferenceHandlerError('Manifest manager is required');
+    this.config = { ...DEFAULT_CONFIG, ...config };
+    console.debug('[PageRefHandler] Initializing with config:', this.config);
+  }
 
-    this.pageId = pageId;
-    this.manifestManager = manifestManager;
-    this.failForward = config.failForward ?? true;
+  private handleError(message: string, error: unknown): void {
+    const err = error instanceof Error ? error : undefined;
+    const wrapped = new PageReferenceHandlerError(message, err);
 
-    console.debug(
-      '[PageRefHandler] Initialized for page:',
-      pageId,
-      'failForward:',
-      this.failForward,
+    if (!this.config.failForward) {
+      throw wrapped;
+    }
+
+    console.error(wrapped);
+  }
+
+  private reset(): void {
+    console.debug('[PageRefHandler] Resetting processed references');
+    this.processedRefs.clear();
+  }
+
+  private shouldProcess(data: ChainData): boolean {
+    return !!(
+      data.blockTree.pageRefBlockReferences && data.blockTree.properties
     );
   }
 
   async process(data: ChainData): Promise<ChainData> {
     console.debug('[PageRefHandler] Starting process');
 
-    // Reset processed references tracking
-    this.processedRefs.clear();
+    this.reset();
 
-    if (data.blockTree.pageRefBlockReferences && data.blockTree.properties) {
+    if (this.shouldProcess(data)) {
       await this.processBlocks(
-        data.blockTree.pageRefBlockReferences,
-        data.blockTree.properties,
+        data.blockTree.pageRefBlockReferences!,
+        data.blockTree.properties!,
       );
 
-      // Clean up any references that no longer exist
-      await this.cleanupRemovedReferences();
-
-      // Save the manifest after processing
       await this.manifestManager.save();
     }
 
     console.debug('[PageRefHandler] Process complete');
 
     if (!data.manifests) {
-      data.manifests = {};
+      data.manifests ??= {};
     }
 
     data.manifests.pageRef = this.manifestManager;
@@ -79,90 +90,75 @@ export class PageReferenceHandler implements ProcessorChainNode {
   ): Promise<void> {
     try {
       console.debug('[PageRefHandler] Processing blocks:', blocks.length);
-      if (!blocks?.length) {
+      if (blocks.length === 0) {
         console.debug('[PageRefHandler] No blocks to process');
         return;
       }
-      if (!properties) {
-        throw new PageReferenceHandlerError('Properties required');
-      }
 
       this.pageProperties = properties;
-      await this.handlePageProperties();
+      // updates the page ref manifest too
+      await this.validateAndRegisterCurrentPageUrlFromNotionPageProperty();
 
       for (const reference of blocks) {
         await this.processPageRef(reference);
       }
       console.debug('[PageRefHandler] Blocks processing complete');
     } catch (error) {
-      console.error('[PageRefHandler] Block processing failed:', error);
-      if (!this.failForward) {
-        throw new PageReferenceHandlerError(
-          'Failed to process blocks',
-          error instanceof Error ? error : undefined,
-        );
-      }
-      console.error(
-        new PageReferenceHandlerError(
-          'Failed to process blocks - continuing due to failForward',
-          error instanceof Error ? error : undefined,
-        ),
-      );
+      this.handleError('[PageRefHandler] Block processing failed:', error);
     }
   }
 
-  private async handlePageProperties(): Promise<void> {
-    if (!this.config.UrlPropertyNameNotion || !this.pageProperties) {
+  private async validateAndRegisterCurrentPageUrlFromNotionPageProperty(): Promise<void> {
+    if (!this.pageProperties) {
+      console.debug('[PageRefHandler] Skipping - no config/properties');
+      return;
+    }
+
+    console.debug('[PageRefHandler] Processing page properties');
+
+    const urlProperty = this.pageProperties[this.config.UrlPropertyNameNotion];
+    if (!urlProperty) {
+      console.debug('[PageRefHandler] Skipping - no url property');
+      return;
+    }
+
+    const rawUrl = extractFinalReferenceUrlFromNotionProperty(urlProperty);
+    if (!rawUrl) {
       console.debug(
-        '[PageRefHandler] Skipping property handling - no config/properties',
+        `[PageRefHandler] No valid URL found in property '${this.config.UrlPropertyNameNotion}'`,
       );
       return;
     }
 
-    try {
-      console.debug('[PageRefHandler] Processing page properties');
-      const urlProperty =
-        this.pageProperties[this.config.UrlPropertyNameNotion];
-      let url: string | null = null;
-
-      if (!urlProperty) {
-        console.debug(
-          '[PageRefHandler] Skipping property handling - no url property',
-        );
-        return;
-      }
-
-      if ('url' in urlProperty) {
-        url = urlProperty.url;
-      } else if (
-        'rich_text' in urlProperty &&
-        urlProperty.rich_text?.[0]?.plain_text?.startsWith('http')
-      ) {
-        url = urlProperty.rich_text[0].plain_text;
-      }
-
-      if (url) {
-        console.debug('[PageRefHandler] Updating manifest with URL:', url);
-        await this.manifestManager.updateEntry(this.pageId, {
-          url,
-          source: PageReferenceEntryType.PROPERTY,
-          lastUpdated: new Date().toISOString(),
-        });
-
-        // Mark this page's reference as processed
-        this.processedRefs.add(this.pageId);
-      }
-    } catch (error) {
-      console.error('[PageRefHandler] Property handling failed:', error);
-      const handlerError = new PageReferenceHandlerError(
-        'Property handling failed',
-        error instanceof Error ? error : undefined,
+    // Validate url
+    const validatedUrl = isValidURL(rawUrl);
+    if (!validatedUrl) {
+      this.handleError(
+        `[PageRefHandler] Invalid URL value in property '${this.config.UrlPropertyNameNotion}': ${rawUrl}`,
+        null,
       );
 
-      if (!this.failForward) {
-        throw handlerError;
-      }
-      console.error(handlerError);
+      return;
+    }
+
+    try {
+      console.debug(
+        '[PageRefHandler] Updating manifest with URL:',
+        validatedUrl,
+      );
+
+      await this.manifestManager.updateEntry(this.pageId, {
+        url: validatedUrl.toString(),
+        source: PageReferenceEntryType.PROPERTY,
+        lastUpdated: new Date().toISOString(),
+      });
+
+      this.processedRefs.add(this.pageId);
+    } catch (error) {
+      this.handleError(
+        `[PageRefHandler] Failed to update manifest for page: ${this.pageId}`,
+        error,
+      );
     }
   }
 
@@ -172,26 +168,25 @@ export class PageReferenceHandler implements ProcessorChainNode {
     try {
       // Extract the block from the reference
       const block = reference.ref as NotionBlock;
-      const pageId = this.extractPageId(block);
-      if (!pageId) return;
+      const pageId = extractPageIdFromBlock(block);
+      if (!pageId) {
+        console.debug(
+          '[PageRefHandler] No page ID found in block, skipping:',
+          block.id,
+        );
+        return;
+      }
 
       console.debug('[PageRefHandler] Processing reference:', pageId);
 
-      let entry;
-      try {
-        entry = this.manifestManager.getEntry(pageId);
-      } catch (error: unknown) {
-        console.debug('[PageRefHandler] No manifest entry for:', pageId, error);
-        return;
-      }
-
+      const entry = this.manifestManager.getEntry(pageId);
       if (!entry) {
-        console.debug('[PageRefHandler] No manifest entry for:', pageId);
+        console.debug('[PageRefHandler] No manifest entry for page:', pageId);
         return;
       }
 
-      const transformedPath = this.transformUrl(entry.url);
-      this.updateBlockContent(block, transformedPath);
+      const transformedURL = this.transformUrl(entry.url);
+      this.updateBlockContent(block, transformedURL);
       this.processedRefs.add(pageId);
 
       console.debug(
@@ -199,101 +194,26 @@ export class PageReferenceHandler implements ProcessorChainNode {
         pageId,
       );
     } catch (error) {
-      console.error('[PageRefHandler] Reference processing failed:', error);
-      const handlerError = new PageReferenceHandlerError(
-        'Reference processing failed',
-        error instanceof Error ? error : undefined,
-      );
-
-      if (!this.failForward) {
-        throw handlerError;
-      }
-      console.error(handlerError);
+      this.handleError('[PageRefHandler] Block processing failed:', error);
     }
-  }
-
-  private async cleanupRemovedReferences(): Promise<void> {
-    console.debug('[PageRefHandler] Starting cleanup of removed references');
-
-    try {
-      // Find entries that weren't processed this time
-      const allEntries = this.manifestManager.getAllEntries();
-
-      for (const [pageId] of Object.entries(allEntries)) {
-        if (!this.processedRefs.has(pageId)) {
-          console.debug('[PageRefHandler] Removing unused reference:', pageId);
-          this.manifestManager.removeEntry(pageId);
-        }
-      }
-
-      console.debug('[PageRefHandler] References cleanup complete');
-    } catch (error) {
-      console.error('[PageRefHandler] Error during cleanup:', error);
-      // Cleanup errors are always logged but don't stop processing
-      console.warn(
-        new PageReferenceHandlerError(
-          'Reference cleanup failed',
-          error instanceof Error ? error : undefined,
-        ),
-      );
-    }
-  }
-
-  private extractPageId(block: NotionBlock): string | null {
-    if (
-      block.type === 'link_to_page' &&
-      block.link_to_page?.type === 'page_id'
-    ) {
-      return block.link_to_page.page_id;
-    }
-
-    // @ts-ignore
-    const blockContent = block[block.type];
-
-    if (blockContent && blockContent.rich_text) {
-      const richText = blockContent.rich_text;
-      for (const text of richText) {
-        if (
-          text.type === 'mention' &&
-          text.mention?.type === 'page' &&
-          text.mention.page?.id
-        ) {
-          return text.mention.page.id;
-        }
-      }
-    }
-    return null;
   }
 
   private transformUrl(url: string): string {
-    if (!url) throw new PageReferenceHandlerError('URL required');
-
     try {
+      // if user provides a transform function, use it
       if (this.config.transformUrl) return this.config.transformUrl(url);
-      if (this.config.baseUrl) {
-        const baseUrl = this.config.baseUrl.replace(/\/$/, '');
-        const pathUrl = url.replace(/^\//, '');
-        return `${baseUrl}/${pathUrl}`;
-      }
+
       return url;
     } catch (error) {
-      console.error('[PageRefHandler] URL transformation failed:', error);
-      const handlerError = new PageReferenceHandlerError(
-        'URL transformation failed',
-        error instanceof Error ? error : undefined,
-      );
-
-      if (!this.failForward) {
-        throw handlerError;
-      }
-      console.error(handlerError);
-      return url; // Return original URL when failing forward
+      this.handleError('[PageRefHandler] URL transformation failed:', error);
+      return url;
     }
   }
 
   /**
    * Update's block content with URL
-   * Blocks: link_to_page, child_page, mention
+   * Blocks: link_to_page, child_page, mention (page & link_preview), and regular links
+   *
    * NOTE: since link_to_page and child_page do not support URL/href property,
    * we only convert them to mention block to maintain consistency
    */
@@ -302,39 +222,55 @@ export class PageReferenceHandler implements ProcessorChainNode {
       if (!('type' in block)) {
         throw new PageReferenceHandlerError('Invalid block structure');
       }
-      // Handle direct page references
+
       if (
         block.type === 'link_to_page' &&
         block.link_to_page?.type === 'page_id'
       ) {
-        //@ts-ignore - url doesn't exist in block, we are adding to keep things consistent
+        // Manually inject for consistency
+        //@ts-ignore
         block.link_to_page.url = url;
       } else if (block.type === 'child_page') {
-        // @ts-ignore
+        //@ts-ignore
         block.child_page.url = url;
-      } else {
-        // Handle mentions
-        // @ts-ignore
-        const blockContent = block[block.type];
-        if (blockContent && 'rich_text' in blockContent) {
-          for (const text of blockContent.rich_text) {
-            if (text.type === 'mention' && text.mention?.type === 'page') {
+      }
+
+      // Handle rich_text-based blocks
+      // @ts-ignore
+      const blockContent = block[block.type];
+      if (blockContent && 'rich_text' in blockContent) {
+        for (const text of blockContent.rich_text) {
+          // Mentions of pages
+          if (text.type === 'mention' && text.mention?.type === 'page') {
+            text.href = url;
+            // Update the mention's page URL (mention.page.url is not standard, but used for consistency)
+            // https://developers.notion.com/reference/rich-text#page-mention-type-object
+            text.mention.page.url = url;
+          }
+
+          // Link previews (edge case: mention of a Notion page)
+          if (
+            text.type === 'mention' &&
+            text.mention?.type === 'link_preview'
+          ) {
+            const previewUrl = text.mention.link_preview.url;
+            if (isNotionPageUrl(previewUrl)) {
+              text.mention.link_preview.url = url;
               text.href = url;
+            }
+          }
+
+          // Regular links that point to Notion pages
+          if (text.type === 'text' && isNotionPageUrl(text.href)) {
+            text.href = url;
+            if (text.text.link) {
+              text.text.link.url = url;
             }
           }
         }
       }
     } catch (error) {
-      console.error('[PageRefHandler] Block content update failed:', error);
-      const handlerError = new PageReferenceHandlerError(
-        'Content update failed',
-        error instanceof Error ? error : undefined,
-      );
-
-      if (!this.failForward) {
-        throw handlerError;
-      }
-      console.error(handlerError);
+      this.handleError('[PageRefHandler] Block content update failed:', error);
     }
   }
 }

@@ -5,7 +5,7 @@ import { MediaHandler } from './core/media-handler';
 import { DirectStrategy } from './core/media-handler/strategies/direct';
 import { DownloadStrategy } from './core/media-handler/strategies/download';
 import { UploadStrategy } from './core/media-handler/strategies/upload';
-import { PageRefConfig, PageReferenceHandler } from './core/page-ref-handler';
+import { PageReferenceHandler } from './core/page-ref-handler';
 
 import {
   MediaManifestManager,
@@ -30,6 +30,7 @@ import {
   DownloadStrategyConfig,
   UploadStrategyConfig,
   DirectStrategyConfig,
+  PageRefConfig,
 } from './types/configuration';
 
 /**
@@ -194,12 +195,12 @@ export class NotionConverter {
    * Configures page reference handling for transforming Notion URLs
    * into public-facing URLs.
    */
-  withPageReferences(config?: PageRefConfig): this {
+  withPageReferences(config: PageRefConfig): this {
     console.debug(
       '[NotionConverter] Configuring page reference handling with:',
       config || {},
     );
-    this.config.pageRefConfig = config || {};
+    this.config.pageRefConfig = config;
     return this;
   }
 

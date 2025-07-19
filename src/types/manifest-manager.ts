@@ -43,7 +43,13 @@ export interface MediaInfo {
  */
 
 export enum PageReferenceEntryType {
+  /**
+   * URL/slug referred from a page property
+   */
   PROPERTY = 'PROPERTY',
+  /**
+   * URL/slug referred from a existing records from manifest
+   */
   MANIFEST = 'MANIFEST',
 }
 
@@ -53,7 +59,13 @@ export interface PageManifest {
 }
 
 export interface PageReferenceEntry {
+  /**
+   * This is the final publishing/ed URL for the page. This cannot be a slug or URL path. It has to be a full URL
+   */
   url: string;
+  /**
+   * From where this URL was sourced. This can be a property in the page, or an existing record in the manifest.
+   */
   source: PageReferenceEntryType;
   lastUpdated: string;
 }

@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { isExternalUrl } from '../../../utils/notion';
+import { isNotionS3Url } from '../../../utils/notion';
 import {
   DownloadStrategyConfig,
   MediaReferenceType,
@@ -96,7 +96,7 @@ export class DownloadStrategy implements MediaStrategy {
       return { mediaInfo: null, needsManifestUpdate: false, isProcessed: true };
     }
 
-    if (this.config.preserveExternalUrls && isExternalUrl(url)) {
+    if (this.config.preserveExternalUrls && !isNotionS3Url(url)) {
       console.debug(
         `[DownloadStrategy] Preserving external URL for ${refId}: ${url}`,
       );

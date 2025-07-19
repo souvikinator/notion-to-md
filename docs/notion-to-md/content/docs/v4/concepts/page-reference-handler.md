@@ -1,6 +1,6 @@
 ---
-title: "Page References Handling"
-description: "Handle links between Notion pages in your converted content"
+title: 'Page References Handling'
+description: 'Handle links between Notion pages in your converted content'
 weight: 3
 ---
 
@@ -33,22 +33,29 @@ At its core, page reference handling requires:
 
 Before using page references, ensure your pages have the necessary property:
 
-1. Add a property to your Notion pages (name it anything, typically named "Slug", "URL", or "Path")
-2. Fill this property with the path where each page will be accessible (e.g., "getting-started", "api/authentication")
-3. Make sure this property is consistent across all pages that will be referenced
+1. **Add a property to your Notion pages** (name it anything, typically named "URL", or "PublishedURL").
+2. **This property must contain the full published URL for the page** (not just a slug or path segment). For example, `https://example.com/docs/getting-started`.
+3. **Supported property types:**
+   - Text (plain text property)
+   - Formula (the final computed value must be a string URL)
+   - URL (URL property or formula that returns a URL)
+4. **Set `UrlPropertyNameNotion` in your config to the exact name of this property.**
+5. Make sure this property is consistent across all pages that will be referenced.
+
+> **Note:** The Page Reference Handler will extract the value from this property and expects it to be a valid, full URL. If you use a formula, ensure the result is a string containing the full URL.
 
 ### How The Manifest Works
 
 notion-to-md uses a two-step process to handle page references:
 
 1. **Building the Manifest**:
-   * As pages are processed, URL information is collected from it's properties and mapped against the page ID
-   * This mapping is stored in a manifest file (`.notion-to-md/ref/page_ref.json`)
+   - As pages are processed, URL information is collected from its properties and mapped against the page ID
+   - This mapping is stored in a manifest file (`.notion-to-md/ref/page_ref.json`)
 
 2. **Transforming References**:
-   * When a reference to another page is found in content
-   * The target page ID is looked up in the manifest
-   * The reference is updated to use the proper URL
+   - When a reference to another page is found in content
+   - The target page ID is looked up in the manifest
+   - The reference is updated to use the proper URL
 
 ### Starting Fresh vs. Existing Content
 
@@ -59,11 +66,9 @@ Your approach depends on how much Notion content you already have:
 If you're just starting with no prior pages, the manifest builds automatically as you process pages:
 
 ```javascript
-const n2m = new NotionConverter(notionClient)
-  .withPageReferences({
-    baseUrl: 'https://example.com',
-    UrlPropertyNameNotion: 'slug'  // The name of your Notion property
-  });
+const n2m = new NotionConverter(notionClient).withPageReferences({
+  UrlPropertyNameNotion: 'slug', // The name of your Notion property (required)
+});
 
 // Converting a page will also add it to the manifest
 await n2m.convert('your-page-id');
@@ -82,8 +87,7 @@ import { PageReferenceManifestBuilder } from 'notion-to-md/utils/page-ref-builde
 
 // Create a builder instance
 const builder = new PageReferenceManifestBuilder(notionClient, {
-  urlPropertyNameNotion: 'slug',  // The name of your Notion property
-  baseUrl: 'https://example.com'  // Your site's base URL
+  UrlPropertyNameNotion: 'slug', // The name of your Notion property (required)
 });
 
 // Build manifest starting from a root page or database
@@ -93,6 +97,7 @@ console.log('Manifest built successfully!');
 ```
 
 This utility:
+
 1. Starts from a root page or database
 2. Finds all pages with the specified property
 3. Creates a complete manifest of page IDs to URLs
@@ -100,11 +105,9 @@ This utility:
 Once built, the manifest is automatically used by your NotionConverter:
 
 ```javascript
-const n2m = new NotionConverter(notionClient)
-  .withPageReferences({
-    baseUrl: 'https://example.com',
-    UrlPropertyNameNotion: 'slug'
-  });
+const n2m = new NotionConverter(notionClient).withPageReferences({
+  UrlPropertyNameNotion: 'slug',
+});
 
 // Now any page conversions will use the pre-built manifest
 await n2m.convert('your-page-id');
@@ -126,19 +129,16 @@ import { PageReferenceManifestBuilder } from 'notion-to-md/utils/page-ref-builde
 
 // First, build a comprehensive page reference manifest
 const builder = new PageReferenceManifestBuilder(notionClient, {
-  urlPropertyNameNotion: 'slug',
-  baseUrl: 'https://example.com/docs'
+  UrlPropertyNameNotion: 'slug',
 });
 
 // Build from a root page or database
 await builder.build('root-page-id');
 
 // Now use the converter with the pre-built manifest
-const n2m = new NotionConverter(notionClient)
-  .withPageReferences({
-    baseUrl: 'https://example.com/docs',
-    UrlPropertyNameNotion: 'slug'
-  });
+const n2m = new NotionConverter(notionClient).withPageReferences({
+  UrlPropertyNameNotion: 'slug',
+});
 
 // The manifest is automatically shared between components
 await n2m.convert('your-page-id');
@@ -151,24 +151,6 @@ const allPages = manifestManager.getAllEntries();
 const sitemap = Object.entries(allPages).map(([pageId, entry]) => ({
   id: pageId,
   url: entry.url,
-  lastUpdated: entry.lastUpdated
+  lastUpdated: entry.lastUpdated,
 }));
 ```
-
-<!-- ### Handling Private Pages
-
-Notion has complex access rules, and some pages might be private or inaccessible to your integration. The Page Reference Handler gracefully handles these cases:
-
-```javascript
-.withPageReferences({
-  baseUrl: 'https://example.com/docs',
-  UrlPropertyNameNotion: 'slug',
-  // Optionally provide fallback handling for private pages
-  transformUrl: (url, pageId, isAccessible) => {
-    if (!isAccessible) {
-      return `/login?redirect=${encodeURIComponent(url)}`;
-    }
-    return url;
-  }
-})
-``` -->
