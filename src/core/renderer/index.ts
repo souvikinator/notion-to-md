@@ -303,6 +303,19 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
         const link = item.href;
         const annotations = item.annotations;
 
+        // If it is an equation, process it and ignore other annotations
+        if (
+          item.type === 'equation' &&
+          item.equation &&
+          this.context.transformers.annotations.equation
+        ) {
+          return this.context.transformers.annotations.equation.transform({
+            text,
+            metadata,
+            manifest: this.context.manifest,
+          });
+        }
+
         // 1. Process code annotation first if it exists and is enabled
         if (annotations.code && this.context.transformers.annotations.code) {
           text = await this.context.transformers.annotations.code.transform({
@@ -313,22 +326,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
           });
         }
 
-        // 2. Process equation next if it exists
-        if (
-          item.type === 'equation' &&
-          item.equation &&
-          this.context.transformers.annotations.equation
-        ) {
-          text = await this.context.transformers.annotations.equation.transform(
-            {
-              text,
-              metadata,
-              manifest: this.context.manifest,
-            },
-          );
-        }
-
-        // 3. Process all other annotations except code
+        // 2. Process all other annotations except code
         for (const [name, value] of Object.entries(annotations)) {
           if (
             name !== 'code' &&
@@ -344,7 +342,7 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
           }
         }
 
-        // 4. Apply link transformation last if exists
+        // 3. Apply link transformation last if exists
         if (link) {
           text = await this.context.transformers.annotations.link.transform({
             text,
