@@ -507,10 +507,13 @@ describe('PageReferenceHandler', () => {
         }),
       });
 
+      console.log('### ', JSON.stringify(chainData, null, 2));
+
       await handler.process(chainData);
 
       const updatedBlock = chainData.blockTree.pageRefBlockReferences![0]
         .ref as any;
+      console.log('@@@@ ', JSON.stringify(chainData, null, 2));
       expect(updatedBlock.paragraph.rich_text[0].href).toBe(finalUrl);
       expect(updatedBlock.paragraph.rich_text[0].text.link.url).toBe(finalUrl);
     });

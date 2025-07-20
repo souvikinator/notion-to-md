@@ -254,14 +254,14 @@ export class PageReferenceHandler implements ProcessorChainNode {
             text.mention?.type === 'link_preview'
           ) {
             const previewUrl = text.mention.link_preview.url;
-            if (isNotionPageUrl(previewUrl)) {
+            if (previewUrl && isNotionPageUrl(previewUrl)) {
               text.mention.link_preview.url = url;
               text.href = url;
             }
           }
 
           // Regular links that point to Notion pages
-          if (text.type === 'text' && isNotionPageUrl(text.href)) {
+          if (text.type === 'text' && text.href && isNotionPageUrl(text.href)) {
             text.href = url;
             if (text.text.link) {
               text.text.link.url = url;

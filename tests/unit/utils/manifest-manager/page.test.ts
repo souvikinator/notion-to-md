@@ -490,6 +490,37 @@ describe('PageReferenceManifestManager', () => {
       );
       expect(savedManifest.references['new-page-3']).toEqual(newEntry);
     });
+
+    it('should handle normalized and un-normalized UUIDs consistently across all operations', async () => {
+      mockFs.mkdir.mockResolvedValue(undefined);
+      const error = new Error('ENOENT') as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      mockFs.readFile.mockRejectedValue(error);
+      await manager.initialize();
+
+      const unnormalizedId = '1107e9d7682d455287113965a3979313';
+      const normalizedId = '1107e9d7-682d-4552-8711-3965a3979313';
+
+      const entry: PageReferenceEntry = {
+        url: 'https://example.com/page-uuid-test',
+        source: PageReferenceEntryType.PROPERTY,
+        lastUpdated: new Date().toISOString(),
+      };
+
+      // Scenario 1: Add with un-normalized ID, then check/get/remove with normalized ID
+      await manager.updateEntry(unnormalizedId, entry);
+      expect(manager.hasEntry(normalizedId)).toBe(true);
+      expect(manager.getEntry(normalizedId)).toEqual(entry);
+      manager.removeEntry(normalizedId);
+      expect(manager.hasEntry(unnormalizedId)).toBe(false);
+
+      // Scenario 2: Add with normalized ID, then check/get/remove with un-normalized ID
+      await manager.updateEntry(normalizedId, entry);
+      expect(manager.hasEntry(unnormalizedId)).toBe(true);
+      expect(manager.getEntry(unnormalizedId)).toEqual(entry);
+      manager.removeEntry(unnormalizedId);
+      expect(manager.hasEntry(normalizedId)).toBe(false);
+    });
   });
 
   describe('error handling edge cases', () => {
