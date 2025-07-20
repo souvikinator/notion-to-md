@@ -98,7 +98,7 @@ export function isTextLinkedToNotionPage(block: NotionBlock): boolean {
  * 3. Else → ❌ Not a Notion page
  */
 export function isNotionPageUrl(url: string): boolean {
-  if (url.length === 0) return false;
+  if (!url || url.length === 0) return false;
 
   // Case 1: Relative Notion page path e.g. "/some-page-uuid"
   if (url.startsWith('/')) {

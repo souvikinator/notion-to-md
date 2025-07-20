@@ -126,6 +126,7 @@ Your Notion property should contain values like:
 - `https://docs.company.com/api/reference`
 
 **Not like this:**
+
 - `getting-started` (missing domain)
 - `/docs/getting-started` (relative path)
 - `docs/getting-started` (incomplete URL)
@@ -173,19 +174,24 @@ const sitemap = Object.entries(allPages).map(([pageId, entry]) => ({
 For detailed configuration options, see the [Page Reference Configuration Guide](../configuration/#page-reference-configuration).
 
 Key configuration properties:
+
 - **urlPropertyNameNotion**: The name of your Notion property containing full URLs (required)
-- **transformUrl**: Optional function to transform URLs before storing
+- **useUrlPath**: When `true` (the default), converts the full URL to just its path (e.g., `/blog/my-post`). Set to `false` to keep the full URL.
+- **transformUrl**: Optional function to transform URLs before storing. This takes precedence over `useUrlPath`.
 - **failForward**: Whether to continue processing on errors (default: true)
 
 ## Common Issues and Solutions
 
 ### Issue: References Not Working
+
 **Solution**: Ensure your property contains full URLs, not just slugs or paths.
 
 ### Issue: Some Pages Missing from Manifest
+
 **Solution**: Check that all pages have the specified property with valid URLs.
 
 ### Issue: Property Name Not Found
+
 **Solution**: Verify the property name matches exactly (case-sensitive) and use `urlPropertyNameNotion` (with lowercase 'u').
 
 ---

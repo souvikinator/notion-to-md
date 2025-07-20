@@ -7,6 +7,7 @@ import {
   ManifestIOError,
   ManifestNotFoundError,
 } from './errors';
+import { normalizeUUID } from '../notion';
 
 const BASE_DIR = 'ref';
 const PAGE_REF_FILENAME = 'page_ref.json';
@@ -69,15 +70,16 @@ export class PageReferenceManifestManager extends BaseManifestManager {
     input: PageReferenceEntry,
   ): Promise<void> {
     this.ensureInitialized();
+    const normalizedPageId = normalizeUUID(pageId);
 
     try {
-      this.manifest!.references[pageId] = {
+      this.manifest!.references[normalizedPageId] = {
         ...input,
       };
       this.manifest!.lastUpdated = new Date().toISOString();
     } catch (error) {
       throw new PageReferenceError(
-        `Failed to update reference for page ${pageId}`,
+        `Failed to update reference for page ${normalizedPageId}`,
         error as Error,
       );
     }
@@ -91,8 +93,9 @@ export class PageReferenceManifestManager extends BaseManifestManager {
    */
   public getEntry(pageId: string): PageReferenceEntry | null {
     this.ensureInitialized();
+    const normalizedPageId = normalizeUUID(pageId);
 
-    const entry = this.manifest!.references[pageId];
+    const entry = this.manifest!.references[normalizedPageId];
 
     return entry;
   }
@@ -104,7 +107,8 @@ export class PageReferenceManifestManager extends BaseManifestManager {
    */
   public hasEntry(pageId: string): boolean {
     this.ensureInitialized();
-    return pageId in this.manifest!.references;
+    const normalizedPageId = normalizeUUID(pageId);
+    return normalizedPageId in this.manifest!.references;
   }
 
   /**
@@ -114,8 +118,9 @@ export class PageReferenceManifestManager extends BaseManifestManager {
    */
   public removeEntry(pageId: string): void {
     this.ensureInitialized();
+    const normalizedPageId = normalizeUUID(pageId);
 
-    delete this.manifest!.references[pageId];
+    delete this.manifest!.references[normalizedPageId];
     this.manifest!.lastUpdated = new Date().toISOString();
   }
 

@@ -15,6 +15,7 @@ import {
 
 const DEFAULT_CONFIG: Partial<PageRefConfig> = {
   transformUrl: undefined,
+  useUrlPath: true, // default to true, since internal links are always relative.
   failForward: true,
 };
 
@@ -28,7 +29,7 @@ export class PageReferenceHandler implements ProcessorChainNode {
     private config: PageRefConfig,
     private readonly manifestManager: PageReferenceManifestManager,
   ) {
-    if (!config.UrlPropertyNameNotion) {
+    if (!config.urlPropertyNameNotion) {
       throw new PageReferenceHandlerError(
         'Please provide a final URL property name in the config object for the page reference handler to point to. More info: https://notionconvert.com/docs/v4/concepts/page-reference-handler/#page-reference-builder',
       );
@@ -116,7 +117,7 @@ export class PageReferenceHandler implements ProcessorChainNode {
 
     console.debug('[PageRefHandler] Processing page properties');
 
-    const urlProperty = this.pageProperties[this.config.UrlPropertyNameNotion];
+    const urlProperty = this.pageProperties[this.config.urlPropertyNameNotion];
     if (!urlProperty) {
       console.debug('[PageRefHandler] Skipping - no url property');
       return;
@@ -125,7 +126,7 @@ export class PageReferenceHandler implements ProcessorChainNode {
     const rawUrl = extractFinalReferenceUrlFromNotionProperty(urlProperty);
     if (!rawUrl) {
       console.debug(
-        `[PageRefHandler] No valid URL found in property '${this.config.UrlPropertyNameNotion}'`,
+        `[PageRefHandler] No valid URL found in property '${this.config.urlPropertyNameNotion}'`,
       );
       return;
     }
@@ -134,7 +135,7 @@ export class PageReferenceHandler implements ProcessorChainNode {
     const validatedUrl = isValidURL(rawUrl);
     if (!validatedUrl) {
       this.handleError(
-        `[PageRefHandler] Invalid URL value in property '${this.config.UrlPropertyNameNotion}': ${rawUrl}`,
+        `[PageRefHandler] Invalid URL value in property '${this.config.urlPropertyNameNotion}': ${rawUrl}`,
         null,
       );
 
@@ -185,8 +186,25 @@ export class PageReferenceHandler implements ProcessorChainNode {
         return;
       }
 
-      const transformedURL = this.transformUrl(entry.url);
-      this.updateBlockContent(block, transformedURL);
+      let finalUrl = entry.url;
+      try {
+        if (this.config.transformUrl) {
+          // If transformUrl is provided, it takes precedence
+          finalUrl = this.config.transformUrl(entry.url);
+        } else if (this.config.useUrlPath) {
+          // Otherwise, use useUrlPath logic
+          finalUrl = new URL(entry.url).pathname;
+        }
+      } catch (error) {
+        this.handleError(
+          '[PageRefHandler] URL transformation/processing failed:',
+          error,
+        );
+        // Fallback to original URL on error to avoid breaking content
+        finalUrl = entry.url;
+      }
+
+      this.updateBlockContent(block, finalUrl);
       this.processedRefs.add(pageId);
 
       console.debug(
@@ -195,18 +213,6 @@ export class PageReferenceHandler implements ProcessorChainNode {
       );
     } catch (error) {
       this.handleError('[PageRefHandler] Block processing failed:', error);
-    }
-  }
-
-  private transformUrl(url: string): string {
-    try {
-      // if user provides a transform function, use it
-      if (this.config.transformUrl) return this.config.transformUrl(url);
-
-      return url;
-    } catch (error) {
-      this.handleError('[PageRefHandler] URL transformation failed:', error);
-      return url;
     }
   }
 
@@ -254,14 +260,14 @@ export class PageReferenceHandler implements ProcessorChainNode {
             text.mention?.type === 'link_preview'
           ) {
             const previewUrl = text.mention.link_preview.url;
-            if (isNotionPageUrl(previewUrl)) {
+            if (previewUrl && isNotionPageUrl(previewUrl)) {
               text.mention.link_preview.url = url;
               text.href = url;
             }
           }
 
           // Regular links that point to Notion pages
-          if (text.type === 'text' && isNotionPageUrl(text.href)) {
+          if (text.type === 'text' && text.href && isNotionPageUrl(text.href)) {
             text.href = url;
             if (text.text.link) {
               text.text.link.url = url;

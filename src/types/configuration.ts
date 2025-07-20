@@ -11,7 +11,8 @@ export interface NotionDatabaseConfig {
 }
 
 export interface PageRefConfig {
-  UrlPropertyNameNotion: string;
+  urlPropertyNameNotion: string;
+  useUrlPath?: boolean;
   transformUrl?: (url: string) => string;
   failForward?: boolean;
 }

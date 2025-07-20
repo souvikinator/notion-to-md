@@ -201,7 +201,6 @@ interface DownloadStrategyConfig {
 - **preserveExternalUrls**: When `true`, doesn't download media from external sources (non-Notion URLs). Keeps the original URLs in the output. Defaults to `false`.
 
 - **enableFor**: Decide _which_ Notion media you want this strategy to handle based on where it is in Notion. You can specify an array with these options:
-
   - `'block'`: For media placed directly within your page content (like image blocks, file blocks, PDFs).
   - `'database_property'`: For media found in 'Files & media' properties within database entries (like attachments in a table row).
   - `'page_property'`: For media in 'Files & media' properties on the page properties (not in a database), including page covers or icons if they are files uploaded to Notion.
@@ -250,7 +249,6 @@ interface UploadStrategyConfig {
 - **preserveExternalUrls**: When `true`, doesn't upload media from external sources. Keeps the original URLs in the output. Defaults to `false`.
 
 - **enableFor**: Decide _which_ Notion media you want this strategy to handle based on where it is in Notion. You can specify an array with these options:
-
   - `'block'`: For media placed directly within your page content (like image blocks, file blocks, PDFs).
   - `'database_property'`: For media found in 'Files & media' properties within database entries (like attachments in a table row).
   - `'page_property'`: For media in 'Files & media' properties on the page properties (not in a database), including page covers or icons if they are files uploaded to Notion.
@@ -281,23 +279,24 @@ You are required to provide a Notion property that contains the **full published
 
 ### Property Requirements
 
-- The property referenced by `UrlPropertyNameNotion` **must contain the full published URL** for the page (not just a slug or path segment). For example, `https://example.com/docs/getting-started`.
+- The property referenced by `urlPropertyNameNotion` **must contain the full published URL** for the page (not just a slug or path segment). For example, `https://example.com/docs/getting-started`.
 - **Supported property types:**
   - Text (plain text property)
   - Formula (the final computed value must be a string URL)
   - URL (URL property or formula that returns a URL)
-- Set `UrlPropertyNameNotion` in your config to the exact name of this property.
+- Set `urlPropertyNameNotion` in your config to the exact name of this property.
 - This property must be consistent across all pages that will be referenced.
 
 > **Note:** The Page Reference Handler will extract the value from this property and expects it to be a valid, full URL. If you use a formula, ensure the result is a string containing the full URL.
 
 {{< callout type="info" >}}
-Read more about [how to use page reference builder utility](/notion-to-md/docs/v4/concepts/page-reference-handler).
+Read more about [how to use page reference builder utility](/docs/v4/guides/how-to-generate-references-for-page).
 {{< /callout >}}
 
 ```typescript
 interface PageRefConfig {
-  UrlPropertyNameNotion: string; // Property containing the full published URL (required)
+  urlPropertyNameNotion: string; // Property containing the full published URL (required)
+  useUrlPath?: boolean; // Use only the path part of the URL (default: true)
   transformUrl?: (url: string) => string; // Custom URL transformation (optional)
   failForward?: boolean; // Continue on errors (default: true)
 }
@@ -305,17 +304,30 @@ interface PageRefConfig {
 
 ### Field Explanations
 
-- **UrlPropertyNameNotion**: The name of a Notion page property that contains the **full published URL** for the page. This property must be of type text, formula (final value string), or URL. This is required.
-- **transformUrl**: A function that customizes how URLs are generated or transformed. Useful for implementing custom slug generation, URL normalization, or adding path prefixes.
+- **urlPropertyNameNotion**: The name of a Notion page property that contains the **full published URL** for the page. This property must be of type text, formula (final value string), or URL. This is required.
+- **useUrlPath**: When `true` (the default), only the path component of the URL is used to replace the page reference (e.g., for `https://mysite.com/blog/my-post`, the reference becomes `/blog/my-post`). Set to `false` to use the full URL.
+- **transformUrl**: An optional function to customize the final URL. It receives the full URL from the manifest and its return value is used as the final reference. If provided, this function takes precedence over the `useUrlPath` setting.
 - **failForward**: When `true` (default), continues processing even if a reference fails to resolve. When `false`, errors will halt the conversion.
+
+{{< callout type="info" >}}
+Why does `useUrlPath` exists?
+
+Page reference handler's primary use case is to build internal page links and those are relative which is why by default we add update the block with the URL path.
+{{< /callout >}}
 
 ### Example
 
 ```javascript
 const n2m = new NotionConverter(notionClient).withPageReferences({
-  UrlPropertyNameNotion: 'url', // The property must contain the full published URL
-  transformUrl: (url) => url.toLowerCase().replace(/\s+/g, '-'),
-  failForward: true,
+  urlPropertyNameNotion: 'Published URL', // The property must contain the full published URL
+  useUrlPath: true, // This is the default, creates relative links like '/my-page'
+});
+
+// Example with transformUrl taking precedence
+const n2mWithTransform = new NotionConverter(notionClient).withPageReferences({
+  urlPropertyNameNotion: 'Published URL',
+  useUrlPath: true, // This will be ignored
+  transformUrl: (url) => url.toLowerCase().replace('https://my.domain.com', ''), // returns just the path, but in lowercase
 });
 ```
 
@@ -354,7 +366,6 @@ interface MDXRendererConfig {
 ### Field Explanations
 
 - **frontmatter**: Controls frontmatter generation. Can be:
-
   - `true`: Generate frontmatter from all page properties
   - `false`: Don't generate frontmatter
   - `FrontmatterConfig`: Configure detailed frontmatter behavior

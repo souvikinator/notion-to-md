@@ -192,7 +192,7 @@ export const blockTransformers: Partial<
 
       // For items with children, process each child sequentially
       // Each child starts with number 1 at its level
-      const childrenContent = [];
+      const childrenContent: string[] = [];
       for (let i = 0; i < block.children.length; i++) {
         const childContent = await utils.processBlock(block.children[i], {
           ...metadata,
@@ -453,7 +453,7 @@ ${childrenContent.join('\n')}
     transform: async ({ block }) => {
       // @ts-ignore
       const expression = block.equation.expression;
-      return `\`\`\`math\n${expression}\n\`\`\`\n\n`;
+      return `\n$$\n${expression}\n$$\n\n`;
     },
   },
 

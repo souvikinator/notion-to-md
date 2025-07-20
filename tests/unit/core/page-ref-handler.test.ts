@@ -127,7 +127,7 @@ describe('PageReferenceHandler', () => {
   });
 
   describe('Configuration Testing', () => {
-    it('Should throw an error if config is missing `UrlPropertyNameNotion`', () => {
+    it('Should throw an error if config is missing `urlPropertyNameNotion`', () => {
       const config = {} as PageRefConfig;
 
       const createHandler = () =>
@@ -136,9 +136,9 @@ describe('PageReferenceHandler', () => {
       expect(createHandler).toThrow(PageReferenceHandlerError);
     });
 
-    it('Should initialize successfully if `UrlPropertyNameNotion` is provided', () => {
+    it('Should initialize successfully if `urlPropertyNameNotion` is provided', () => {
       const config: PageRefConfig = {
-        UrlPropertyNameNotion: 'URL',
+        urlPropertyNameNotion: 'URL',
       };
 
       const createHandler = () =>
@@ -152,7 +152,8 @@ describe('PageReferenceHandler', () => {
     const URL_PROP_NAME = 'Published URL';
 
     const config: PageRefConfig = {
-      UrlPropertyNameNotion: URL_PROP_NAME,
+      urlPropertyNameNotion: URL_PROP_NAME,
+      useUrlPath: false,
     };
 
     it("should not create a manifest entry if the URL property doesn't exist", async () => {
@@ -335,7 +336,8 @@ describe('PageReferenceHandler', () => {
   describe('Content Modification Testing', () => {
     const URL_PROP_NAME = 'Published URL';
     const config: PageRefConfig = {
-      UrlPropertyNameNotion: URL_PROP_NAME,
+      urlPropertyNameNotion: URL_PROP_NAME,
+      useUrlPath: false,
     };
     const referencedPageId = '1107e9d7-682d-4552-8711-3965a3979313';
     const finalUrl = 'https://example.com/final-url-for-ref-page';
@@ -507,10 +509,13 @@ describe('PageReferenceHandler', () => {
         }),
       });
 
+      console.log('### ', JSON.stringify(chainData, null, 2));
+
       await handler.process(chainData);
 
       const updatedBlock = chainData.blockTree.pageRefBlockReferences![0]
         .ref as any;
+      console.log('@@@@ ', JSON.stringify(chainData, null, 2));
       expect(updatedBlock.paragraph.rich_text[0].href).toBe(finalUrl);
       expect(updatedBlock.paragraph.rich_text[0].text.link.url).toBe(finalUrl);
     });
@@ -561,6 +566,7 @@ describe('PageReferenceHandler', () => {
         pageId,
         {
           ...config,
+          useUrlPath: false, // Explicitly false for this test
           transformUrl: (url: string) => {
             expect(url).toBe(finalUrl);
             return transformedUrl;
@@ -622,6 +628,103 @@ describe('PageReferenceHandler', () => {
       );
 
       expect(processedJson).toBe(originalJson);
+    });
+
+    describe('with useUrlPath configuration', () => {
+      it('should update block with only the path when useUrlPath is true', async () => {
+        const handler = new PageReferenceHandler(
+          pageId,
+          {
+            ...config,
+            useUrlPath: true,
+          },
+          mockManifestManager,
+        );
+        const linkToPageBlock = createMockTrackedBlock(
+          'link-to-page-block-url-path',
+          createMockLinkToPageBlock(
+            'link-to-page-block-url-path',
+            referencedPageId,
+          ),
+        );
+
+        const chainData = createMockChainData({
+          blockTree: createMockBlockTree({
+            pageRefBlockReferences: [linkToPageBlock],
+          }),
+        });
+
+        await handler.process(chainData);
+
+        const updatedBlock = chainData.blockTree.pageRefBlockReferences![0]
+          .ref as any;
+        expect(updatedBlock.link_to_page.url).toBe(new URL(finalUrl).pathname);
+      });
+
+      it('should update block with the full URL when useUrlPath is false', async () => {
+        const handler = new PageReferenceHandler(
+          pageId,
+          {
+            ...config,
+            useUrlPath: false, // Explicitly false
+          },
+          mockManifestManager,
+        );
+        const linkToPageBlock = createMockTrackedBlock(
+          'link-to-page-block-full-url',
+          createMockLinkToPageBlock(
+            'link-to-page-block-full-url',
+            referencedPageId,
+          ),
+        );
+
+        const chainData = createMockChainData({
+          blockTree: createMockBlockTree({
+            pageRefBlockReferences: [linkToPageBlock],
+          }),
+        });
+
+        await handler.process(chainData);
+
+        const updatedBlock = chainData.blockTree.pageRefBlockReferences![0]
+          .ref as any;
+        expect(updatedBlock.link_to_page.url).toBe(finalUrl);
+      });
+
+      it('should prioritize transformUrl over useUrlPath', async () => {
+        const transformedUrl = 'https://custom-transformed.com/overridden';
+        const handler = new PageReferenceHandler(
+          pageId,
+          {
+            ...config,
+            useUrlPath: true, // This should be ignored
+            transformUrl: (url: string) => {
+              expect(url).toBe(finalUrl); // Still receives the full URL
+              return transformedUrl;
+            },
+          },
+          mockManifestManager,
+        );
+        const linkToPageBlock = createMockTrackedBlock(
+          'link-to-page-block-transform-override',
+          createMockLinkToPageBlock(
+            'link-to-page-block-transform-override',
+            referencedPageId,
+          ),
+        );
+
+        const chainData = createMockChainData({
+          blockTree: createMockBlockTree({
+            pageRefBlockReferences: [linkToPageBlock],
+          }),
+        });
+
+        await handler.process(chainData);
+
+        const updatedBlock = chainData.blockTree.pageRefBlockReferences![0]
+          .ref as any;
+        expect(updatedBlock.link_to_page.url).toBe(transformedUrl);
+      });
     });
   });
 });
