@@ -138,9 +138,6 @@ dist
 # Build Output
 /build
 
-# Package Lock
-package-lock.json
-
 # misc
 demo.ts
 test.md
