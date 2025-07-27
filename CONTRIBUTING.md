@@ -18,6 +18,7 @@ This guide will help you get started with contributing to the project, whether y
 - [Testing](#testing)
 - [Code Standards](#code-standards)
 - [Pull Request Process](#pull-request-process)
+- [Documentation Contribution Setup](#documentation-contribution-setup)
 
 ## Getting Started
 
@@ -253,6 +254,74 @@ describe('YourClass', () => {
 3. **Tests**: Include relevant tests for your changes
 4. **Documentation**: Update docs for user-facing changes
 5. **Examples**: Add examples for new features when applicable
+
+## Documentation Contribution Setup
+
+### Prerequisites
+
+- **Hugo Extended** (latest version) - Required for building the documentation site
+
+### Install Hugo
+
+**macOS:**
+```bash
+brew install hugo
+```
+
+**Windows:**
+```bash
+choco install hugo-extended
+```
+
+**Linux:**
+```bash
+# Download the latest Hugo extended from: https://github.com/gohugoio/hugo/releases
+# Or use snap
+sudo snap install hugo
+```
+
+### Running Documentation Locally
+
+1. **Navigate to docs directory:**
+   ```bash
+   cd docs/notion-to-md
+   ```
+
+2. **Start the development server:**
+   ```bash
+   hugo server -D
+   ```
+
+3. **View the documentation:**
+   Open `http://localhost:1313` in your browser
+
+### Documentation Structure
+
+```
+docs/notion-to-md/
+├── content/
+│   ├── docs/v4/           # Main API documentation
+│   ├── blog/              # Tutorials and guides
+│   └── catalogue/         # Plugin catalogue
+├── static/                # Images and assets
+├── themes/                # Hugo theme
+└── config.yaml            # Site configuration
+```
+
+### Making Documentation Changes
+
+1. **API Documentation**: Edit files in `content/docs/v4/`
+2. **Tutorials/Guides**: Add new files to `content/blog/`
+3. **Plugin Catalogue**: Update `content/catalogue/`
+4. **Images**: Add to `static/images/`
+
+### Documentation Guidelines
+
+- Use clear, concise language
+- Include working code examples
+- Test all code snippets before submitting
+- Follow the existing markdown structure
+- Add images to help explain complex concepts
 
 ---
 
