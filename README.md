@@ -30,6 +30,20 @@ For installation instructions, complete API references, and detailed examples, p
 
 [https://notionconvert.com](https://notionconvert.com)
 
----
+## Contributing
 
-Part of [Escape Org](https://github.com/join-escape).
+We welcome contributions from the community! 🎉 Whether you're fixing bugs, adding features, improving documentation, or creating plugins, your help makes notion-to-md better for everyone.
+
+### Quick Start for Contributors
+
+1. **Fork** the repository
+2. **Clone** your fork locally
+3. **Switch** to the `v4.0.0-alpha` branch
+4. **Install** dependencies with `npm install`
+5. **Make** your changes and add tests
+6. **Submit** a pull request
+
+For detailed setup instructions, coding standards, and development workflow, please see our [Contribution Guide](CONTRIBUTING.md).
+
+
+Ready to contribute? Check out our [open issues](https://github.com/souvikinator/notion-to-md/issues) or start a [discussion](https://github.com/souvikinator/notion-to-md/discussions) for new ideas!
