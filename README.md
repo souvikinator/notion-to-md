@@ -40,6 +40,9 @@
 ## Sponsored
 [![Sponsored by GitAds](https://gitads.dev/v1/ad-serve?source=souvikinator/notion-to-md@github)](https://gitads.dev/v1/ad-track?source=souvikinator/notion-to-md@github)
 
+> [!NOTE]
+> Looking to contribute to v4? Here is the [v4 branch](https://github.com/souvikinator/notion-to-md/tree/v4.0.0-alpha/)
+
 ## 🗒️ Recent posts
 
 <!-- feed start -->
