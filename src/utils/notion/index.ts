@@ -23,8 +23,14 @@ export function isMediaBlock(block: NotionBlock): boolean {
   return ['image', 'video', 'file', 'pdf'].includes(block.type);
 }
 
-export function isRawUUID(input: string): boolean {
-  return /^[a-f0-9]{32}$/i.test(input);
+export function isRawUUID(str: string): boolean {
+  return /^[a-fA-F0-9]{32}$/.test(str);
+}
+
+export function isHyphenatedUUID(str: string): boolean {
+  return /^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/.test(
+    str,
+  );
 }
 
 export function isLinkToPageBlock(block: NotionBlock): boolean {
@@ -224,21 +230,20 @@ export function isMediaProperty(
 }
 
 /**
- * Converts UUID without hyphens to the one with hyphens. If UUID with hyphens is given then return the same.
+ * Converts UUID with or without hyphens to the one without hyphens (raw format).
+ * If the input is not a valid UUID, returns it unchanged.
  *
  * Example:
- *  `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` to `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
- * @param uuid in hyphenated or unhyphenated form
- * @returns UUID (with hyphens)
+ *  `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` to `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+ * @param uuid in hyphenated or unhyphenated form, or any other string
+ * @returns UUID (without hyphens) if input is a valid UUID, otherwise returns input unchanged
  */
-export function normalizeUUID(uuid: string): string {
-  // If the UUID already contains hyphens, return it as-is
-  if (uuid.includes('-')) {
-    return uuid;
+export function normalizeUUID(input: string): string {
+  if (isHyphenatedUUID(input)) {
+    return input.replace(/-/g, '');
   }
 
-  // Convert bare UUID to hyphenated format
-  return uuid.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5');
+  return input;
 }
 
 export function isNotionS3Url(url: string): boolean {

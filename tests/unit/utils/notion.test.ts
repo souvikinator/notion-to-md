@@ -480,13 +480,13 @@ describe('Notion Utils', () => {
 
   describe('extractNotionPageIdFromUrl', () => {
     const rawId = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6';
-    const normalizedId = 'a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6';
+    const normalizedId = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6'; // Now normalized means non-dashed
 
     it('should extract and normalize page ID from relative paths', () => {
       expect(extractNotionPageIdFromUrl(`/${rawId}`)).toBe(normalizedId);
       expect(
         extractNotionPageIdFromUrl(`/123456789abcdef123456789abcdef12`),
-      ).toBe('12345678-9abc-def1-2345-6789abcdef12');
+      ).toBe('123456789abcdef123456789abcdef12');
     });
 
     it('should extract and normalize page ID from absolute URLs with titles "https://www.notion.so/Page-Title-<uuid>"', () => {
@@ -518,7 +518,6 @@ describe('Notion Utils', () => {
       expect(
         extractNotionPageIdFromUrl(`https://www.notion.so/Page-${rawId}?v=123`),
       ).toBe(normalizedId);
-
       expect(extractNotionPageIdFromUrl(`/${rawId}#section`)).toBe(
         normalizedId,
       );
@@ -550,15 +549,26 @@ describe('Notion Utils', () => {
   });
 
   describe('normalizeUUID', () => {
-    it('should add hyphens to a raw UUID', () => {
-      const raw = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6';
-      const normalized = 'a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6';
-      expect(normalizeUUID(raw)).toBe(normalized);
+    it('should remove hyphens from a hyphenated UUID', () => {
+      const hyphenated = 'a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6';
+      const normalized = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6';
+      expect(normalizeUUID(hyphenated)).toBe(normalized);
     });
 
-    it('should return a hyphenated UUID as-is', () => {
-      const normalized = 'a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6';
-      expect(normalizeUUID(normalized)).toBe(normalized);
+    it('should return a non-hyphenated UUID as-is', () => {
+      const raw = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6';
+      expect(normalizeUUID(raw)).toBe(raw);
+    });
+
+    it('should return non-UUID strings unchanged', () => {
+      const nonUuid = 'page-1';
+      expect(normalizeUUID(nonUuid)).toBe(nonUuid);
+
+      const anotherNonUuid = 'some-random-string';
+      expect(normalizeUUID(anotherNonUuid)).toBe(anotherNonUuid);
+
+      const shortString = 'abc-def';
+      expect(normalizeUUID(shortString)).toBe(shortString);
     });
   });
 
@@ -618,7 +628,7 @@ describe('Notion Utils', () => {
         },
       } as any;
       expect(extractPageIdFromBlock(block)).toBe(
-        'a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6',
+        'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6',
       );
     });
 
@@ -637,7 +647,7 @@ describe('Notion Utils', () => {
         },
       } as any;
       expect(extractPageIdFromBlock(block)).toBe(
-        'a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6',
+        'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6',
       );
     });
 

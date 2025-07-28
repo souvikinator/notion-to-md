@@ -498,8 +498,8 @@ describe('PageReferenceManifestManager', () => {
       mockFs.readFile.mockRejectedValue(error);
       await manager.initialize();
 
-      const unnormalizedId = '1107e9d7682d455287113965a3979313';
-      const normalizedId = '1107e9d7-682d-4552-8711-3965a3979313';
+      const dashedId = '1107e9d7-682d-4552-8711-3965a3979313';
+      const nonDashedId = '1107e9d7682d455287113965a3979313';
 
       const entry: PageReferenceEntry = {
         url: 'https://example.com/page-uuid-test',
@@ -507,19 +507,19 @@ describe('PageReferenceManifestManager', () => {
         lastUpdated: new Date().toISOString(),
       };
 
-      // Scenario 1: Add with un-normalized ID, then check/get/remove with normalized ID
-      await manager.updateEntry(unnormalizedId, entry);
-      expect(manager.hasEntry(normalizedId)).toBe(true);
-      expect(manager.getEntry(normalizedId)).toEqual(entry);
-      manager.removeEntry(normalizedId);
-      expect(manager.hasEntry(unnormalizedId)).toBe(false);
+      // Scenario 1: Add with non-dashed ID, then check/get/remove with dashed ID
+      await manager.updateEntry(nonDashedId, entry);
+      expect(manager.hasEntry(dashedId)).toBe(true);
+      expect(manager.getEntry(dashedId)).toEqual(entry);
+      manager.removeEntry(dashedId);
+      expect(manager.hasEntry(nonDashedId)).toBe(false);
 
-      // Scenario 2: Add with normalized ID, then check/get/remove with un-normalized ID
-      await manager.updateEntry(normalizedId, entry);
-      expect(manager.hasEntry(unnormalizedId)).toBe(true);
-      expect(manager.getEntry(unnormalizedId)).toEqual(entry);
-      manager.removeEntry(unnormalizedId);
-      expect(manager.hasEntry(normalizedId)).toBe(false);
+      // Scenario 2: Add with dashed ID, then check/get/remove with non-dashed ID
+      await manager.updateEntry(dashedId, entry);
+      expect(manager.hasEntry(nonDashedId)).toBe(true);
+      expect(manager.getEntry(nonDashedId)).toEqual(entry);
+      manager.removeEntry(nonDashedId);
+      expect(manager.hasEntry(dashedId)).toBe(false);
     });
   });
 

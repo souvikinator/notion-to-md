@@ -339,7 +339,7 @@ describe('PageReferenceHandler', () => {
       urlPropertyNameNotion: URL_PROP_NAME,
       useUrlPath: false,
     };
-    const referencedPageId = '1107e9d7-682d-4552-8711-3965a3979313';
+    const referencedPageId = '1107e9d7682d455287113965a3979313'; // Non-dashed format (normalized)
     const finalUrl = 'https://example.com/final-url-for-ref-page';
 
     beforeEach(() => {
@@ -439,10 +439,7 @@ describe('PageReferenceHandler', () => {
         config,
         mockManifestManager,
       );
-      const notionPageUrl = `https://www.notion.so/refpage-${referencedPageId.replace(
-        /-/g,
-        '',
-      )}`;
+      const notionPageUrl = `https://www.notion.so/refpage-${referencedPageId}`;
       const linkPreviewBlock = createMockTrackedBlock('link-preview-block-1', {
         type: 'paragraph',
         paragraph: {
@@ -480,10 +477,7 @@ describe('PageReferenceHandler', () => {
         config,
         mockManifestManager,
       );
-      const notionPageUrl = `https://www.notion.so/some-slug-here-${referencedPageId.replace(
-        /-/g,
-        '',
-      )}`;
+      const notionPageUrl = `https://www.notion.so/some-slug-here-${referencedPageId}`;
       const textLinkBlock = createMockTrackedBlock('text-link-block-1', {
         type: 'paragraph',
         paragraph: {
