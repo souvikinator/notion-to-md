@@ -6,22 +6,22 @@ export const annotationTransformers: Partial<
 > = {
   bold: {
     transform: async ({ text, metadata }) =>
-      !metadata?.html ? ` **${text.trim()}** ` : `<strong>${text}</strong>`,
+      !metadata?.html ? `**${text.trim()}**` : `<strong>${text}</strong>`,
   },
 
   italic: {
     transform: async ({ text, metadata }) =>
-      !metadata?.html ? ` *${text.trim()}* ` : `<i>${text}</i>`,
+      !metadata?.html ? `*${text.trim()}*` : `<i>${text}</i>`,
   },
 
   strikethrough: {
     transform: async ({ text, metadata }) =>
-      !metadata?.html ? ` ~~${text.trim()}~~ ` : `<strike>${text}</strike>`,
+      !metadata?.html ? `~~${text.trim()}~~` : `<strike>${text}</strike>`,
   },
 
   code: {
     transform: async ({ text, metadata }) =>
-      metadata?.html ? `<code>${text}</code>` : ` \`${text.trim()}\` `,
+      metadata?.html ? `<code>${text}</code>` : `\`${text.trim()}\``,
   },
 
   underline: {
@@ -39,7 +39,7 @@ export const annotationTransformers: Partial<
 
   equation: {
     transform: async ({ text, metadata }) => {
-      if (!metadata?.html) return ` $${text.trim()}$ `;
+      if (!metadata?.html) return `$${text.trim()}$`;
       return `<code>${text}</code>`;
     },
   },

@@ -250,20 +250,36 @@ export const blockTransformers: Partial<
       const text = await utils.transformRichText(calloutBlock.rich_text);
       const icon = calloutBlock.icon?.emoji || '';
 
-      // Process any children
-      const childrenContent = block.children?.length
-        ? await Promise.all(
-            block.children.map((child) => utils.processBlock(child)),
-          )
-        : [];
+      // Process children with proper numbered list tracking
+      const childrenContent: string[] = [];
+      let currentNumber = 0;
 
-      // Format the main content
-      const lines = text
-        .split('\n')
-        .map((line) => `> ${line}`)
+      if (block.children?.length) {
+        for (const child of block.children) {
+          const isNumberedList = child.type === 'numbered_list_item';
+
+          if (isNumberedList) {
+            currentNumber++;
+          } else {
+            currentNumber = 0;
+          }
+
+          const metadata = {
+            currentNumber: isNumberedList ? currentNumber : undefined,
+          };
+
+          const result = await utils.processBlock(child, metadata);
+          childrenContent.push(result);
+        }
+      }
+
+      // Format the main text - first line gets icon, all lines get "> " prefix
+      const textLines = text.split('\n');
+      const formattedText = textLines
+        .map((line, i) => (i === 0 ? `> ${icon} ${line}` : `> ${line}`))
         .join('\n');
 
-      // Format children content
+      // Format children content - each line gets "> " prefix
       const formattedChildren = childrenContent.length
         ? childrenContent
             .join('\n')
@@ -272,7 +288,7 @@ export const blockTransformers: Partial<
             .join('\n')
         : '';
 
-      return `> ${icon} ${lines}${formattedChildren ? `\n${formattedChildren}` : ''}\n\n`;
+      return `${formattedText}${formattedChildren ? `\n${formattedChildren}` : ''}\n\n`;
     },
   },
 

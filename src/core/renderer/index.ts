@@ -21,6 +21,43 @@ import {
 } from '../../types/renderer';
 
 /**
+ * Helper function to process children blocks with proper numbered list tracking.
+ * This ensures sibling numbered list items get sequential numbers (1, 2, 3...)
+ * instead of all getting "1." as they would if processed independently.
+ */
+async function processChildrenWithNumbering(
+  children: NotionBlock[],
+  processBlock: (
+    block: NotionBlock,
+    metadata?: ContextMetadata,
+  ) => Promise<string>,
+  baseMetadata: ContextMetadata = {},
+): Promise<string[]> {
+  const results: string[] = [];
+  let currentNumber = 0;
+
+  for (const child of children) {
+    const isNumberedList = child.type === 'numbered_list_item';
+
+    if (isNumberedList) {
+      currentNumber++;
+    } else {
+      currentNumber = 0;
+    }
+
+    const metadata: ContextMetadata = {
+      ...baseMetadata,
+      currentNumber: isNumberedList ? currentNumber : undefined,
+    };
+
+    const result = await processBlock(child, metadata);
+    results.push(result);
+  }
+
+  return results;
+}
+
+/**
  * Interface for renderer plugins in the Notion-to-MD system.
  * Provides core framework for transforming Notion blocks into any desired output format.
  */
@@ -264,11 +301,16 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
       this.updateContext(data);
       this.resetCollectors();
 
-      // Process all blocks
-      console.debug('[BaseRendererPlugin] Processing blocks');
-      for (const block of data.blockTree.blocks) {
-        await this.processBlock(block);
-      }
+      // Process all blocks with proper numbered list tracking
+      // Note: processBlock handles adding to collector for top-level blocks (parent.type === 'page_id')
+      console.debug(
+        '[BaseRendererPlugin] Processing blocks with sibling numbering',
+      );
+      await processChildrenWithNumbering(
+        data.blockTree.blocks,
+        this.processBlock.bind(this),
+        {},
+      );
 
       const content = await this.renderTemplate();
       console.debug(
