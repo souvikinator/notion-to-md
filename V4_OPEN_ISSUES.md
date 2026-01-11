@@ -1,66 +1,56 @@
-# Open Issues for v4.0.0-alpha
+# Open Issues for v4.0.0-alpha.8
 
 ## 🔴 HIGH PRIORITY (Critical Bugs)
 
-### 1. #140 - Nested Lists and Maths Rendering (bug, v4, priority:high) ✅ RESOLVED
-
-- **URL**: https://github.com/souvikinator/notion-to-md/issues/140
-- **Created**: 2025-05-17
-- **Comments**: 8
-- **Status**: RESOLVED in alpha.8
-- **Details**: Fixed sibling numbered list numbering, callout duplicate prefix, and annotation spacing
-- **Changes**:
-  - `src/core/renderer/index.ts` - Added `processChildrenWithNumbering()` helper for sequential numbering
-  - `src/plugins/renderer/mdx/transformers/blocks.ts` - Fixed callout transformer duplicate prefix
-  - `src/plugins/renderer/mdx/transformers/annotations.ts` - Removed extra spaces around annotations
-  - `tests/rca-140-*.ts` - Added comprehensive test suite for issue #140 scenarios
-
-### 2. #162 - Block indentation is not preserved
+### 1. #162 - Block indentation is not preserved (Related to #140)
 
 - **URL**: https://github.com/souvikinator/notion-to-md/issues/162
 - **Created**: 2025-07-26
 - **Comments**: 1
-- **Status**: Related to #140, work in progress
+- **Status**: Open - Needs investigation
 - **Details**: Owner confirmed this is related to #140 and work in progress
+- **Root Cause Hypothesis**: May be related to how nested content is indented within callouts or other block containers
 
-### 3. #158 - Child database not converting to MD when parent is a workspace (bug, v4)
+### 2. #158 - Child database not converting to MD when parent is a workspace (bug, v4)
 
 - **URL**: https://github.com/souvikinator/notion-to-md/issues/158
 - **Created**: 2025-07-18
 - **Comments**: 0
-- **Status**: No response yet
+- **Status**: Open - No response yet
 
-### 4. #151 - v4 MDX output produces final content with consistent line breaks (bug, v4)
+### 3. #151 - v4 MDX output produces final content with inconsistent line breaks (bug, v4)
 
 - **URL**: https://github.com/souvikinator/notion-to-md/issues/151
 - **Created**: 2025-06-29
 - **Comments**: 0
-- **Status**: No response yet
+- **Status**: Open - No response yet
 
 ---
 
 ## 🟡 MEDIUM PRIORITY (Recent Bugs & Features)
 
-### 5. #163 - Only one image is downloaded for every converted page using the `downloadMediaTo` option
+### 4. #163 - Only one image is downloaded for every converted page using the `downloadMediaTo` option
 
 - **URL**: https://github.com/souvikinator/notion-to-md/issues/163
 - **Created**: 2025-07-26
 - **Comments**: 1
 - **Status**: Owner responded they'll look into it
 
-### 6. #166 - Numbered list in Notion serialized as bullet list in Markdown
+### 5. #166 - Numbered list in Notion serialized as bullet list in Markdown
 
 - **URL**: https://github.com/souvikinator/notion-to-md/issues/166
 - **Created**: 2025-08-15
 - **Comments**: 0
+- **Status**: Open
 
-### 7. #164 - Extra spaces in rendered
+### 6. #164 - Extra spaces in rendered output
 
 - **URL**: https://github.com/souvikinator/notion-to-md/issues/164
 - **Created**: 2025-08-11
 - **Comments**: 1
+- **Status**: Open - Needs investigation (similar to #140 spacing issue)
 
-### 8. #161 - Feature: Add support for "Link to block" to URL hash conversion
+### 7. #161 - Feature: Add support for "Link to block" to URL hash conversion
 
 - **URL**: https://github.com/souvikinator/notion-to-md/issues/161
 - **Created**: 2025-07-21
@@ -69,7 +59,19 @@
 
 ---
 
-## ✅ RESOLVED in v4 (Can be ignored)
+## ✅ RESOLVED in v4.0.0-alpha.8
+
+### #140 - Nested Lists and Maths Rendering (bug, v4, priority:high) ✅ RESOLVED
+
+- **URL**: https://github.com/souvikinator/notion-to-md/issues/140
+- **Created**: 2025-05-17
+- **Comments**: 8+
+- **Status**: RESOLVED in alpha.8
+- **Changes**:
+  - `src/core/renderer/index.ts` - Added `processChildrenWithNumbering()` helper for sequential numbering
+  - `src/plugins/renderer/mdx/transformers/blocks.ts` - Fixed callout transformer duplicate prefix
+  - `src/plugins/renderer/mdx/transformers/annotations.ts` - Removed extra spaces around annotations
+  - `tests/rca-140-*.ts` - Added comprehensive test suite for issue #140 scenarios
 
 ### #26 - feature: handle properties as frontmatter
 
@@ -131,11 +133,14 @@
 
 ---
 
-## Summary
+## Summary for v4.0.0-alpha.8
 
-- **High Priority Issues**: 3 (critical bugs, work in progress) - #140 resolved in alpha.8
-- **Medium Priority Issues**: 4 (recent bugs & features)
-- **Resolved in v4**: 8 issues (implemented or addressed)
-- **Low Priority**: 4 issues (old v4-candidate, need validation)
+| Category               | Count | Status                               |
+| ---------------------- | ----- | ------------------------------------ |
+| High Priority (Open)   | 3     | #162, #158, #151                     |
+| Medium Priority (Open) | 4     | #163, #166, #164, #161               |
+| Resolved in alpha.8    | 1     | #140                                 |
+| Previously Resolved    | 7     | #26, #133, #22, #146, #95, #98, #106 |
+| Low Priority           | 4     | #10, #100, #104, #72                 |
 
-**Total Unresolved Issues**: 7 (High + Medium Priority)
+**Total Open Issues for alpha.8**: 7 (High + Medium Priority)
