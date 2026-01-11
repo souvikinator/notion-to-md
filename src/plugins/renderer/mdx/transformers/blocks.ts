@@ -7,16 +7,15 @@ export const blockTransformers: Partial<
   Record<NotionBlockType, BlockTransformer>
 > = {
   paragraph: {
-    transform: async ({ block, utils }) => {
+    transform: async ({ block, utils, metadata = {} }) => {
       //@ts-ignore Just process this block's content
       const text = await utils.transformRichText(block.paragraph.rich_text);
 
       // If block has no content, return empty string
       if (!text) return '';
 
-      //@ts-ignore Add a newline only for top-level paragraphs
-      const needsNewline = block.parent.type === 'page_id';
-      return text + (needsNewline ? '\n' : '');
+      const indent = INDENT.repeat(metadata.listLevel || 0);
+      return `${indent}${text}`;
     },
   },
 
@@ -34,7 +33,7 @@ export const blockTransformers: Partial<
 
       // For regular headings, return simple markdown
       if (!isToggle) {
-        return `# ${text}\n\n`;
+        return `# ${text}\n`;
       }
 
       // For toggleable headings, we process children directly
@@ -74,7 +73,7 @@ export const blockTransformers: Partial<
 
       // Regular heading case
       if (!isToggle) {
-        return `## ${text}\n\n`;
+        return `## ${text}\n`;
       }
 
       // Handle toggleable heading with children
@@ -110,7 +109,7 @@ export const blockTransformers: Partial<
 
       // Simple heading case
       if (!isToggle) {
-        return `### ${text}\n\n`;
+        return `### ${text}\n`;
       }
 
       // Process children for toggleable heading
@@ -144,13 +143,14 @@ export const blockTransformers: Partial<
 
       // If no children, just return formatted content
       if (!block.children?.length) {
-        return `${indent}- ${text}`;
+        return `${indent}- ${text}\n`;
       }
 
       // For blocks with children, we'll recursively handle them
+      // Children should be at currentLevel + 1
       const childMetadata = {
         ...metadata,
-        listLevel: currentLevel + 1, // can be anything as per your use case
+        listLevel: currentLevel + 1,
       };
 
       // Process each child block directly through processBlock
@@ -161,7 +161,7 @@ export const blockTransformers: Partial<
       );
 
       // Combine everything with proper formatting
-      return `${indent}- ${text}\n${childrenContent.join('\n')}\n`;
+      return `${indent}- ${text}\n${childrenContent.join('\n')}`;
     },
   },
 
@@ -187,7 +187,7 @@ export const blockTransformers: Partial<
 
       // If no children, just return this item
       if (!block.children?.length) {
-        return formattedItem;
+        return `${formattedItem}\n`;
       }
 
       // For items with children, process each child sequentially
@@ -203,7 +203,7 @@ export const blockTransformers: Partial<
       }
 
       // Combine this item with its children
-      return `${formattedItem}\n${childrenContent.join('\n')}\n`;
+      return `${formattedItem}\n${childrenContent.join('\n')}`;
     },
   },
 
@@ -225,7 +225,7 @@ export const blockTransformers: Partial<
 
       // If this todo item has no children, return just the item
       if (!block.children?.length) {
-        return formattedItem;
+        return `${formattedItem}\n`;
       }
 
       // For todo items with children, process each child
@@ -239,16 +239,18 @@ export const blockTransformers: Partial<
         ),
       );
 
-      return `${formattedItem}\n${childrenContent.join('\n')}\n`;
+      return `${formattedItem}\n${childrenContent.join('\n')}`;
     },
   },
 
   callout: {
-    transform: async ({ block, utils }) => {
+    transform: async ({ block, utils, metadata = {} }) => {
       // @ts-ignore
       const calloutBlock = block.callout;
       const text = await utils.transformRichText(calloutBlock.rich_text);
       const icon = calloutBlock.icon?.emoji || '';
+
+      const indent = INDENT.repeat(metadata.listLevel || 0);
 
       // Process children with proper numbered list tracking
       const childrenContent: string[] = [];
@@ -264,11 +266,13 @@ export const blockTransformers: Partial<
             currentNumber = 0;
           }
 
-          const metadata = {
+          const childMetadata = {
+            ...metadata,
+            listLevel: (metadata.listLevel || 0) + 1,
             currentNumber: isNumberedList ? currentNumber : undefined,
           };
 
-          const result = await utils.processBlock(child, metadata);
+          const result = await utils.processBlock(child, childMetadata);
           childrenContent.push(result);
         }
       }
@@ -276,7 +280,9 @@ export const blockTransformers: Partial<
       // Format the main text - first line gets icon, all lines get "> " prefix
       const textLines = text.split('\n');
       const formattedText = textLines
-        .map((line, i) => (i === 0 ? `> ${icon} ${line}` : `> ${line}`))
+        .map((line, i) =>
+          i === 0 ? `${indent}> ${icon} ${line}` : `${indent}> ${line}`,
+        )
         .join('\n');
 
       // Format children content - each line gets "> " prefix
@@ -284,11 +290,11 @@ export const blockTransformers: Partial<
         ? childrenContent
             .join('\n')
             .split('\n')
-            .map((line) => `> ${line}`)
+            .map((line) => `${indent}> ${line}`)
             .join('\n')
         : '';
 
-      return `${formattedText}${formattedChildren ? `\n${formattedChildren}` : ''}\n\n`;
+      return `${formattedText}${formattedChildren ? `\n${formattedChildren}` : ''}\n`;
     },
   },
 
@@ -335,14 +341,16 @@ ${childrenContent.join('\n')}
   },
 
   quote: {
-    transform: async ({ block, utils }) => {
+    transform: async ({ block, utils, metadata = {} }) => {
       // @ts-ignore
       const text = await utils.transformRichText(block.quote.rich_text);
+
+      const indent = INDENT.repeat(metadata.listLevel || 0);
 
       // Format main quote text
       const lines = text
         .split('\n')
-        .map((line) => `> ${line}`)
+        .map((line) => `${indent}> ${line}`)
         .join('\n');
 
       // If no children, return just the quote
@@ -358,15 +366,15 @@ ${childrenContent.join('\n')}
       const formattedChildren = childrenContent
         .join('\n')
         .split('\n')
-        .map((line) => `> ${line}`)
+        .map((line) => `${indent}> ${line}`)
         .join('\n');
 
-      return `${lines}\n${formattedChildren}\n\n`;
+      return `${lines}\n${formattedChildren}\n`;
     },
   },
 
   image: {
-    transform: async ({ block, utils }) => {
+    transform: async ({ block, utils, metadata = {} }) => {
       // @ts-ignore
       const imageBlock = block.image;
       const url =
@@ -379,12 +387,13 @@ ${childrenContent.join('\n')}
           ? await utils.transformRichText(imageBlock.caption)
           : 'Image';
 
-      return `![${caption}](${url})\n\n`;
+      const indent = INDENT.repeat(metadata.listLevel || 0);
+      return `${indent}![${caption}](${url})\n\n`;
     },
   },
 
   video: {
-    transform: async ({ block, utils }) => {
+    transform: async ({ block, utils, metadata = {} }) => {
       // @ts-ignore
       const videoBlock = block.video;
       const url =
@@ -397,12 +406,13 @@ ${childrenContent.join('\n')}
           ? await utils.transformRichText(videoBlock.caption)
           : 'Video';
 
-      return `[${caption}](${url})\n\n`;
+      const indent = INDENT.repeat(metadata.listLevel || 0);
+      return `${indent}[${caption}](${url})\n\n`;
     },
   },
 
   file: {
-    transform: async ({ block, utils }) => {
+    transform: async ({ block, utils, metadata = {} }) => {
       // @ts-ignore
       const fileBlock = block.file;
       const url =
@@ -415,12 +425,13 @@ ${childrenContent.join('\n')}
           ? await utils.transformRichText(fileBlock.caption)
           : fileBlock.name || 'File';
 
-      return `[${caption}](${url})\n\n`;
+      const indent = INDENT.repeat(metadata.listLevel || 0);
+      return `${indent}[${caption}](${url})\n\n`;
     },
   },
 
   pdf: {
-    transform: async ({ block, utils }) => {
+    transform: async ({ block, utils, metadata = {} }) => {
       // @ts-ignore
       const pdfBlock = block.pdf;
       const url =
@@ -433,12 +444,13 @@ ${childrenContent.join('\n')}
           ? await utils.transformRichText(pdfBlock.caption)
           : 'PDF Document';
 
-      return `[${caption}](${url})\n\n`;
+      const indent = INDENT.repeat(metadata.listLevel || 0);
+      return `${indent}[${caption}](${url})\n\n`;
     },
   },
 
   bookmark: {
-    transform: async ({ block, utils }) => {
+    transform: async ({ block, utils, metadata = {} }) => {
       // @ts-ignore
       const bookmarkBlock = block.bookmark;
       const url = bookmarkBlock.url;
@@ -446,7 +458,9 @@ ${childrenContent.join('\n')}
         bookmarkBlock.caption.length > 0
           ? await utils.transformRichText(bookmarkBlock.caption)
           : url;
-      return `[${caption}](${url})\n\n`;
+
+      const indent = INDENT.repeat(metadata.listLevel || 0);
+      return `${indent}[${caption}](${url})\n\n`;
     },
   },
 
@@ -474,7 +488,7 @@ ${childrenContent.join('\n')}
   },
 
   divider: {
-    transform: async () => '---\n\n',
+    transform: async () => '---\n',
   },
 
   table: {

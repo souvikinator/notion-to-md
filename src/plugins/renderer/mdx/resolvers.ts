@@ -82,7 +82,8 @@ export const createFrontmatterResolver = (): VariableResolver => {
 export const createContentResolver = (): VariableResolver => {
   return async (_, context) => {
     const collected = context.variableData.get('content') || [];
-    return collected.filter((line) => line.trim()).join('\n');
+    // Don't filter empty lines - preserve intentional spacing
+    return collected.join('\n');
   };
 };
 
@@ -92,6 +93,7 @@ export const createContentResolver = (): VariableResolver => {
 export const createImportsResolver = (): VariableResolver => {
   return async (_, context) => {
     const imports = context.variableData.get('imports') || [];
+    if (imports.length === 0) return '';
     // Deduplicate imports while preserving order
     const uniqueImports = [...new Set(imports)];
     return uniqueImports.join('\n') + '\n\n';
