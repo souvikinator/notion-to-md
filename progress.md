@@ -45,6 +45,7 @@ downloadMediaTo only saves last image per page
 - Verified `MediaHandler` processes all references concurrently (test: `rca-163-media-download.test.ts`)
 - Verified filenames are unique (using Block ID) so no overwrites occur
 - Verified manifest entries are unique per image
+- **Live Verification:** Ran reproduction script against a real Notion page with nested lists/images. All 3 images downloaded successfully and Markdown updated correctly.
   **Conclusion:** The issue appears to have been fixed in recent alpha updates. The current architecture correctly handles the reported scenario.
   #158 - Child Database in Workspace Fails (MEDIUM, v4 labeled)
 
