@@ -266,8 +266,29 @@ export abstract class BaseRendererPlugin implements ProcessorChainNode {
 
       // Process all blocks
       console.debug('[BaseRendererPlugin] Processing blocks');
+
+      // Track numbering for consecutive top-level numbered_list_item blocks
+      let currentNumber = 1;
+      let previousBlockWasNumberedList = false;
+
       for (const block of data.blockTree.blocks) {
-        await this.processBlock(block);
+        const isNumberedList = block.type === 'numbered_list_item';
+
+        // Reset numbering if we encounter a non-numbered-list block
+        if (!isNumberedList && previousBlockWasNumberedList) {
+          currentNumber = 1;
+        }
+
+        // Pass currentNumber metadata to numbered_list_item blocks
+        const metadata = isNumberedList ? { currentNumber } : undefined;
+        await this.processBlock(block, metadata);
+
+        // Increment for next numbered list item
+        if (isNumberedList) {
+          currentNumber++;
+        }
+
+        previousBlockWasNumberedList = isNumberedList;
       }
 
       const content = await this.renderTemplate();

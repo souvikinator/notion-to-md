@@ -598,3 +598,555 @@ describe('Block Transformers - Issue #140', () => {
     });
   });
 });
+
+/**
+ * Test Suite for Issue #162 - Block indentation is not preserved
+ * Focus: Nested content (paragraph, image, callout, quote) inside list items
+ */
+describe('Block Transformers - Issue #162', () => {
+  describe('Paragraph nested inside list items', () => {
+    it('should indent paragraph when nested inside bulleted list item', async () => {
+      const paragraph = createMockBlock(
+        'paragraph',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Image in point 1', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [],
+      );
+
+      const listItem = createMockBlock(
+        'bulleted_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Minor point 1', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [paragraph],
+      );
+
+      const utils = createMockUtils();
+      const context: RendererContext = {
+        pageId: 'test-page',
+        pageProperties: {},
+        metadata: {},
+        block: listItem,
+        blockTree: [],
+        variableData: new Map(),
+        transformers: {
+          blocks: blockTransformers as any,
+          annotations: {} as any,
+          properties: {} as any,
+        },
+        utils,
+        manifest: {},
+      };
+
+      const result =
+        await blockTransformers.bulleted_list_item!.transform(context);
+
+      // Should contain the list item text
+      expect(result).toContain('- Minor point 1');
+
+      // Paragraph should be indented with 4 spaces (level 1)
+      expect(result).toContain('    Image in point 1');
+    });
+
+    it('should indent paragraph when nested inside numbered list item', async () => {
+      const paragraph = createMockBlock(
+        'paragraph',
+        {
+          rich_text: [
+            {
+              type: 'text',
+              plain_text: 'Explanation text here',
+              annotations: {},
+            },
+          ],
+          color: 'default',
+        },
+        [],
+      );
+
+      const listItem = createMockBlock(
+        'numbered_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Step one', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [paragraph],
+      );
+
+      const utils = createMockUtils();
+      const context: RendererContext = {
+        pageId: 'test-page',
+        pageProperties: {},
+        metadata: {},
+        block: listItem,
+        blockTree: [],
+        variableData: new Map(),
+        transformers: {
+          blocks: blockTransformers as any,
+          annotations: {} as any,
+          properties: {} as any,
+        },
+        utils,
+        manifest: {},
+      };
+
+      const result =
+        await blockTransformers.numbered_list_item!.transform(context);
+
+      // Should contain the list item text
+      expect(result).toContain('1. Step one');
+
+      // Paragraph should be indented with 4 spaces (level 1)
+      expect(result).toContain('    Explanation text here');
+    });
+  });
+
+  describe('Image nested inside list items', () => {
+    it('should indent image when nested inside bulleted list item', async () => {
+      const image = createMockBlock(
+        'image',
+        {
+          type: 'external',
+          external: { url: 'https://example.com/image.png' },
+          caption: [{ type: 'text', plain_text: 'My Image', annotations: {} }],
+        },
+        [],
+      );
+
+      const listItem = createMockBlock(
+        'bulleted_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Minor point 1', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [image],
+      );
+
+      const utils = createMockUtils();
+      const context: RendererContext = {
+        pageId: 'test-page',
+        pageProperties: {},
+        metadata: {},
+        block: listItem,
+        blockTree: [],
+        variableData: new Map(),
+        transformers: {
+          blocks: blockTransformers as any,
+          annotations: {} as any,
+          properties: {} as any,
+        },
+        utils,
+        manifest: {},
+      };
+
+      const result =
+        await blockTransformers.bulleted_list_item!.transform(context);
+
+      // Should contain the list item text
+      expect(result).toContain('- Minor point 1');
+
+      // Image should be indented with 4 spaces (level 1)
+      expect(result).toContain(
+        '    ![My Image](https://example.com/image.png)',
+      );
+    });
+  });
+
+  describe('Quote nested inside list items', () => {
+    it('should indent quote when nested inside bulleted list item', async () => {
+      const quote = createMockBlock(
+        'quote',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Quote in point 3', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [],
+      );
+
+      const listItem = createMockBlock(
+        'bulleted_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Minor point 3', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [quote],
+      );
+
+      const utils = createMockUtils();
+      const context: RendererContext = {
+        pageId: 'test-page',
+        pageProperties: {},
+        metadata: {},
+        block: listItem,
+        blockTree: [],
+        variableData: new Map(),
+        transformers: {
+          blocks: blockTransformers as any,
+          annotations: {} as any,
+          properties: {} as any,
+        },
+        utils,
+        manifest: {},
+      };
+
+      const result =
+        await blockTransformers.bulleted_list_item!.transform(context);
+
+      // Should contain the list item text
+      expect(result).toContain('- Minor point 3');
+
+      // Quote should be indented with 4 spaces (level 1)
+      expect(result).toContain('    > Quote in point 3');
+    });
+  });
+
+  describe('Callout nested inside list items', () => {
+    it('should indent callout when nested inside bulleted list item', async () => {
+      const callout = createMockBlock(
+        'callout',
+        {
+          rich_text: [
+            {
+              type: 'text',
+              plain_text: 'Callout in point 2',
+              annotations: {},
+            },
+          ],
+          icon: { type: 'emoji', emoji: '💡' },
+          color: 'default',
+        },
+        [],
+      );
+
+      const listItem = createMockBlock(
+        'bulleted_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Minor point 2', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [callout],
+      );
+
+      const utils = createMockUtils();
+      const context: RendererContext = {
+        pageId: 'test-page',
+        pageProperties: {},
+        metadata: {},
+        block: listItem,
+        blockTree: [],
+        variableData: new Map(),
+        transformers: {
+          blocks: blockTransformers as any,
+          annotations: {} as any,
+          properties: {} as any,
+        },
+        utils,
+        manifest: {},
+      };
+
+      const result =
+        await blockTransformers.bulleted_list_item!.transform(context);
+
+      // Should contain the list item text
+      expect(result).toContain('- Minor point 2');
+
+      // Callout should be indented with 4 spaces (level 1)
+      expect(result).toContain('    > 💡 Callout in point 2');
+    });
+  });
+
+  describe('Full Issue #162 example - mixed nested content', () => {
+    it('should preserve indentation for all nested content types', async () => {
+      // Create the exact structure from Issue #162:
+      // - Major point
+      //     - Minor point 1
+      //         Image in point 1
+      //         ![Image](/media/image.png)
+      //     - Minor point 2
+      //         > 💡 > Callout in point 2
+      //     - Minor point 3
+      //         > Quote in point 3
+
+      const paragraph = createMockBlock(
+        'paragraph',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Image in point 1', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [],
+      );
+
+      const image = createMockBlock(
+        'image',
+        {
+          type: 'external',
+          external: { url: '/media/image.png' },
+          caption: [{ type: 'text', plain_text: 'Image', annotations: {} }],
+        },
+        [],
+      );
+
+      const callout = createMockBlock(
+        'callout',
+        {
+          rich_text: [
+            {
+              type: 'text',
+              plain_text: 'Callout in point 2',
+              annotations: {},
+            },
+          ],
+          icon: { type: 'emoji', emoji: '💡' },
+          color: 'default',
+        },
+        [],
+      );
+
+      const quote = createMockBlock(
+        'quote',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Quote in point 3', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [],
+      );
+
+      const minorPoint1 = createMockBlock(
+        'bulleted_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Minor point 1', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [paragraph, image],
+      );
+
+      const minorPoint2 = createMockBlock(
+        'bulleted_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Minor point 2', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [callout],
+      );
+
+      const minorPoint3 = createMockBlock(
+        'bulleted_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Minor point 3', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [quote],
+      );
+
+      const majorPoint = createMockBlock(
+        'bulleted_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Major point', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [minorPoint1, minorPoint2, minorPoint3],
+      );
+
+      const utils = createMockUtils();
+      const context: RendererContext = {
+        pageId: 'test-page',
+        pageProperties: {},
+        metadata: {},
+        block: majorPoint,
+        blockTree: [],
+        variableData: new Map(),
+        transformers: {
+          blocks: blockTransformers as any,
+          annotations: {} as any,
+          properties: {} as any,
+        },
+        utils,
+        manifest: {},
+      };
+
+      const result =
+        await blockTransformers.bulleted_list_item!.transform(context);
+
+      // Major point (level 0)
+      expect(result).toContain('- Major point');
+
+      // Minor points (level 1 - 4 spaces)
+      expect(result).toContain('    - Minor point 1');
+      expect(result).toContain('    - Minor point 2');
+      expect(result).toContain('    - Minor point 3');
+
+      // Content nested inside minor points (level 2 - 8 spaces)
+      expect(result).toContain('        Image in point 1');
+      expect(result).toContain('        ![Image](/media/image.png)');
+      expect(result).toContain('        > 💡 Callout in point 2');
+      expect(result).toContain('        > Quote in point 3');
+    });
+  });
+});
+
+/**
+ * Test Suite for Issue #166 - Numbered list in Notion serialized as bullet list
+ * Focus: Top-level consecutive numbered_list_item blocks must be numbered sequentially
+ */
+describe('Block Transformers - Issue #166', () => {
+  describe('Top-level consecutive numbered lists', () => {
+    it('should number consecutive top-level numbered list items sequentially', async () => {
+      // This test simulates what happens when the renderer processes top-level blocks
+      // The issue is that without proper metadata tracking, all items default to "1."
+
+      const listItem1 = createMockBlock(
+        'numbered_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'First item', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [],
+      );
+
+      const listItem2 = createMockBlock(
+        'numbered_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Second item', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [],
+      );
+
+      const listItem3 = createMockBlock(
+        'numbered_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Third item', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [],
+      );
+
+      const utils = createMockUtils();
+
+      // Simulate processing as top-level blocks with proper metadata
+      const result1 = await blockTransformers.numbered_list_item!.transform({
+        pageId: 'test-page',
+        pageProperties: {},
+        metadata: { currentNumber: 1 },
+        block: listItem1,
+        blockTree: [],
+        variableData: new Map(),
+        transformers: {
+          blocks: blockTransformers as any,
+          annotations: {} as any,
+          properties: {} as any,
+        },
+        utils,
+        manifest: {},
+      });
+
+      const result2 = await blockTransformers.numbered_list_item!.transform({
+        pageId: 'test-page',
+        pageProperties: {},
+        metadata: { currentNumber: 2 },
+        block: listItem2,
+        blockTree: [],
+        variableData: new Map(),
+        transformers: {
+          blocks: blockTransformers as any,
+          annotations: {} as any,
+          properties: {} as any,
+        },
+        utils,
+        manifest: {},
+      });
+
+      const result3 = await blockTransformers.numbered_list_item!.transform({
+        pageId: 'test-page',
+        pageProperties: {},
+        metadata: { currentNumber: 3 },
+        block: listItem3,
+        blockTree: [],
+        variableData: new Map(),
+        transformers: {
+          blocks: blockTransformers as any,
+          annotations: {} as any,
+          properties: {} as any,
+        },
+        utils,
+        manifest: {},
+      });
+
+      // Should have sequential numbering
+      expect(result1).toContain('1. First item');
+      expect(result2).toContain('2. Second item');
+      expect(result3).toContain('3. Third item');
+    });
+
+    it('should default to 1 when no currentNumber metadata is provided', async () => {
+      // This demonstrates the bug: without metadata, items default to 1
+      const listItem = createMockBlock(
+        'numbered_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Item text', annotations: {} },
+          ],
+          color: 'default',
+        },
+        [],
+      );
+
+      const utils = createMockUtils();
+
+      // Process without metadata (simulating the bug)
+      const result = await blockTransformers.numbered_list_item!.transform({
+        pageId: 'test-page',
+        pageProperties: {},
+        metadata: {}, // No currentNumber!
+        block: listItem,
+        blockTree: [],
+        variableData: new Map(),
+        transformers: {
+          blocks: blockTransformers as any,
+          annotations: {} as any,
+          properties: {} as any,
+        },
+        utils,
+        manifest: {},
+      });
+
+      // Should default to 1
+      expect(result).toContain('1. Item text');
+    });
+  });
+});

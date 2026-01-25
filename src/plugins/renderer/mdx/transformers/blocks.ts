@@ -7,16 +7,30 @@ export const blockTransformers: Partial<
   Record<NotionBlockType, BlockTransformer>
 > = {
   paragraph: {
-    transform: async ({ block, utils }) => {
+    transform: async ({ block, utils, metadata = {} }) => {
       //@ts-ignore Just process this block's content
       const text = await utils.transformRichText(block.paragraph.rich_text);
 
       // If block has no content, return empty string
       if (!text) return '';
 
+      // Apply indentation if nested inside a list
+      const currentLevel = metadata.listLevel || 0;
+      const indent = INDENT.repeat(currentLevel);
+
       //@ts-ignore Add a newline only for top-level paragraphs
       const needsNewline = block.parent.type === 'page_id';
-      return text + (needsNewline ? '\n' : '');
+
+      // Apply indent to each line for multi-line paragraphs
+      const indentedText =
+        currentLevel > 0
+          ? text
+              .split('\n')
+              .map((line) => `${indent}${line}`)
+              .join('\n')
+          : text;
+
+      return indentedText + (needsNewline ? '\n' : '');
     },
   },
 
@@ -252,11 +266,15 @@ export const blockTransformers: Partial<
   },
 
   callout: {
-    transform: async ({ block, utils }) => {
+    transform: async ({ block, utils, metadata = {} }) => {
       // @ts-ignore
       const calloutBlock = block.callout;
       const text = await utils.transformRichText(calloutBlock.rich_text);
       const icon = calloutBlock.icon?.emoji || '';
+
+      // Apply indentation if nested inside a list
+      const currentLevel = metadata.listLevel || 0;
+      const indent = INDENT.repeat(currentLevel);
 
       // Process any children
       let currentNumber = 1;
@@ -265,39 +283,39 @@ export const blockTransformers: Partial<
         ? await Promise.all(
             block.children.map((child) => {
               const isNumberedList = child.type === 'numbered_list_item';
-              const metadata = isNumberedList ? { currentNumber } : {};
+              const childMetadata = isNumberedList ? { currentNumber } : {};
 
               if (isNumberedList) {
                 currentNumber++;
               }
 
-              return utils.processBlock(child, metadata);
+              return utils.processBlock(child, childMetadata);
             }),
           )
         : [];
 
-      // Format the main content
+      // Format the main content with indentation
       const lines = text.split('\n');
       const firstLine = lines[0] || '';
       const remainingLines = lines
         .slice(1)
-        .map((line) => `> ${line}`)
+        .map((line) => `${indent}> ${line}`)
         .join('\n');
 
       const mainContent = remainingLines
         ? `${firstLine}\n${remainingLines}`
         : firstLine;
 
-      // Format children content
+      // Format children content with indentation
       const formattedChildren = childrenContent.length
         ? childrenContent
             .join('\n')
             .split('\n')
-            .map((line) => `> ${line}`)
+            .map((line) => `${indent}> ${line}`)
             .join('\n')
         : '';
 
-      return `> ${icon} ${mainContent}${formattedChildren ? `\n${formattedChildren}` : ''}\n\n`;
+      return `${indent}> ${icon} ${mainContent}${formattedChildren ? `\n${formattedChildren}` : ''}\n\n`;
     },
   },
 
@@ -344,14 +362,18 @@ ${childrenContent.join('\n')}
   },
 
   quote: {
-    transform: async ({ block, utils }) => {
+    transform: async ({ block, utils, metadata = {} }) => {
       // @ts-ignore
       const text = await utils.transformRichText(block.quote.rich_text);
 
-      // Format main quote text
+      // Apply indentation if nested inside a list
+      const currentLevel = metadata.listLevel || 0;
+      const indent = INDENT.repeat(currentLevel);
+
+      // Format main quote text with indentation
       const lines = text
         .split('\n')
-        .map((line) => `> ${line}`)
+        .map((line) => `${indent}> ${line}`)
         .join('\n');
 
       // If no children, return just the quote
@@ -367,7 +389,7 @@ ${childrenContent.join('\n')}
       const formattedChildren = childrenContent
         .join('\n')
         .split('\n')
-        .map((line) => `> ${line}`)
+        .map((line) => `${indent}> ${line}`)
         .join('\n');
 
       return `${lines}\n${formattedChildren}\n\n`;
@@ -375,7 +397,7 @@ ${childrenContent.join('\n')}
   },
 
   image: {
-    transform: async ({ block, utils }) => {
+    transform: async ({ block, utils, metadata = {} }) => {
       // @ts-ignore
       const imageBlock = block.image;
       const url =
@@ -388,7 +410,11 @@ ${childrenContent.join('\n')}
           ? await utils.transformRichText(imageBlock.caption)
           : 'Image';
 
-      return `![${caption}](${url})\n\n`;
+      // Apply indentation if nested inside a list
+      const currentLevel = metadata.listLevel || 0;
+      const indent = INDENT.repeat(currentLevel);
+
+      return `${indent}![${caption}](${url})\n\n`;
     },
   },
 
