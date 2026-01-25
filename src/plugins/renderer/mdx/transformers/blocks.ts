@@ -193,12 +193,20 @@ export const blockTransformers: Partial<
       // For items with children, process each child sequentially
       // Each child starts with number 1 at its level
       const childrenContent: string[] = [];
+      let childNumber = 1;
       for (let i = 0; i < block.children.length; i++) {
-        const childContent = await utils.processBlock(block.children[i], {
+        const child = block.children[i];
+        const isNumberedList = child.type === 'numbered_list_item';
+
+        const childContent = await utils.processBlock(child, {
           ...metadata,
           listLevel: currentLevel + 1,
-          currentNumber: i + 1, // Pass sequential numbers to siblings
+          currentNumber: isNumberedList ? childNumber : undefined, // Pass sequential numbers to siblings
         });
+
+        if (isNumberedList) {
+          childNumber++;
+        }
         childrenContent.push(childContent);
       }
 
@@ -251,17 +259,34 @@ export const blockTransformers: Partial<
       const icon = calloutBlock.icon?.emoji || '';
 
       // Process any children
+      let currentNumber = 1;
+
       const childrenContent = block.children?.length
         ? await Promise.all(
-            block.children.map((child) => utils.processBlock(child)),
+            block.children.map((child) => {
+              const isNumberedList = child.type === 'numbered_list_item';
+              const metadata = isNumberedList ? { currentNumber } : {};
+
+              if (isNumberedList) {
+                currentNumber++;
+              }
+
+              return utils.processBlock(child, metadata);
+            }),
           )
         : [];
 
       // Format the main content
-      const lines = text
-        .split('\n')
+      const lines = text.split('\n');
+      const firstLine = lines[0] || '';
+      const remainingLines = lines
+        .slice(1)
         .map((line) => `> ${line}`)
         .join('\n');
+
+      const mainContent = remainingLines
+        ? `${firstLine}\n${remainingLines}`
+        : firstLine;
 
       // Format children content
       const formattedChildren = childrenContent.length
@@ -272,7 +297,7 @@ export const blockTransformers: Partial<
             .join('\n')
         : '';
 
-      return `> ${icon} ${lines}${formattedChildren ? `\n${formattedChildren}` : ''}\n\n`;
+      return `> ${icon} ${mainContent}${formattedChildren ? `\n${formattedChildren}` : ''}\n\n`;
     },
   },
 
@@ -450,10 +475,13 @@ ${childrenContent.join('\n')}
   },
 
   equation: {
-    transform: async ({ block }) => {
+    transform: async ({ block, metadata = {} }) => {
       // @ts-ignore
       const expression = block.equation.expression;
-      return `\n$$\n${expression}\n$$\n\n`;
+      const currentLevel = metadata.listLevel || 0;
+      const indent = INDENT.repeat(currentLevel);
+
+      return `\n${indent}$$\n${indent}${expression.split('\n').join(`\n${indent}`)}\n${indent}$$\n\n`;
     },
   },
 
