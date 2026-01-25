@@ -53,11 +53,26 @@ export const blockTransformers: Partial<
 
       // For toggleable headings, we process children directly
       // This ensures proper content building from bottom up
-      const childrenContent = block.children?.length
-        ? await Promise.all(
-            block.children.map((child) => utils.processBlock(child)),
-          )
-        : [];
+      let currentNumber = 1;
+      const childrenContent: string[] = [];
+
+      if (block.children?.length) {
+        for (const child of block.children) {
+          const isNumberedList = child.type === 'numbered_list_item';
+
+          if (!isNumberedList) {
+            currentNumber = 1;
+          }
+
+          const childMetadata = isNumberedList ? { currentNumber } : {};
+          const content = await utils.processBlock(child, childMetadata);
+          childrenContent.push(content);
+
+          if (isNumberedList) {
+            currentNumber++;
+          }
+        }
+      }
 
       // Build the complete toggle structure with the heading
       // we need to add a newline after the summary tag for the markdown to render
@@ -92,11 +107,26 @@ export const blockTransformers: Partial<
       }
 
       // Handle toggleable heading with children
-      const childrenContent = block.children?.length
-        ? await Promise.all(
-            block.children.map((child) => utils.processBlock(child)),
-          )
-        : [];
+      let currentNumber = 1;
+      const childrenContent: string[] = [];
+
+      if (block.children?.length) {
+        for (const child of block.children) {
+          const isNumberedList = child.type === 'numbered_list_item';
+
+          if (!isNumberedList) {
+            currentNumber = 1;
+          }
+
+          const childMetadata = isNumberedList ? { currentNumber } : {};
+          const content = await utils.processBlock(child, childMetadata);
+          childrenContent.push(content);
+
+          if (isNumberedList) {
+            currentNumber++;
+          }
+        }
+      }
 
       // Create toggle structure with h2
       return `<details>
@@ -128,11 +158,26 @@ export const blockTransformers: Partial<
       }
 
       // Process children for toggleable heading
-      const childrenContent = block.children?.length
-        ? await Promise.all(
-            block.children.map((child) => utils.processBlock(child)),
-          )
-        : [];
+      let currentNumber = 1;
+      const childrenContent: string[] = [];
+
+      if (block.children?.length) {
+        for (const child of block.children) {
+          const isNumberedList = child.type === 'numbered_list_item';
+
+          if (!isNumberedList) {
+            currentNumber = 1;
+          }
+
+          const childMetadata = isNumberedList ? { currentNumber } : {};
+          const content = await utils.processBlock(child, childMetadata);
+          childrenContent.push(content);
+
+          if (isNumberedList) {
+            currentNumber++;
+          }
+        }
+      }
 
       // Build toggle with h3
       return `<details>
@@ -161,18 +206,30 @@ export const blockTransformers: Partial<
         return `${indent}- ${text}`;
       }
 
-      // For blocks with children, we'll recursively handle them
-      const childMetadata = {
-        ...metadata,
-        listLevel: currentLevel + 1, // can be anything as per your use case
-      };
-
       // Process each child block directly through processBlock
-      const childrenContent = await Promise.all(
-        block.children.map((childBlock) =>
-          utils.processBlock(childBlock, childMetadata),
-        ),
-      );
+      let childNumber = 1;
+      const childrenContent: string[] = [];
+
+      for (const childBlock of block.children) {
+        const isNumberedList = childBlock.type === 'numbered_list_item';
+
+        // Reset numbering if sequence is broken
+        if (!isNumberedList) {
+          childNumber = 1;
+        }
+
+        const content = await utils.processBlock(childBlock, {
+          ...metadata,
+          listLevel: currentLevel + 1,
+          currentNumber: isNumberedList ? childNumber : undefined,
+        });
+
+        childrenContent.push(content);
+
+        if (isNumberedList) {
+          childNumber++;
+        }
+      }
 
       // Combine everything with proper formatting
       return `${indent}- ${text}\n${childrenContent.join('\n')}\n`;
@@ -252,14 +309,29 @@ export const blockTransformers: Partial<
 
       // For todo items with children, process each child
       // maintaining the proper hierarchy
-      const childrenContent = await Promise.all(
-        block.children.map((child) =>
-          utils.processBlock(child, {
-            ...metadata,
-            listLevel: currentLevel + 1,
-          }),
-        ),
-      );
+      let childNumber = 1;
+      const childrenContent: string[] = [];
+
+      for (const childBlock of block.children) {
+        const isNumberedList = childBlock.type === 'numbered_list_item';
+
+        // Reset numbering if sequence is broken
+        if (!isNumberedList) {
+          childNumber = 1;
+        }
+
+        const content = await utils.processBlock(childBlock, {
+          ...metadata,
+          listLevel: currentLevel + 1,
+          currentNumber: isNumberedList ? childNumber : undefined,
+        });
+
+        childrenContent.push(content);
+
+        if (isNumberedList) {
+          childNumber++;
+        }
+      }
 
       return `${formattedItem}\n${childrenContent.join('\n')}\n`;
     },
@@ -277,22 +349,29 @@ export const blockTransformers: Partial<
       const indent = INDENT.repeat(currentLevel);
 
       // Process any children
+      // Callout adds its own "> " prefix to all lines
+      // Nested numbered lists get their own numbering sequence
       let currentNumber = 1;
+      const childrenContent: string[] = [];
 
-      const childrenContent = block.children?.length
-        ? await Promise.all(
-            block.children.map((child) => {
-              const isNumberedList = child.type === 'numbered_list_item';
-              const childMetadata = isNumberedList ? { currentNumber } : {};
+      if (block.children?.length) {
+        for (const child of block.children) {
+          const isNumberedList = child.type === 'numbered_list_item';
 
-              if (isNumberedList) {
-                currentNumber++;
-              }
+          // Reset numbering if sequence is broken
+          if (!isNumberedList) {
+            currentNumber = 1;
+          }
 
-              return utils.processBlock(child, childMetadata);
-            }),
-          )
-        : [];
+          const childMetadata = isNumberedList ? { currentNumber } : {};
+          const content = await utils.processBlock(child, childMetadata);
+          childrenContent.push(content);
+
+          if (isNumberedList) {
+            currentNumber++;
+          }
+        }
+      }
 
       // Format the main content with indentation
       const lines = text.split('\n');
@@ -320,7 +399,7 @@ export const blockTransformers: Partial<
   },
 
   toggle: {
-    transform: async ({ block, utils }) => {
+    transform: async ({ block, utils, metadata = {} }) => {
       // @ts-ignore Process the toggle text
       const text = await utils.transformRichText(block.toggle.rich_text, {
         html: true, // since markdown doesn't get's renderer
@@ -328,26 +407,36 @@ export const blockTransformers: Partial<
 
       // If no children, return just a basic toggle
       if (!block.children?.length) {
-        return `<details>
-<summary>
-${text}
-</summary>
-</details>\n\n`;
+        return `<details>\n<summary>\n${text}\n</summary>\n</details>\n\n`;
       }
 
       // Process children and include them in the toggle
-      const childrenContent = await Promise.all(
-        block.children.map((child) => utils.processBlock(child)),
-      );
+      // Toggle children start at indentation level 1 (if nested)
+      // Toggle itself doesn't add indentation, but it needs to track nesting
+      const baseLevel = (metadata.listLevel || 0) + 1;
+      let currentNumber = 1;
+      const childrenContent: string[] = [];
 
-      return `<details>
-<summary>
-${text}
-</summary>
+      for (const child of block.children) {
+        const isNumberedList = child.type === 'numbered_list_item';
 
-${childrenContent.join('\n')}
+        // Reset numbering if sequence is broken
+        if (!isNumberedList) {
+          currentNumber = 1;
+        }
 
-</details>\n\n`;
+        const childMetadata = isNumberedList
+          ? { currentNumber, listLevel: baseLevel }
+          : { listLevel: baseLevel };
+        const content = await utils.processBlock(child, childMetadata);
+        childrenContent.push(content);
+
+        if (isNumberedList) {
+          currentNumber++;
+        }
+      }
+
+      return `<details>\n<summary>\n${text}\n</summary>\n\n${childrenContent.join('\n')}\n\n</details>\n\n`;
     },
   },
 
@@ -382,9 +471,27 @@ ${childrenContent.join('\n')}
       }
 
       // Process and format children as part of the quote
-      const childrenContent = await Promise.all(
-        block.children.map((child) => utils.processBlock(child)),
-      );
+      // Quote adds "> " prefix to all lines, but nested content
+      // still needs listLevel for proper indentation
+      let currentNumber = 1;
+      const childrenContent: string[] = [];
+
+      for (const child of block.children) {
+        const isNumberedList = child.type === 'numbered_list_item';
+
+        // Reset numbering if sequence is broken
+        if (!isNumberedList) {
+          currentNumber = 1;
+        }
+
+        const childMetadata = isNumberedList ? { currentNumber } : {};
+        const content = await utils.processBlock(child, childMetadata);
+        childrenContent.push(content);
+
+        if (isNumberedList) {
+          currentNumber++;
+        }
+      }
 
       const formattedChildren = childrenContent
         .join('\n')

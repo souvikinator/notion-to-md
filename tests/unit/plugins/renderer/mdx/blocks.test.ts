@@ -1150,3 +1150,371 @@ describe('Block Transformers - Issue #166', () => {
     });
   });
 });
+
+/**
+ * Test Suite for Advanced Nested List Scenarios & Combinations
+ * Focus: Verifying indentation and numbering propagation across various containers
+ */
+describe('Advanced Nested List Scenarios', () => {
+  describe('Depth 3 Mixed Nesting', () => {
+    it('should handle Numbered > Bulleted > Numbered nesting with correct indentation', async () => {
+      // Structure:
+      // 1. Level 0
+      //    - Level 1
+      //        1. Level 2
+
+      const level2Item = createMockBlock(
+        'numbered_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Level 2 Item', annotations: {} },
+          ],
+        },
+        [],
+      );
+
+      const level1Item = createMockBlock(
+        'bulleted_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Level 1 Item', annotations: {} },
+          ],
+        },
+        [level2Item],
+      );
+
+      const level0Item = createMockBlock(
+        'numbered_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Level 0 Item', annotations: {} },
+          ],
+        },
+        [level1Item],
+      );
+
+      const utils = createMockUtils();
+      const context: RendererContext = {
+        pageId: 'test-page',
+        pageProperties: {},
+        metadata: { currentNumber: 1 },
+        block: level0Item,
+        blockTree: [],
+        variableData: new Map(),
+        transformers: {
+          blocks: blockTransformers as any,
+          annotations: {} as any,
+          properties: {} as any,
+        },
+        utils,
+        manifest: {},
+      };
+
+      const result =
+        await blockTransformers.numbered_list_item!.transform(context);
+
+      expect(result).toContain('1. Level 0 Item');
+      expect(result).toContain('    - Level 1 Item'); // 4 spaces
+      expect(result).toContain('        1. Level 2 Item'); // 8 spaces
+    });
+  });
+
+  describe('Numbered List inside Quote', () => {
+    it('should propagate numbering and indentation inside quote block', async () => {
+      // Structure:
+      // > Quote
+      // > 1. First Item
+      // > 2. Second Item
+
+      const item1 = createMockBlock(
+        'numbered_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'First Item', annotations: {} },
+          ],
+        },
+        [],
+      );
+
+      const item2 = createMockBlock(
+        'numbered_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Second Item', annotations: {} },
+          ],
+        },
+        [],
+      );
+
+      const quote = createMockBlock(
+        'quote',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Quote Header', annotations: {} },
+          ],
+        },
+        [item1, item2],
+      );
+
+      const utils = createMockUtils();
+      const context: RendererContext = {
+        pageId: 'test-page',
+        pageProperties: {},
+        metadata: {},
+        block: quote,
+        blockTree: [],
+        variableData: new Map(),
+        transformers: {
+          blocks: blockTransformers as any,
+          annotations: {} as any,
+          properties: {} as any,
+        },
+        utils,
+        manifest: {},
+      };
+
+      const result = await blockTransformers.quote!.transform(context);
+
+      expect(result).toContain('> Quote Header');
+      // Numbering should work
+      expect(result).toContain('> 1. First Item');
+      expect(result).toContain('> 2. Second Item');
+    });
+  });
+
+  describe('Numbered List inside Toggle', () => {
+    it('should propagate numbering inside toggle block', async () => {
+      // Structure:
+      // Toggle
+      // 1. First Item
+      // 2. Second Item
+
+      const item1 = createMockBlock(
+        'numbered_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'First Item', annotations: {} },
+          ],
+        },
+        [],
+      );
+
+      const item2 = createMockBlock(
+        'numbered_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Second Item', annotations: {} },
+          ],
+        },
+        [],
+      );
+
+      const toggle = createMockBlock(
+        'toggle',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Toggle Header', annotations: {} },
+          ],
+        },
+        [item1, item2],
+      );
+
+      const utils = createMockUtils();
+      const context: RendererContext = {
+        pageId: 'test-page',
+        pageProperties: {},
+        metadata: {},
+        block: toggle,
+        blockTree: [],
+        variableData: new Map(),
+        transformers: {
+          blocks: blockTransformers as any,
+          annotations: {} as any,
+          properties: {} as any,
+        },
+        utils,
+        manifest: {},
+      };
+
+      const result = await blockTransformers.toggle!.transform(context);
+
+      expect(result).toContain('<summary>\nToggle Header\n</summary>');
+      expect(result).toContain('1. First Item');
+      expect(result).toContain('2. Second Item');
+    });
+  });
+
+  describe('Numbered List inside Bulleted List', () => {
+    it('should correctly number sequential numbered items nested in a bullet', async () => {
+      // Structure:
+      // - Bullet
+      //     1. Num 1
+      //     2. Num 2
+
+      const num1 = createMockBlock(
+        'numbered_list_item',
+        { rich_text: [{ type: 'text', plain_text: 'Num 1', annotations: {} }] },
+        [],
+      );
+
+      const num2 = createMockBlock(
+        'numbered_list_item',
+        { rich_text: [{ type: 'text', plain_text: 'Num 2', annotations: {} }] },
+        [],
+      );
+
+      const bullet = createMockBlock(
+        'bulleted_list_item',
+        {
+          rich_text: [{ type: 'text', plain_text: 'Bullet', annotations: {} }],
+        },
+        [num1, num2],
+      );
+
+      const utils = createMockUtils();
+      const context: RendererContext = {
+        pageId: 'test-page',
+        pageProperties: {},
+        metadata: {},
+        block: bullet,
+        blockTree: [],
+        variableData: new Map(),
+        transformers: {
+          blocks: blockTransformers as any,
+          annotations: {} as any,
+          properties: {} as any,
+        },
+        utils,
+        manifest: {},
+      };
+
+      const result =
+        await blockTransformers.bulleted_list_item!.transform(context);
+
+      expect(result).toContain('- Bullet');
+      expect(result).toContain('    1. Num 1');
+      expect(result).toContain('    2. Num 2');
+    });
+  });
+
+  describe('Multi-line Paragraph in Nested List', () => {
+    it('should indent all lines of a multi-line paragraph inside a list', async () => {
+      // Structure:
+      // 1. List Item
+      //     Line 1
+      //     Line 2
+
+      const paragraph = createMockBlock(
+        'paragraph',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Line 1\nLine 2', annotations: {} },
+          ],
+        },
+        [],
+      );
+
+      const listItem = createMockBlock(
+        'numbered_list_item',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'List Item', annotations: {} },
+          ],
+        },
+        [paragraph],
+      );
+
+      const utils = createMockUtils();
+      const context: RendererContext = {
+        pageId: 'test-page',
+        pageProperties: {},
+        metadata: { currentNumber: 1 },
+        block: listItem,
+        blockTree: [],
+        variableData: new Map(),
+        transformers: {
+          blocks: blockTransformers as any,
+          annotations: {} as any,
+          properties: {} as any,
+        },
+        utils,
+        manifest: {},
+      };
+
+      const result =
+        await blockTransformers.numbered_list_item!.transform(context);
+
+      expect(result).toContain('1. List Item');
+      expect(result).toContain('    Line 1');
+      expect(result).toContain('    Line 2');
+    });
+  });
+
+  describe('Interrupted Sequence in Container', () => {
+    it('should reset numbering when sequence is interrupted inside a container', async () => {
+      // Structure (inside callout):
+      // > 1. Item A
+      // > Interruption (Paragraph)
+      // > 1. Item B (Should restart at 1)
+
+      const itemA = createMockBlock(
+        'numbered_list_item',
+        {
+          rich_text: [{ type: 'text', plain_text: 'Item A', annotations: {} }],
+        },
+        [],
+      );
+
+      const interruption = createMockBlock(
+        'paragraph',
+        {
+          rich_text: [
+            { type: 'text', plain_text: 'Interruption', annotations: {} },
+          ],
+        },
+        [],
+      );
+
+      const itemB = createMockBlock(
+        'numbered_list_item',
+        {
+          rich_text: [{ type: 'text', plain_text: 'Item B', annotations: {} }],
+        },
+        [],
+      );
+
+      const callout = createMockBlock(
+        'callout',
+        {
+          rich_text: [{ type: 'text', plain_text: 'Callout', annotations: {} }],
+          icon: { type: 'emoji', emoji: '📢' },
+          color: 'default',
+        },
+        [itemA, interruption, itemB],
+      );
+
+      const utils = createMockUtils();
+      const context: RendererContext = {
+        pageId: 'test-page',
+        pageProperties: {},
+        metadata: {},
+        block: callout,
+        blockTree: [],
+        variableData: new Map(),
+        transformers: {
+          blocks: blockTransformers as any,
+          annotations: {} as any,
+          properties: {} as any,
+        },
+        utils,
+        manifest: {},
+      };
+
+      const result = await blockTransformers.callout!.transform(context);
+
+      expect(result).toContain('> 1. Item A');
+      expect(result).toContain('> Interruption');
+      expect(result).toContain('> 1. Item B'); // Should reset to 1
+    });
+  });
+});
