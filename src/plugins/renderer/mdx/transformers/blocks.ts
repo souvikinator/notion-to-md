@@ -14,9 +14,9 @@ export const blockTransformers: Partial<
       // If block has no content, return empty string
       if (!text) return '';
 
-      //@ts-ignore Add a newline only for top-level paragraphs
-      const needsNewline = block.parent.type === 'page_id';
-      return text + (needsNewline ? '\n' : '');
+      // All paragraphs should end with double newlines so they render as distinct
+      // separate blocks in markdown, regardless of nesting depth.
+      return text + '\n\n';
     },
   },
 
@@ -54,7 +54,7 @@ export const blockTransformers: Partial<
   <h1>${text}</h1>
   </summary>
 
-  ${childrenContent.join('\n')}
+${childrenContent.join('\n')}
 
 </details>\n`;
     },
@@ -90,7 +90,7 @@ export const blockTransformers: Partial<
   <h2>${text}</h2>
   </summary>
 
-  ${childrenContent.join('\n')}
+${childrenContent.join('\n')}
 
 </details>\n`;
     },
@@ -126,7 +126,7 @@ export const blockTransformers: Partial<
   <h3>${text}</h3>
   </summary>
 
-  ${childrenContent.join('\n')}
+${childrenContent.join('\n')}
 
 </details>\n`;
     },
@@ -257,10 +257,15 @@ export const blockTransformers: Partial<
           )
         : [];
 
-      // Format the main content
+      // Format the main content, placing callout icon only on the first line
       const lines = text
         .split('\n')
-        .map((line) => `> ${line}`)
+        .map((line, index) => {
+          if (index === 0) {
+            return `> ${icon ? `${icon} ` : ''}${line}`;
+          }
+          return `> ${line}`;
+        })
         .join('\n');
 
       // Format children content
@@ -272,7 +277,7 @@ export const blockTransformers: Partial<
             .join('\n')
         : '';
 
-      return `> ${icon} ${lines}${formattedChildren ? `\n${formattedChildren}` : ''}\n\n`;
+      return `${lines}${formattedChildren ? `\n${formattedChildren}` : ''}\n\n`;
     },
   },
 
