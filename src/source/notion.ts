@@ -5,8 +5,7 @@ import type {
   GetDataSourceResponse,
   PageObjectResponse,
 } from '@notionhq/client';
-import { normalizeId } from '../tree/ids';
-import { pageTitle } from '../tree/properties';
+import { pageTitle } from '../normalize/properties';
 import { createLimiter } from '../utils/limit';
 import type {
   BlockExtras,
@@ -156,9 +155,9 @@ export function notion(
         );
       return page;
     },
-    blocks: (id) => blocks(normalizeId(id)),
+    blocks,
     async *query(databaseId, query) {
-      for (const dataSourceId of await dataSourceIds(normalizeId(databaseId))) {
+      for (const dataSourceId of await dataSourceIds(databaseId)) {
         yield* await rowsOf(dataSourceId, query);
       }
     },

@@ -33,7 +33,10 @@ export type RawBlock = BlockObjectResponse & BlockExtras;
 
 export type DatabaseQuery = Pick<QueryDataSourceParameters, 'filter' | 'sorts'>;
 
-/** Where page content comes from. `notion()` reads the Notion API; `fromBlocks()` reads saved JSON. */
+/**
+ * Where page content comes from. `notion()` reads the Notion API; `fromBlocks()` reads saved JSON.
+ * The converter passes ids as dashed UUIDs.
+ */
 export interface Source {
   page(id: string): Promise<RawPage>;
   blocks(id: string): Promise<RawBlock[]>;

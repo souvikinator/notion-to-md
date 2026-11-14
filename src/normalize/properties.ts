@@ -1,6 +1,6 @@
 import type { PageObjectResponse } from '@notionhq/client';
 import { plainText } from './rich-text';
-import type { FileValue, Properties, PropertyValue } from './types';
+import type { FileValue, Properties, PropertyValue } from '../tree/types';
 
 type NotionProperty = PageObjectResponse['properties'][string];
 type RollupValue = Extract<NotionProperty, { type: 'rollup' }>['rollup'];
@@ -21,24 +21,6 @@ export function properties(notion: Record<string, NotionProperty>): Properties {
     result[name] = propertyValue(property);
   }
   return result;
-}
-
-/** A property value as display text, e.g. for a table cell. */
-export function formatPropertyValue(value: PropertyValue): string {
-  if (value === null) return '';
-  if (!Array.isArray(value)) return String(value);
-  return value
-    .map((item) => (isFileValue(item) ? item.name : formatPropertyValue(item)))
-    .join(', ');
-}
-
-export function isFileValue(value: unknown): value is FileValue {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'url' in value &&
-    'hosted' in value
-  );
 }
 
 /** The plain-text title of a page, from whichever property has the `title` type. */

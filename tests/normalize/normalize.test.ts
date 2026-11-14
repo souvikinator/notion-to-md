@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { normalize } from '../../src/tree/normalize';
+import { normalize } from '../../src/normalize/normalize';
 import type { Block, List } from '../../src/tree/types';
 import {
   breadcrumb,

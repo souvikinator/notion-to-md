@@ -31,7 +31,7 @@ export type {
   RawPage,
   Source,
 } from './source/types';
-export { normalizeId, notionUrl, parseNotionUrl } from './tree/ids';
+export { normalizeId, notionUrl, parseNotionUrl } from './normalize/ids';
 export type * from './tree/types';
 export {
   blockChildren,

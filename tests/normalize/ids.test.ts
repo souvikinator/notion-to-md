@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeId, notionUrl, parseNotionUrl } from '../../src/tree/ids';
+import {
+  normalizeId,
+  notionUrl,
+  parseNotionUrl,
+} from '../../src/normalize/ids';
 
 describe('normalizeId', () => {
   it('adds dashes to a compact id and lowercases it', () => {

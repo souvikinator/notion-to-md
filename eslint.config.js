@@ -58,7 +58,12 @@ export default defineConfig(
     },
   },
   {
-    files: ['src/core/**/*.ts', 'src/tree/**/*.ts', 'src/source/**/*.ts'],
+    files: [
+      'src/core/**/*.ts',
+      'src/normalize/**/*.ts',
+      'src/source/**/*.ts',
+      'src/tree/**/*.ts',
+    ],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
         'error',

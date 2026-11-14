@@ -1,6 +1,6 @@
 import type { RichTextItemResponse } from '@notionhq/client';
 import { normalizeId, notionUrl, parseNotionUrl } from './ids';
-import type { Inline, Marks } from './types';
+import type { Inline, Marks } from '../tree/types';
 
 type Annotations = RichTextItemResponse['annotations'];
 type Mention = Extract<RichTextItemResponse, { type: 'mention' }>['mention'];

@@ -1,4 +1,4 @@
-import { isFileValue } from '../tree/properties';
+import { isFileValue } from '../tree/values';
 import type { Document, Properties } from '../tree/types';
 import { visit } from '../tree/visit';
 import type { Asset, PageLinkTarget, Plugin, PluginContext } from './types';
@@ -9,42 +9,45 @@ interface UrlTarget<T> {
   holder: { url: string };
 }
 
-/** Asks plugins for the final URL of every file in the page, and writes the answers into the tree. */
-export async function resolveAssets(
-  document: Document,
-  plugins: Plugin[],
+type Hook<T> = (
+  target: T,
   context: PluginContext,
-): Promise<Asset[]> {
-  const resolvers = plugins.flatMap((plugin) =>
-    plugin.resolveAsset
-      ? [(asset: Asset) => plugin.resolveAsset?.(asset, context)]
-      : [],
-  );
-  return resolve(assetTargets(document), resolvers);
-}
+) => string | undefined | Promise<string | undefined>;
 
-/** Asks plugins for the final URL of every link to a Notion page, and writes the answers into the tree. */
-export async function resolveLinks(
+/**
+ * Asks plugins for the final URL of every file and every link to a Notion page,
+ * and writes the answers into the tree. The first plugin to return a URL wins.
+ */
+export async function resolveUrls(
   document: Document,
   plugins: Plugin[],
   context: PluginContext,
-): Promise<PageLinkTarget[]> {
-  const resolvers = plugins.flatMap((plugin) =>
-    plugin.resolveLink
-      ? [(link: PageLinkTarget) => plugin.resolveLink?.(link, context)]
-      : [],
-  );
-  return resolve(linkTargets(document), resolvers);
+): Promise<{ assets: Asset[]; links: PageLinkTarget[] }> {
+  const [assets, links] = await Promise.all([
+    resolve(
+      assetTargets(document),
+      plugins.map((plugin) => plugin.resolveAsset?.bind(plugin)),
+      context,
+    ),
+    resolve(
+      linkTargets(document),
+      plugins.map((plugin) => plugin.resolveLink?.bind(plugin)),
+      context,
+    ),
+  ]);
+  return { assets, links };
 }
 
 async function resolve<T extends { url: string }>(
   targets: UrlTarget<T>[],
-  resolvers: ((info: T) => Promise<string | undefined> | string | undefined)[],
+  hooks: (Hook<T> | undefined)[],
+  context: PluginContext,
 ): Promise<T[]> {
+  const resolvers = hooks.filter((hook) => hook !== undefined);
   await Promise.all(
     targets.map(async ({ info, holder }) => {
       for (const resolver of resolvers) {
-        const url = await resolver(info);
+        const url = await resolver(info, context);
         if (url !== undefined) {
           holder.url = url;
           return;

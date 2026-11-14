@@ -7,7 +7,7 @@ import {
 } from 'mdast-util-to-markdown';
 
 type Extension = NonNullable<ToMarkdownOptions['extensions']>[number];
-import { formatPropertyValue } from '../../tree/properties';
+import { displayValue } from '../../tree/values';
 import type {
   Block,
   Database,
@@ -18,7 +18,7 @@ import type {
   Table,
 } from '../../tree/types';
 import { blockChildren, inlineContent, toPlainText } from '../../tree/visit';
-import { inlineToHtml } from '../html/index';
+import { inlineToHtml } from '../html/convert';
 import {
   handlerFor,
   type ContentNode,
@@ -344,7 +344,7 @@ function createConverter(flavor: Flavor) {
       children: node.columns.map((column) => {
         const text: M.Text = {
           type: 'text',
-          value: formatPropertyValue(row.properties[column] ?? null),
+          value: displayValue(row.properties[column] ?? null),
         };
         return {
           type: 'tableCell',

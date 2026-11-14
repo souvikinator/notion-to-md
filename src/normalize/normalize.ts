@@ -14,7 +14,7 @@ import type {
   ListItem,
   Media,
   MediaKind,
-} from './types';
+} from '../tree/types';
 
 export type Warn = (message: string) => void;
 
@@ -28,15 +28,22 @@ export function normalize(
   blocks: RawBlock[],
   warn: Warn,
 ): Document {
-  const icon = iconText(page.icon);
   return {
     type: 'root',
+    ...pageInfo(page),
+    children: normalizeBlocks(blocks, warn),
+  };
+}
+
+/** The page fields of the tree, without its content. */
+export function pageInfo(page: RawPage): Omit<Document, 'type' | 'children'> {
+  const icon = iconText(page.icon);
+  return {
     id: normalizeId(page.id),
     title: pageTitle(page.properties),
     url: page.url,
     ...(icon && { icon }),
     properties: properties(page.properties),
-    children: normalizeBlocks(blocks, warn),
   };
 }
 

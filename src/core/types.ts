@@ -1,11 +1,7 @@
 import type { Document, MediaKind, Properties } from '../tree/types';
 
-export interface SitePage {
-  id: string;
-  title: string;
-  url: string;
-  properties: Properties;
-}
+/** What plugins know about every page in a `pages()` run. */
+export type SitePage = Pick<Document, 'id' | 'title' | 'url' | 'properties'>;
 
 export interface PluginContext {
   /** Records a problem that did not stop the conversion. Throws instead when `strict` is on. */
