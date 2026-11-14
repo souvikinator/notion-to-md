@@ -13,6 +13,7 @@ export function fromBlocks(saved: SavedPage): Source {
     url: '',
     icon: null,
     properties: {},
+    last_edited_time: '',
   };
   return {
     page: () => Promise.resolve(page),

@@ -1,5 +1,11 @@
 import { createServer, type Server } from 'node:http';
-import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import {
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  writeFile as write,
+} from 'node:fs/promises';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -12,7 +18,7 @@ import {
   expect,
   it,
 } from 'vitest';
-import { downloadMedia, writeFile } from '../../src/node/index';
+import { downloadMedia, fileCache, writeFile } from '../../src/node/index';
 import type { Asset, PluginContext } from '../../src/index';
 import { convertBlocks } from '../helpers/convert';
 import { media } from '../helpers/notion';
@@ -136,5 +142,22 @@ describe('writeFile', () => {
     const path = join(dir, 'a', 'b', 'page.md');
     await writeFile({ content: '# Hi\n' }, path);
     expect(await readFile(path, 'utf8')).toBe('# Hi\n');
+  });
+});
+
+describe('fileCache', () => {
+  it('stores one entry per page and reads it back', async () => {
+    const store = fileCache(join(dir, 'cache'));
+    expect(await store.get('page')).toBeUndefined();
+    await store.set('page', { editedAt: 'a', blocks: [] });
+    await store.set('page', { editedAt: 'b', blocks: [] });
+    expect(await store.get('page')).toEqual({ editedAt: 'b', blocks: [] });
+    expect(await readdir(join(dir, 'cache'))).toEqual(['page.json']);
+  });
+
+  it('treats a corrupt file as a miss', async () => {
+    const store = fileCache(dir);
+    await write(join(dir, 'page.json'), '{not json');
+    expect(await store.get('page')).toBeUndefined();
   });
 });

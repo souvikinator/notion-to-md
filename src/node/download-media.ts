@@ -1,11 +1,12 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
-import { access, mkdir, rename, rm } from 'node:fs/promises';
-import { dirname, extname, join } from 'node:path';
+import { access } from 'node:fs/promises';
+import { extname, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { Asset, Plugin } from '../core/types';
 import { createLimiter } from '../utils/limit';
+import { writeAtomic } from './atomic-write';
 
 export interface DownloadMediaOptions {
   /** Folder to save files in. */
@@ -66,20 +67,13 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-/** Streams to a temporary file first, so an interrupted download never leaves a broken file behind. */
 async function download(url: string, path: string): Promise<void> {
   const response = await fetch(url);
-  if (!response.ok || !response.body)
+  const body = response.body;
+  if (!response.ok || !body) {
     throw new Error(`HTTP ${String(response.status)}`);
-  await mkdir(dirname(path), { recursive: true });
-  const temporary = `${path}.${randomUUID()}.tmp`;
-  try {
-    await pipeline(
-      Readable.fromWeb(response.body),
-      createWriteStream(temporary),
-    );
-    await rename(temporary, path);
-  } finally {
-    await rm(temporary, { force: true });
   }
+  await writeAtomic(path, (temporary) =>
+    pipeline(Readable.fromWeb(body), createWriteStream(temporary)),
+  );
 }

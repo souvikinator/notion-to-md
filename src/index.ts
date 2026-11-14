@@ -20,6 +20,7 @@ export type {
   NodeOf,
   NodeType,
 } from './render/types';
+export { cached, type CacheEntry, type CacheStore } from './source/cached';
 export { fromBlocks, type SavedPage } from './source/from-blocks';
 export { notion, type NotionSourceOptions } from './source/notion';
 export type {

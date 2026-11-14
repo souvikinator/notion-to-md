@@ -8,7 +8,7 @@ import type {
 /** The page fields the converter reads. A full `PageObjectResponse` satisfies it. */
 export type RawPage = Pick<
   PageObjectResponse,
-  'id' | 'url' | 'icon' | 'properties'
+  'id' | 'url' | 'icon' | 'properties' | 'last_edited_time'
 >;
 
 export interface RawDatabase {
