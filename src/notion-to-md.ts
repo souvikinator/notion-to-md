@@ -132,8 +132,6 @@ export class NotionToMarkdown {
           );
 
           mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
-          // <summary> is raw HTML, where Markdown backslash escapes are
-          // shown literally, so convert them to HTML-safe text instead.
           const toggle_summary = this.config.escapeMarkdown
             ? md.markdownEscapesToHtml(mdBlocks.parent)
             : mdBlocks.parent;
@@ -229,8 +227,6 @@ export class NotionToMarkdown {
 
     if (!blocks) return mdBlocks;
 
-    // Blocks fetched by the caller (not via getBlockChildren) have no list
-    // numbers yet, which made numbered lists render as bullets (#166).
     modifyNumberedListObject(blocks);
 
     for (let i = 0; i < blocks.length; i++) {
@@ -578,7 +574,6 @@ export class NotionToMarkdown {
 
       case "numbered_list_item":
         {
-          // A single block converted on its own has no list position.
           parsedData = md.bullet(
             parsedData,
             block.numbered_list_item.number ?? 1,

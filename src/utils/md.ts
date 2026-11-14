@@ -3,21 +3,12 @@ import markdownTable from "markdown-table";
 
 import fetch from "node-fetch";
 
-/**
- * Length of the longest run of consecutive backticks in `text`.
- */
 const longestBacktickRun = (text: string): number => {
   const runs = text.match(/`+/g);
   return runs ? Math.max(...runs.map((run) => run.length)) : 0;
 };
 
-/**
- * Escapes characters that would otherwise be interpreted as Markdown
- * syntax, so the text renders literally (CommonMark backslash escapes).
- */
 export const escapeMarkdown = (text: string): string => {
-  // Bare URLs are left untouched: renderers that auto-link them (GFM) would
-  // otherwise keep the backslashes in the link target and break the URL.
   const urlPattern = /(https?:\/\/[^\s<>]+|www\.[^\s<>]+)/;
   return text
     .split(urlPattern)
@@ -28,21 +19,12 @@ export const escapeMarkdown = (text: string): string => {
 const escapeMarkdownSyntax = (text: string): string => {
   return (
     text
-      // inline syntax: emphasis, code, links, html, entities,
-      // strikethrough, tables
       .replace(/([\\`*_[\]<>~|&])/g, "\\$1")
-      // block syntax at the start of a line: headings, quotes, list markers,
-      // setext heading underlines
       .replace(/(^|\n)([ \t]*)([#>+=-])/g, "$1$2\\$3")
-      // ordered list markers at the start of a line, e.g. "1." or "1)"
       .replace(/(^|\n)([ \t]*\d+)([.)])/g, "$1$2\\$3")
   );
 };
 
-/**
- * Converts escaped Markdown text into text that is safe inside raw HTML
- * (e.g. `<summary>`), where backslash escapes are not processed.
- */
 export const markdownEscapesToHtml = (text: string): string => {
   return text
     .replace(/\\([!-/:-@[-`{-~])/g, "$1")
@@ -52,10 +34,7 @@ export const markdownEscapesToHtml = (text: string): string => {
 };
 
 export const inlineCode = (text: string) => {
-  // The delimiter must be a backtick run longer than any run inside the text.
   const fence = "`".repeat(longestBacktickRun(text) + 1);
-  // Pad with a space when the content would otherwise merge with the
-  // delimiter, or would lose a meaningful leading/trailing space.
   const needsPadding =
     text.startsWith("`") ||
     text.endsWith("`") ||
@@ -93,12 +72,8 @@ export const codeBlock = (text: string, language?: string) => {
   // Ensure a valid language, default to "plaintext" if missing
   let lang =
     language && language.trim() ? language.toLowerCase() : "plaintext";
-  // Notion's "plain text" is not a valid fence language (see #47).
   if (lang === "plain text") lang = "text";
-  // The fence must be longer than any backtick run inside the code.
   const fence = "`".repeat(Math.max(3, longestBacktickRun(text) + 1));
-  // Drop leading blank lines and trailing whitespace only, so indentation
-  // on the first line of code is preserved.
   const code = text.replace(/^(?:[ \t]*\r?\n)+/, "").replace(/\s+$/, "");
   return `${fence}${lang}
 ${code}

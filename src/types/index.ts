@@ -62,11 +62,6 @@ export type ConfigurationOptions = {
   separateChildPage?: boolean;
   convertImagesToBase64?: boolean;
   parseChildPages?: boolean;
-  /**
-   * Escape Markdown syntax characters in plain (non-code) text so that
-   * text like `2*3*4` or `# not a heading` renders literally.
-   * Defaults to `false` to keep output unchanged for existing users.
-   */
   escapeMarkdown?: boolean;
 };
 export interface NotionToMarkdownOptions {
