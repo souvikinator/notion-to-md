@@ -38,7 +38,7 @@
 <main>
 
 <h1>notion-to-md v4 — rewrite plan</h1>
-<div class="sub">Tracking doc. Status: <span class="tag ok">M0–M4 built</span> <span class="tag warn">M5 partly, M6 not started</span> · Updated 2026-11-15 · Branch: <code>worktree-v4-rewrite</code></div>
+<div class="sub">Tracking doc. Status: <span class="tag ok">M0–M4 built</span> <span class="tag warn">M5 partly, M6 started (README)</span> · Updated 2026-11-15 · Branch: <code>worktree-v4-rewrite</code></div>
 <nav>
   <a href="#status">Status</a><a href="#goal">Goal</a><a href="#why">Why rewrite</a><a href="#arch">Architecture</a><a href="#pieces">Pieces</a>
   <a href="#api">Public API</a><a href="#decisions">Decisions</a><a href="#impl">Implementation decisions</a><a href="#pkg">Package</a>
@@ -49,10 +49,11 @@
 <h2 id="status">0. Status</h2>
 <ul>
   <li><b>Built:</b> tree + normalizer, <code>markdown()</code>, <code>mdx()</code>, <code>html()</code>, <code>notion()</code>, <code>fromBlocks()</code> and <code>cached()</code> sources, plugin hooks, <code>pageLinks</code>, <code>media</code>, <code>frontmatter</code>, <code>downloadMedia</code>, <code>fileCache</code>, <code>writeFile</code>, <code>pages()</code>, database tables.</li>
-  <li><b>Checks passing:</b> <code>npm run check</code> = typecheck, strict lint, prettier, 150 tests, build, publint, are-the-types-wrong, tree-shake check.</li>
+  <li><b>Checks passing:</b> <code>npm run check</code> = typecheck, strict lint, prettier, 154 tests, build, publint, are-the-types-wrong, tree-shake check.</li>
   <li><b>Independent review:</b> a separate reviewer read the code cold and reported 13 bugs and 12 quality issues. All bugs are fixed with tests; quality fixes are D47–D49 and the shared helpers in <code>render/shared.ts</code>.</li>
   <li><b>v3 parity:</b> same page through v3.1.10 and v4; every difference is a v4 fix (nesting indent, toggle-heading content, table pipes, child pages, heading 4).</li>
-  <li><b>Not done:</b> <code>footnotes()</code>, child pages as separate pages in <code>pages()</code>, table of contents, docs, README, migration guide.</li>
+  <li><b>Not done:</b> <code>footnotes()</code>, child pages as separate pages in <code>pages()</code>, table of contents block, full docs site, alpha → v4 migration page.</li>
+  <li><b>README:</b> rewritten for v4 on this branch; every example in it runs as a test (<code>tests/readme.test.ts</code>).</li>
   <li><b>Needs your review:</b> implementation decisions D18–D56 (section 7). Each one is a call I made tonight.</li>
 </ul>
 
@@ -357,8 +358,9 @@ notion-to-md/node           downloadMedia, writeFile                    yes
   <li><input type="checkbox" disabled>Table of contents block</li>
 </ul></div>
 
-<div class="ms"><h3>M6 — Docs and release <span class="tag">not started</span></h3>
+<div class="ms"><h3>M6 — Docs and release <span class="tag warn">started</span></h3>
 <ul>
+  <li><input type="checkbox" disabled checked>README for v4 with tested examples and a v3 migration table</li>
   <li><input type="checkbox" disabled>Docs: getting started, plugins, handlers, writing a renderer</li>
   <li><input type="checkbox" disabled>Migration guides: v3 → v4, alpha → v4</li>
   <li><input type="checkbox" disabled>README on master points to v4; update #112; close mapped issues</li>
@@ -413,6 +415,8 @@ notion-to-md/node           downloadMedia, writeFile                    yes
   <tr><td>Q6</td><td>Escaping default (D24): keep off like v3, or on for v4?</td><td>Open — your call</td></tr>
   <tr><td>Q7</td><td>Child pages in <code>pages()</code>: separate pages with a <code>parent</code> id, or inline content?</td><td>Open (M5)</td></tr>
   <tr><td>Q8</td><td>Old Hugo docs in <code>docs/</code> describe the alpha API. Delete, or rewrite in place?</td><td>Open (M6)</td></tr>
+  <tr><td>Q9</td><td>Table of contents block: render links to headings? Anchors differ per site (GitHub, Docusaurus, Hugo slug rules)</td><td>Open; for now it renders nothing and users can add a handler</td></tr>
+  <tr><td>Q10</td><td>Comments as footnotes (#143): fetch comments in the source (one request per block) behind an option?</td><td>Open (M4)</td></tr>
 </table>
 
 <h2 id="review">14. How to review</h2>
