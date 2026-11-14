@@ -16,15 +16,39 @@ const longestBacktickRun = (text: string): number => {
  * syntax, so the text renders literally (CommonMark backslash escapes).
  */
 export const escapeMarkdown = (text: string): string => {
+  // Bare URLs are left untouched: renderers that auto-link them (GFM) would
+  // otherwise keep the backslashes in the link target and break the URL.
+  const urlPattern = /(https?:\/\/[^\s<>]+|www\.[^\s<>]+)/;
+  return text
+    .split(urlPattern)
+    .map((part, i) => (i % 2 === 1 ? part : escapeMarkdownSyntax(part)))
+    .join("");
+};
+
+const escapeMarkdownSyntax = (text: string): string => {
   return (
     text
-      // inline syntax: emphasis, code, links, html, strikethrough, tables
-      .replace(/([\\`*_[\]<>~|])/g, "\\$1")
-      // block syntax at the start of a line: headings, quotes, list markers
-      .replace(/(^|\n)([ \t]*)([#>+-])/g, "$1$2\\$3")
+      // inline syntax: emphasis, code, links, html, entities,
+      // strikethrough, tables
+      .replace(/([\\`*_[\]<>~|&])/g, "\\$1")
+      // block syntax at the start of a line: headings, quotes, list markers,
+      // setext heading underlines
+      .replace(/(^|\n)([ \t]*)([#>+=-])/g, "$1$2\\$3")
       // ordered list markers at the start of a line, e.g. "1." or "1)"
       .replace(/(^|\n)([ \t]*\d+)([.)])/g, "$1$2\\$3")
   );
+};
+
+/**
+ * Converts escaped Markdown text into text that is safe inside raw HTML
+ * (e.g. `<summary>`), where backslash escapes are not processed.
+ */
+export const markdownEscapesToHtml = (text: string): string => {
+  return text
+    .replace(/\\([!-/:-@[-`{-~])/g, "$1")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 };
 
 export const inlineCode = (text: string) => {

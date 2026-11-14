@@ -141,3 +141,45 @@ describe("Markdown escaping in blockToMarkdown (issue #176)", () => {
     ).toBe("```python\n    indented()\nnext()\n```");
   });
 });
+
+describe("escapeMarkdown with toggles", () => {
+  test("toggle summary is HTML-safe instead of backslash-escaped", async () => {
+    const rt = (content: string) => ({
+      type: "text",
+      text: { content, link: null },
+      plain_text: content,
+      href: null,
+      annotations: {
+        bold: false, italic: false, strikethrough: false,
+        underline: false, code: false, color: "default",
+      },
+    });
+    const child = {
+      object: "block", id: "c", type: "paragraph", has_children: false,
+      paragraph: { rich_text: [rt("child")], color: "default" },
+    };
+    const toggle = {
+      object: "block", id: "t", type: "toggle", has_children: true,
+      toggle: { rich_text: [rt("2*3 <b>")], color: "default" },
+    };
+    const client = {
+      blocks: {
+        children: {
+          list: async ({ block_id }: any) => ({
+            results: block_id === "t" ? [child] : [],
+            has_more: false,
+            next_cursor: null,
+          }),
+        },
+      },
+    };
+    const n2m = new NotionToMarkdown({
+      notionClient: client as any,
+      config: { escapeMarkdown: true },
+    });
+    const out = n2m.toMarkdownString(
+      await n2m.blocksToMarkdown([toggle as any])
+    ).parent;
+    expect(out).toContain("<summary>2*3 &lt;b&gt;</summary>");
+  });
+});

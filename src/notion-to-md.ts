@@ -132,8 +132,14 @@ export class NotionToMarkdown {
           );
 
           mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
+          // <summary> is raw HTML, where Markdown backslash escapes are
+          // shown literally, so convert them to HTML-safe text instead.
+          const toggle_summary = this.config.escapeMarkdown
+            ? md.markdownEscapesToHtml(mdBlocks.parent)
+            : mdBlocks.parent;
+
           mdOutput[pageIdentifier] += md.toggle(
-            mdBlocks.parent,
+            toggle_summary,
             toggle_children_md_string["parent"],
           );
         } else if (mdBlocks.type === "quote") {

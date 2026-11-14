@@ -19,6 +19,7 @@ import {
   inlineEquation,
   equation,
   escapeMarkdown,
+  markdownEscapesToHtml,
 } from "./md";
 
 describe("Callout", () => {
@@ -204,6 +205,24 @@ describe("escapeMarkdown (issue #176)", () => {
   test("leaves ordinary text alone", () => {
     expect(escapeMarkdown("Hello, world. 3 - 2 = 1")).toBe(
       "Hello, world. 3 - 2 = 1"
+    );
+  });
+});
+
+describe("escapeMarkdown edge cases", () => {
+  test("leaves bare URLs untouched so auto-links keep working", () => {
+    expect(escapeMarkdown("see https://x.com/a_b?q=1*2 and a_b")).toBe(
+      "see https://x.com/a_b?q=1*2 and a\\_b"
+    );
+    expect(escapeMarkdown("www.x.com/a_b")).toBe("www.x.com/a_b");
+  });
+  test("escapes entities and setext underlines", () => {
+    expect(escapeMarkdown("&amp;")).toBe("\\&amp;");
+    expect(escapeMarkdown("Title\n===")).toBe("Title\n\\===");
+  });
+  test("markdownEscapesToHtml turns escapes into HTML-safe text", () => {
+    expect(markdownEscapesToHtml(escapeMarkdown("2*3 <b> & a_b"))).toBe(
+      "2*3 &lt;b&gt; &amp; a_b"
     );
   });
 });
