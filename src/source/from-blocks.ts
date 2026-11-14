@@ -8,20 +8,26 @@ export interface SavedPage {
 
 /** Converts blocks you already have (for example, saved JSON) without calling Notion. */
 export function fromBlocks(saved: SavedPage): Source {
-  const page: RawPage = saved.page ?? {
-    id: parentPageId(saved.blocks) ?? '',
-    url: '',
-    icon: null,
-    properties: {},
-    last_edited_time: '',
-  };
+  const page: RawPage = saved.page ?? emptyPage(saved.blocks);
   return {
     page: () => Promise.resolve(page),
     blocks: () => Promise.resolve(saved.blocks),
   };
 }
 
-function parentPageId(blocks: RawBlock[]): string | undefined {
+/** Without a saved page, the page id comes from the blocks' parent. */
+function emptyPage(blocks: RawBlock[]): RawPage {
   const parent = blocks[0]?.parent;
-  return parent?.type === 'page_id' ? parent.page_id : undefined;
+  if (parent?.type !== 'page_id') {
+    throw new Error(
+      'fromBlocks needs the page object, or blocks whose parent is a page.',
+    );
+  }
+  return {
+    id: parent.page_id,
+    url: '',
+    icon: null,
+    properties: {},
+    last_edited_time: '',
+  };
 }

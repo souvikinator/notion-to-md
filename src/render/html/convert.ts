@@ -1,4 +1,3 @@
-import { displayValue } from '../../tree/values';
 import { blockChildren, inlineContent, toPlainText } from '../../tree/visit';
 import type {
   Block,
@@ -10,6 +9,7 @@ import type {
   Table,
   Text,
 } from '../../tree/types';
+import { databaseCells, linkLabel } from '../shared';
 import { handlerFor, type Handlers, type Renderer } from '../types';
 
 export interface HtmlOptions {
@@ -61,7 +61,7 @@ function createHtml(handlers: Handlers) {
         return text(current);
       case 'link':
       case 'pageLink':
-        return `<a href="${escapeAttribute(current.url)}">${inline(current.children)}</a>`;
+        return anchor(current.url, inline(current.children));
       case 'inlineEquation':
         return `<span class="math math-inline">${escapeHtml(current.value)}</span>`;
       case 'break':
@@ -99,7 +99,10 @@ function createHtml(handlers: Handlers) {
           blocks(current.children),
         );
       case 'code':
-        return `<pre><code class="language-${escapeAttribute(current.language)}">${escapeHtml(current.value)}</code></pre>`;
+        return figure(
+          `<pre><code class="language-${escapeAttribute(current.language)}">${escapeHtml(current.value)}</code></pre>`,
+          inline(current.caption),
+        );
       case 'equation':
         return `<div class="math math-display">${escapeHtml(current.value)}</div>`;
       case 'divider':
@@ -112,12 +115,10 @@ function createHtml(handlers: Handlers) {
         return `<div class="column">\n${blocks(current.children)}\n</div>`;
       case 'media':
         return media(current, inline);
-      case 'embed': {
-        const label = inline(current.caption) || escapeHtml(current.url);
-        return `<p><a href="${escapeAttribute(current.url)}">${label}</a></p>`;
-      }
+      case 'embed':
+        return `<p>${anchor(current.url, inline(current.caption) || escapeHtml(linkLabel(current)))}</p>`;
       case 'pageRef':
-        return `<p><a href="${escapeAttribute(current.url)}">${escapeHtml(current.title || current.url)}</a></p>`;
+        return `<p>${anchor(current.url, escapeHtml(linkLabel(current)))}</p>`;
       case 'database':
         return database(current);
       case 'tableOfContents':
@@ -170,45 +171,48 @@ function table(node: Table, inline: (nodes: Inline[]) => string): string {
 function media(node: Media, inline: (nodes: Inline[]) => string): string {
   const url = escapeAttribute(node.url);
   const caption = inline(node.caption);
-  const label = caption || escapeHtml(node.name);
+  const label = caption || escapeHtml(linkLabel(node));
   switch (node.kind) {
     case 'image': {
       const image = `<img src="${url}" alt="${escapeAttribute(toPlainText(node.caption))}" />`;
-      return caption
-        ? `<figure>\n${image}\n<figcaption>${caption}</figcaption>\n</figure>`
-        : image;
+      return figure(image, caption);
     }
     case 'video':
       return node.hosted
         ? `<video controls src="${url}"></video>`
-        : `<p><a href="${url}">${label}</a></p>`;
+        : `<p>${anchor(node.url, label)}</p>`;
     case 'audio':
       return `<audio controls src="${url}"></audio>`;
     case 'file':
     case 'pdf':
-      return `<p><a href="${url}">${label}</a></p>`;
+      return `<p>${anchor(node.url, label)}</p>`;
   }
 }
 
 function database(node: Database): string {
-  const title = `<p><a href="${escapeAttribute(node.url)}">${escapeHtml(node.title || node.url)}</a></p>`;
+  const title = `<p>${anchor(node.url, escapeHtml(linkLabel(node)))}</p>`;
   if (node.rows.length === 0) return title;
-  const [titleColumn] = node.columns;
   const head = node.columns
     .map((column) => `<th>${escapeHtml(column)}</th>`)
     .join('');
-  const rows = node.rows.map((row) => {
-    const cells = node.columns.map((column) => {
-      const value = escapeHtml(displayValue(row.properties[column] ?? null));
-      const cell =
-        column === titleColumn
-          ? `<a href="${escapeAttribute(row.url)}">${value}</a>`
-          : value;
-      return `<td>${cell}</td>`;
+  const rows = databaseCells(node).map((cells) => {
+    const html = cells.map(({ text, url }) => {
+      const value = escapeHtml(text);
+      return `<td>${url ? anchor(url, value) : value}</td>`;
     });
-    return `<tr>${cells.join('')}</tr>`;
+    return `<tr>${html.join('')}</tr>`;
   });
   return `${title}\n<table>\n<thead>\n<tr>${head}</tr>\n</thead>\n<tbody>\n${rows.join('\n')}\n</tbody>\n</table>`;
+}
+
+function figure(content: string, caption: string): string {
+  return caption
+    ? `<figure>\n${content}\n<figcaption>${caption}</figcaption>\n</figure>`
+    : content;
+}
+
+function anchor(url: string, label: string): string {
+  return `<a href="${escapeAttribute(url)}">${label}</a>`;
 }
 
 const MARK_TAGS: [keyof Marks, string][] = [

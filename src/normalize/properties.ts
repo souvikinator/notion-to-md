@@ -84,6 +84,7 @@ function propertyValue(property: NotionProperty | ArrayItem): PropertyValue {
         ? (property.place.name ?? property.place.address ?? null)
         : null;
     case 'button':
+    default:
       return null;
   }
 }

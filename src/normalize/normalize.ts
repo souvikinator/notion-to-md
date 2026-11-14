@@ -68,7 +68,7 @@ function addListItem(result: Block[], item: ListItem, block: RawBlock): void {
   }
   const list: List = {
     type: 'list',
-    id: item.id,
+    id: `${item.id}:list`,
     kind,
     start: 1,
     children: [item],
@@ -91,11 +91,14 @@ function listKind(block: RawBlock): ListKind {
 // eslint-disable-next-line complexity
 function normalizeBlock(block: RawBlock, warn: Warn): Block[] {
   const id = normalizeId(block.id);
+  // Kept outside the switch: block types newer than the installed client reach `default`.
+  const notionType: string = block.type;
   const children = (): Block[] => normalizeBlocks(block.children ?? [], warn);
-  if (block.error)
+  if (block.error) {
     warn(
-      `Some content of "${block.type}" block ${id} could not be fetched: ${block.error}`,
+      `Some content of "${notionType}" block ${id} could not be fetched: ${block.error}`,
     );
+  }
 
   switch (block.type) {
     case 'paragraph':
@@ -251,7 +254,13 @@ function normalizeBlock(block: RawBlock, warn: Warn): Block[] {
         ];
       }
       if (block.link_to_page.type === 'database_id') {
-        return [pageRef(id, normalizeId(block.link_to_page.database_id), '')];
+        return [
+          pageRef(
+            id,
+            normalizeId(block.link_to_page.database_id),
+            block.title ?? '',
+          ),
+        ];
       }
       return [];
     case 'child_database':
@@ -268,8 +277,9 @@ function normalizeBlock(block: RawBlock, warn: Warn): Block[] {
       return [];
     case 'table_row':
     case 'unsupported':
-      warn(`Skipped unsupported Notion block "${block.type}" (${id}).`);
-      return [{ type: 'unknown', id, notionType: block.type }];
+    default:
+      warn(`Skipped unsupported Notion block "${notionType}" (${id}).`);
+      return [{ type: 'unknown', id, notionType }];
   }
 }
 

@@ -61,6 +61,7 @@ export interface Heading extends TextBlock {
 
 export interface List {
   type: 'list';
+  /** The first item's id with a `:list` suffix; Notion has no list block of its own. */
   id: string;
   kind: 'bulleted' | 'numbered' | 'todo';
   start: number;

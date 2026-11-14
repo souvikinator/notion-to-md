@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { toHtml } from '../helpers/convert';
+import { html } from '../../src/render/html/index';
+import { convertBlocks, toHtml } from '../helpers/convert';
 import {
+  bookmark,
   bullet,
   callout,
+  childPage,
   code,
+  columns,
+  equation,
   heading,
   media,
   numbered,
@@ -84,6 +89,52 @@ describe('html', () => {
       ]),
     ).toBe(
       '<figure>\n<img src="https://a.com/p.png" alt="Cap" />\n<figcaption>Cap</figcaption>\n</figure>',
+    );
+  });
+});
+
+describe('html review fixes', () => {
+  it('wraps code with a caption in a figure', async () => {
+    const block = code('x', 'js', 'Example');
+    expect(await toHtml([block])).toBe(
+      '<figure>\n<pre><code class="language-js">x</code></pre>\n<figcaption>Example</figcaption>\n</figure>',
+    );
+  });
+
+  it('applies handlers to blocks and inline nodes', async () => {
+    const result = await convertBlocks(
+      [callout('💡', [text('see', { link: 'https://a.com' })])],
+      {
+        renderer: html({
+          handlers: {
+            callout: (_, { content }) => `<Note>${content()}</Note>`,
+            link: (node, { content }) =>
+              `<a class="ext" href="${node.url}">${content()}</a>`,
+          },
+        }),
+      },
+    );
+    expect(result.content).toBe(
+      '<Note><a class="ext" href="https://a.com">see</a></Note>',
+    );
+  });
+
+  it('renders equations, columns, embeds and page links', async () => {
+    const output = await toHtml([
+      equation('x^2'),
+      columns([paragraph('l')], [paragraph('r')]),
+      bookmark('https://example.com'),
+      childPage('Sub'),
+    ]);
+    expect(output).toContain('<div class="math math-display">x^2</div>');
+    expect(output).toContain(
+      '<div class="columns">\n<div class="column">\n<p>l</p>\n</div>',
+    );
+    expect(output).toContain(
+      '<p><a href="https://example.com">https://example.com</a></p>',
+    );
+    expect(output).toMatch(
+      /<p><a href="https:\/\/www\.notion\.so\/[0-9a-f]{32}">Sub<\/a><\/p>/,
     );
   });
 });

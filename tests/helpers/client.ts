@@ -10,6 +10,8 @@ export interface MockDatabase {
   /** Property schema of the data source, in display order. */
   schema: Record<string, { type: string }>;
   rows: PageObjectResponse[];
+  /** Rows of further data sources, for databases with more than one. */
+  extraSources?: PageObjectResponse[][];
 }
 
 export interface Workspace {
@@ -47,8 +49,16 @@ export function mockClient(workspace: Workspace): MockClient {
     pagesById.set(page.id, page);
     index(page.id, blocks);
   }
-  for (const database of Object.values(workspace.databases ?? {})) {
-    for (const row of database.rows) pagesById.set(row.id, row);
+  const dataSources = new Map<
+    string,
+    { database: MockDatabase; rows: PageObjectResponse[] }
+  >();
+  for (const [id, database] of Object.entries(workspace.databases ?? {})) {
+    const sources = [database.rows, ...(database.extraSources ?? [])];
+    sources.forEach((rows, index) => {
+      dataSources.set(dataSourceId(id, index), { database, rows });
+      for (const row of rows) pagesById.set(row.id, row);
+    });
   }
 
   const call = async <T>(
@@ -88,6 +98,12 @@ export function mockClient(workspace: Workspace): MockClient {
     return found;
   };
 
+  const dataSource = (id: string) => {
+    const found = dataSources.get(id);
+    if (!found) throw new NotFound(`No data source ${id}`);
+    return found;
+  };
+
   const client = {
     blocks: {
       children: {
@@ -112,17 +128,22 @@ export function mockClient(workspace: Workspace): MockClient {
       retrieve: (args: { database_id: string }) =>
         call('databases.retrieve', args.database_id, () => {
           const found = database(args.database_id);
+          const count = 1 + (found.extraSources?.length ?? 0);
           return {
             object: 'database',
             id: args.database_id,
-            data_sources: [{ id: `ds-${args.database_id}`, name: found.title }],
+            title: [{ type: 'text', plain_text: found.title }],
+            data_sources: Array.from({ length: count }, (_, index) => ({
+              id: dataSourceId(args.database_id, index),
+              name: found.title,
+            })),
           };
         }),
     },
     dataSources: {
       retrieve: (args: { data_source_id: string }) =>
         call('dataSources.retrieve', args.data_source_id, () => {
-          const found = database(args.data_source_id.replace(/^ds-/, ''));
+          const found = dataSource(args.data_source_id).database;
           const properties = Object.fromEntries(
             Object.entries(found.schema).map(([name, { type }], position) => [
               name,
@@ -133,10 +154,7 @@ export function mockClient(workspace: Workspace): MockClient {
         }),
       query: (args: { data_source_id: string; start_cursor?: string }) =>
         call('dataSources.query', args.data_source_id, () =>
-          paginate(
-            database(args.data_source_id.replace(/^ds-/, '')).rows,
-            args.start_cursor,
-          ),
+          paginate(dataSource(args.data_source_id).rows, args.start_cursor),
         ),
     },
   };
@@ -146,4 +164,8 @@ export function mockClient(workspace: Workspace): MockClient {
     calls,
     maxInFlight: () => maxInFlight,
   };
+}
+
+function dataSourceId(databaseId: string, index: number): string {
+  return index === 0 ? `ds-${databaseId}` : `ds-${databaseId}-${String(index)}`;
 }

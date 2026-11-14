@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { notion } from '../../src/source/notion';
 import { mockClient, type Workspace } from '../helpers/client';
-import type { block } from '../helpers/notion';
 import {
   PAGE_ID,
+  block,
   bullet,
   childDatabase,
   childPage,
@@ -168,5 +168,46 @@ describe('notion source', () => {
     >;
     const { client } = mockClient(workspaceWith([partial, paragraph('full')]));
     expect(await notion(client).blocks(PAGE_ID)).toHaveLength(1);
+  });
+});
+
+describe('notion source review fixes', () => {
+  it('reads rows from every data source of a database', async () => {
+    const db = childDatabase('Tasks');
+    const rows = [1, 2].map((n) =>
+      page(
+        { Name: titleProperty(`Row ${String(n)}`) },
+        `8888888${String(n)}-8888-4888-8888-888888888888`,
+      ),
+    );
+    const { client } = mockClient({
+      pages: [{ page: page(), blocks: [db] }],
+      databases: {
+        [db.id]: {
+          title: 'Tasks',
+          schema: { Name: { type: 'title' } },
+          rows: [rows[0]!],
+          extraSources: [[rows[1]!]],
+        },
+      },
+    });
+    const [fetched] = await notion(client).blocks(PAGE_ID);
+    expect(fetched?.database?.rows.map((row) => row.id)).toEqual(
+      rows.map((row) => row.id),
+    );
+  });
+
+  it('fetches the title of linked databases', async () => {
+    const dbId = '99999999-9999-4999-8999-999999999999';
+    const link = block('link_to_page', {
+      type: 'database_id',
+      database_id: dbId,
+    });
+    const { client } = mockClient({
+      pages: [{ page: page(), blocks: [link] }],
+      databases: { [dbId]: { title: 'Roadmap', schema: {}, rows: [] } },
+    });
+    const [fetched] = await notion(client).blocks(PAGE_ID);
+    expect(fetched?.title).toBe('Roadmap');
   });
 });

@@ -302,3 +302,46 @@ describe('a full page', () => {
     );
   });
 });
+
+describe('review fixes', () => {
+  it('writes code captions under the code block', async () => {
+    const block = code('x', 'js', 'Example');
+    expect(await toMd([block])).toBe('```js\nx\n```\n\nExample\n');
+  });
+
+  it('keeps formatting when a text handler falls back', async () => {
+    const md = await toMd(
+      [paragraph([text('bold', { bold: true }), text(' plain')])],
+      {
+        handlers: { text: (_, { fallback }) => fallback() },
+      },
+    );
+    expect(md).toBe('**bold** plain\n');
+  });
+
+  it('lets a text handler change only the words', async () => {
+    const md = await toMd([paragraph([text('shout', { italic: true })])], {
+      handlers: { text: (node) => node.value.toUpperCase() },
+    });
+    expect(md).toBe('SHOUT\n');
+  });
+
+  it("renders a list handler's children as one list", async () => {
+    const md = await toMd([bullet('a'), bullet('b')], {
+      handlers: {
+        list: (_, { children }) => `<div>\n\n${children()}\n\n</div>`,
+      },
+    });
+    expect(md).toBe('<div>\n\n- a\n- b\n\n</div>\n');
+  });
+
+  it('escapes pipes in equations inside tables', async () => {
+    const md = await toMd([table([['a'], [[inlineEquation('|x|')]]])]);
+    expect(md).toContain('| $\\|x\\|$ |');
+    expect(parseMarkdown(md).children[0]?.type).toBe('table');
+  });
+
+  it('skips empty quotes', async () => {
+    expect(await toMd([quote(''), paragraph('after')])).toBe('after\n');
+  });
+});

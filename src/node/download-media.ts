@@ -30,19 +30,19 @@ export function downloadMedia(options: DownloadMediaOptions): Plugin {
     name: 'download-media',
     async resolveAsset(asset, context) {
       if (!asset.hosted && !options.external) return undefined;
-      const fileName = fileNameFor(asset);
-      const path = join(options.dir, fileName);
       try {
+        const fileName = fileNameFor(asset);
+        const path = join(options.dir, fileName);
         if (!(await exists(path))) await limit(() => download(asset.url, path));
+        return options.publicPath === undefined
+          ? path
+          : `${options.publicPath.replace(/\/+$/, '')}/${fileName}`;
       } catch (error) {
         context.warn(
           `Could not download ${asset.kind} ${asset.id}: ${String(error)}`,
         );
         return undefined;
       }
-      return options.publicPath === undefined
-        ? path
-        : `${options.publicPath.replace(/\/+$/, '')}/${fileName}`;
     },
   };
 }

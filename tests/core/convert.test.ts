@@ -6,6 +6,7 @@ import {
   pageLinks,
 } from '../../src/plugins/index';
 import { markdown } from '../../src/render/markdown/index';
+import { fromBlocks } from '../../src/source/from-blocks';
 import { notion } from '../../src/source/notion';
 import { OTHER_PAGE } from '../helpers/fixtures';
 import { mockClient } from '../helpers/client';
@@ -45,7 +46,7 @@ describe('plugins', () => {
   });
 
   it('let a transform edit the tree before rendering', async () => {
-    const page = await convertBlocks([paragraph('hello')], {
+    const result = await convertBlocks([paragraph('hello')], {
       plugins: [
         {
           name: 'shout',
@@ -58,24 +59,24 @@ describe('plugins', () => {
         },
       ],
     });
-    expect(page.content).toBe('HELLO\n');
+    expect(result.content).toBe('HELLO\n');
   });
 
   it('use the first resolver that returns a URL', async () => {
-    const page = await convertBlocks([linkTo(OTHER_PAGE, 'Other')], {
+    const result = await convertBlocks([linkTo(OTHER_PAGE, 'Other')], {
       plugins: [
         pageLinks(() => undefined),
         pageLinks(() => '/first'),
         pageLinks(() => '/second'),
       ],
     });
-    expect(page.content).toBe('[Other](/first)\n');
-    expect(page.links).toEqual([{ pageId: OTHER_PAGE, url: '/first' }]);
+    expect(result.content).toBe('[Other](/first)\n');
+    expect(result.links).toEqual([{ pageId: OTHER_PAGE, url: '/first' }]);
   });
 
   it('pass block ids so links to a block can become anchors (#161)', async () => {
     const blockId = '99999999999949998999999999999999';
-    const page = await convertBlocks(
+    const result = await convertBlocks(
       [
         paragraph([
           text('section', {
@@ -85,7 +86,7 @@ describe('plugins', () => {
       ],
       { plugins: [pageLinks((link) => `/other#${link.blockId ?? ''}`)] },
     );
-    expect(page.content).toBe(
+    expect(result.content).toBe(
       '[section](/other#99999999-9999-4999-8999-999999999999)\n',
     );
   });
@@ -108,13 +109,13 @@ describe('plugins', () => {
       } as Property,
     };
     const seen: string[] = [];
-    const page = await convertBlocks(
+    const result = await convertBlocks(
       [
         media('image', 'https://files.notion.so/s/a/one.png'),
         media('image', 'https://files.notion.so/s/b/two.png'),
       ],
       {
-        pageObject: (await import('../helpers/notion')).page(files),
+        pageObject: page(files),
         plugins: [
           mediaPlugin((asset) => {
             seen.push(asset.name);
@@ -124,11 +125,11 @@ describe('plugins', () => {
       },
     );
     expect(seen.sort()).toEqual(['cover.png', 'one.png', 'two.png']);
-    expect(page.content).toBe('![](/img/one.png)\n\n![](/img/two.png)\n');
-    expect(page.properties.Cover).toEqual([
+    expect(result.content).toBe('![](/img/one.png)\n\n![](/img/two.png)\n');
+    expect(result.properties.Cover).toEqual([
       { name: 'cover.png', url: '/img/cover.png', hosted: true },
     ]);
-    expect(page.assets.map((asset) => asset.url).sort()).toEqual([
+    expect(result.assets.map((asset) => asset.url).sort()).toEqual([
       '/img/cover.png',
       '/img/one.png',
       '/img/two.png',
@@ -138,15 +139,13 @@ describe('plugins', () => {
 
 describe('warnings', () => {
   it('are collected on the page', async () => {
-    const page = await convertBlocks([unsupported()]);
-    expect(page.warnings).toHaveLength(1);
+    const result = await convertBlocks([unsupported()]);
+    expect(result.warnings).toHaveLength(1);
   });
 
   it('throw in strict mode', async () => {
     const run = notionToMd({
-      source: (await import('../../src/source/from-blocks')).fromBlocks({
-        blocks: [unsupported()],
-      }),
+      source: fromBlocks({ blocks: [unsupported()] }),
       renderer: markdown(),
       strict: true,
     });
@@ -302,9 +301,7 @@ describe('pages', () => {
 
   it('needs a source that can list pages', async () => {
     const converter = notionToMd({
-      source: (await import('../../src/source/from-blocks')).fromBlocks({
-        blocks: [],
-      }),
+      source: fromBlocks({ blocks: [], page: page() }),
       renderer: markdown(),
     });
     await expect(converter.pages('db').next()).rejects.toThrow(/cannot list/);
@@ -354,5 +351,38 @@ describe('frontmatter', () => {
       plugins: [frontmatter({ include: ['Name'] })],
     });
     expect(result.content).toBe('---\nName: "Test page"\n---\n\n');
+  });
+});
+
+describe('input handling', () => {
+  it('accepts a link to the page instead of an id', async () => {
+    const { client, calls } = mockClient({
+      pages: [{ page: page(), blocks: [paragraph('Hi')] }],
+    });
+    const result = await notionToMd({
+      source: notion(client),
+      renderer: markdown(),
+    }).convert(
+      'https://www.notion.so/team/Test-11111111111141118111111111111111?pvs=4',
+    );
+    expect(result.content).toBe('Hi\n');
+    expect(calls[0]).toBe(
+      'pages.retrieve:11111111-1111-4111-8111-111111111111',
+    );
+  });
+
+  it('needs a page id when converting saved blocks', () => {
+    expect(() => fromBlocks({ blocks: [] })).toThrow(/page object/);
+  });
+
+  it('quotes frontmatter keys YAML would read as other types', async () => {
+    const result = await convertBlocks([], {
+      pageObject: page({
+        true: { id: 'a', type: 'checkbox', checkbox: true } as Property,
+        '123': { id: 'b', type: 'number', number: 1 } as Property,
+      }),
+      plugins: [frontmatter({ exclude: ['Name'] })],
+    });
+    expect(result.content).toBe('---\n"123": 1\n"true": true\n---\n\n');
   });
 });

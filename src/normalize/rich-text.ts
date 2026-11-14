@@ -11,7 +11,16 @@ export function richText(items: RichTextItemResponse[]): Inline[] {
   for (const item of items) {
     for (const node of itemToInline(item)) appendMerged(nodes, node);
   }
-  return nodes;
+  return trimBreaks(nodes);
+}
+
+/** A line break at the start or end of a block shows nothing in Notion, but would in the output. */
+function trimBreaks(nodes: Inline[]): Inline[] {
+  let start = 0;
+  let end = nodes.length;
+  while (start < end && nodes[start]?.type === 'break') start++;
+  while (end > start && nodes[end - 1]?.type === 'break') end--;
+  return nodes.slice(start, end);
 }
 
 export function plainText(items: RichTextItemResponse[]): string {
@@ -19,20 +28,18 @@ export function plainText(items: RichTextItemResponse[]): string {
 }
 
 function itemToInline(item: RichTextItemResponse): Inline[] {
+  const marks = marksOf(item.annotations);
+  // Kept outside the switch: text types newer than the installed client reach `default`.
+  const label = item.plain_text;
   switch (item.type) {
     case 'equation':
       return [{ type: 'inlineEquation', value: item.equation.expression }];
     case 'mention':
-      return mentionToInline(
-        item.mention,
-        item.plain_text,
-        marksOf(item.annotations),
-      );
+      return mentionToInline(item.mention, label, marks);
     case 'text':
-      return withLink(
-        textNodes(item.plain_text, marksOf(item.annotations)),
-        item.href,
-      );
+      return withLink(textNodes(label, marks), item.href);
+    default:
+      return textNodes(label, marks);
   }
 }
 
@@ -58,6 +65,7 @@ function mentionToInline(
     case 'date':
     case 'template_mention':
     case 'custom_emoji':
+    default:
       return children;
   }
 }
@@ -70,12 +78,10 @@ function withLink(children: Inline[], href: string | null): Inline[] {
   return [{ type: 'link', url: href, children }];
 }
 
-function pageLink(
-  pageId: string,
-  children: Inline[],
-  blockId?: string,
-): Inline {
+function pageLink(pageId: string, label: Inline[], blockId?: string): Inline {
   const url = notionUrl(pageId, blockId);
+  const children: Inline[] =
+    label.length > 0 ? label : [{ type: 'text', value: url, marks: {} }];
   return blockId
     ? { type: 'pageLink', pageId, blockId, url, children }
     : { type: 'pageLink', pageId, url, children };

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { normalize } from '../../src/normalize/normalize';
 import type { Block, List } from '../../src/tree/types';
 import {
+  block,
   breadcrumb,
   bullet,
   callout,
@@ -304,5 +305,57 @@ describe('page properties', () => {
       vi.fn(),
     );
     expect(document.title).toBe('My Title');
+  });
+});
+
+describe('robustness', () => {
+  it('keeps going on block, text and property types newer than the client', () => {
+    const warn = vi.fn();
+    const future = block('future_block', {});
+    const futureText = {
+      ...text('future text'),
+      type: 'future',
+    } as unknown as ReturnType<typeof text>;
+    const document = normalize(
+      page({
+        New: { id: 'n', type: 'future_property' } as unknown as Property,
+      }),
+      [future, paragraph([futureText])],
+      warn,
+    );
+    expect(document.children[0]).toMatchObject({
+      type: 'unknown',
+      notionType: 'future_block',
+    });
+    expect(document.children[1]).toMatchObject({
+      content: [{ type: 'text', value: 'future text' }],
+    });
+    expect(document.properties.New).toBeNull();
+    expect(warn).toHaveBeenCalledOnce();
+  });
+
+  it('drops line breaks at the start and end of text', () => {
+    const [block] = tree([paragraph('\nline\n')]);
+    expect(block).toMatchObject({ content: [{ type: 'text', value: 'line' }] });
+  });
+
+  it('gives a list its own id', () => {
+    const [list] = tree([bullet('a')]) as List[];
+    expect(list?.id).not.toBe(list?.children[0]?.id);
+  });
+
+  it('labels a page mention with its URL when Notion sends no title', () => {
+    const target = '22222222-2222-4222-8222-222222222222';
+    const [block] = tree([paragraph([pageMention(target, '')])]);
+    expect(block).toMatchObject({
+      content: [
+        {
+          type: 'pageLink',
+          children: [
+            { value: `https://www.notion.so/${target.replaceAll('-', '')}` },
+          ],
+        },
+      ],
+    });
   });
 });

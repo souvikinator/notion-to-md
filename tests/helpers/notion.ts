@@ -156,8 +156,12 @@ export const callout = (icon: string, value: Rich, children?: RawBlock[]) =>
     textData(value, { icon: { type: 'emoji', emoji: icon } }),
     children,
   );
-export const code = (value: Rich, language = 'javascript') =>
-  block('code', { rich_text: rich(value), language, caption: [] });
+export const code = (value: Rich, language = 'javascript', caption?: Rich) =>
+  block('code', {
+    rich_text: rich(value),
+    language,
+    caption: caption ? rich(caption) : [],
+  });
 export const equation = (expression: string) =>
   block('equation', { expression });
 export const divider = () => block('divider', {});

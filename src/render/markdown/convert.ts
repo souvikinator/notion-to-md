@@ -7,14 +7,15 @@ import {
 } from 'mdast-util-to-markdown';
 
 type Extension = NonNullable<ToMarkdownOptions['extensions']>[number];
-import { displayValue } from '../../tree/values';
 import type {
   Block,
   Database,
+  Embed,
   Inline,
   List,
   ListItem,
   Media,
+  PageRef,
   Table,
 } from '../../tree/types';
 import { blockChildren, inlineContent, toPlainText } from '../../tree/visit';
@@ -25,7 +26,8 @@ import {
   type Handlers,
   type Renderer,
 } from '../types';
-import { phrasing } from './phrasing';
+import { databaseCells, linkLabel, type DatabaseCell } from '../shared';
+import { phrasing, type Leaf } from './phrasing';
 
 export interface MarkdownOptions {
   /** Custom output per node type. */
@@ -100,12 +102,16 @@ function createConverter(flavor: Flavor) {
     const handler = handlerFor(flavor.handlers, node);
     return handler?.(node, {
       content: () => serializeInline(inline(inlineContent(node))),
-      children: () => serialize(blocks(blockChildren(node))).trimEnd(),
+      children: () => serialize(childBlocks(node)).trimEnd(),
       fallback: () => serialize(fallback()).trimEnd(),
     });
   };
 
   const blocks = (nodes: Block[]): M.BlockContent[] => nodes.flatMap(block);
+
+  /** List items only mean something inside their list, so a list's children are rendered as one. */
+  const childBlocks = (node: ContentNode): M.BlockContent[] =>
+    node.type === 'list' ? [list(node)] : blocks(blockChildren(node));
 
   const block = (node: Block): M.BlockContent[] => {
     const output = custom(node, () => builtInBlock(node));
@@ -115,20 +121,24 @@ function createConverter(flavor: Flavor) {
   };
 
   const inline = (nodes: Inline[], inTable = false): M.PhrasingContent[] => {
-    if (flavor.handlers.text)
-      return nodes.flatMap((node) => inlineLeaf(node, inTable, inline));
-    return phrasing(nodes, (node, convert) =>
-      inlineLeaf(node, inTable, convert),
+    const builtIn: Leaf = (node, convert) =>
+      builtInInline(node, inTable, convert);
+    const withHandler: Leaf = (node, convert) =>
+      inlineLeaf(node, () => builtIn(node, convert));
+    if (!flavor.handlers.text) return phrasing(nodes, withHandler);
+
+    // A text handler owns a text's formatting, so texts are not merged with their neighbours.
+    return nodes.flatMap((node) =>
+      node.type === 'text'
+        ? inlineLeaf(node, () => phrasing([node], builtIn))
+        : withHandler(node, (children) => inline(children, inTable)),
     );
   };
 
   const inlineLeaf = (
     node: Inline,
-    inTable: boolean,
-    convert: (nodes: Inline[]) => M.PhrasingContent[],
+    builtIn: () => M.PhrasingContent[],
   ): M.PhrasingContent[] => {
-    const builtIn = (): M.PhrasingContent[] =>
-      builtInInline(node, inTable, convert);
     const output = custom(node, () => [
       { type: 'paragraph', children: builtIn() },
     ]);
@@ -184,26 +194,22 @@ function createConverter(flavor: Flavor) {
       case 'listItem':
         return [{ type: 'list', spread: false, children: [listItem(node)] }];
       case 'quote':
-        return [{ type: 'blockquote', children: body(node) }];
+        return blockquote(body(node));
       case 'callout': {
         const icon: Inline[] = node.icon
           ? [{ type: 'text', value: `${node.icon} `, marks: {} }]
           : [];
-        return [
-          {
-            type: 'blockquote',
-            children: [
-              ...paragraph([...icon, ...node.content]),
-              ...blocks(node.children),
-            ],
-          },
-        ];
+        return blockquote([
+          ...paragraph([...icon, ...node.content]),
+          ...blocks(node.children),
+        ]);
       }
       case 'toggle':
         return details(summaryHtml(node.content), node.children);
       case 'code':
         return [
           { type: 'code', lang: node.language || null, value: node.value },
+          ...paragraph(node.caption),
         ];
       case 'equation':
         return [{ type: 'html', value: `$$\n${node.value}\n$$` }];
@@ -217,18 +223,9 @@ function createConverter(flavor: Flavor) {
       case 'media':
         return [media(node)];
       case 'embed':
-        return [
-          link(
-            node.url,
-            node.caption.length
-              ? inline(node.caption)
-              : [{ type: 'text', value: node.url }],
-          ),
-        ];
+        return [link(node.url, captionOrLabel(node))];
       case 'pageRef':
-        return [
-          link(node.url, [{ type: 'text', value: node.title || node.url }]),
-        ];
+        return [link(node.url, captionOrLabel(node))];
       case 'database':
         return database(node);
       case 'tableOfContents':
@@ -254,14 +251,26 @@ function createConverter(flavor: Flavor) {
         return [
           { type: 'link', url: node.url, children: convert(node.children) },
         ];
-      case 'inlineEquation':
-        return [{ type: 'html', value: `$${node.value}$` }];
+      case 'inlineEquation': {
+        const value = inTable ? node.value.replaceAll('|', '\\|') : node.value;
+        return [{ type: 'html', value: `$${value}$` }];
+      }
       case 'break':
         return [
           inTable ? { type: 'html', value: '<br />' } : { type: 'break' },
         ];
     }
   };
+
+  const blockquote = (children: M.BlockContent[]): M.BlockContent[] =>
+    children.length === 0 ? [] : [{ type: 'blockquote', children }];
+
+  const captionOrLabel = (
+    node: Media | Embed | PageRef | Database,
+  ): M.PhrasingContent[] =>
+    'caption' in node && node.caption.length > 0
+      ? inline(node.caption)
+      : [{ type: 'text', value: linkLabel(node) }];
 
   const summaryHtml = (nodes: Inline[]): string => {
     const html = inlineToHtml(nodes);
@@ -320,42 +329,28 @@ function createConverter(flavor: Flavor) {
         ],
       };
     }
-    const label = node.caption.length
-      ? inline(node.caption)
-      : [{ type: 'text' as const, value: node.name }];
-    return link(node.url, label);
+    return link(node.url, captionOrLabel(node));
   };
 
   const database = (node: Database): M.BlockContent[] => {
-    const title = link(node.url, [
-      { type: 'text', value: node.title || node.url },
-    ]);
+    const title = link(node.url, captionOrLabel(node));
     if (node.rows.length === 0) return [title];
-    const [titleColumn] = node.columns;
-    const header: M.TableRow = {
-      type: 'tableRow',
-      children: node.columns.map((column) => ({
+    const cell = ({ text, url }: DatabaseCell): M.TableCell => {
+      const value: M.Text = { type: 'text', value: text };
+      return {
         type: 'tableCell',
-        children: [{ type: 'text', value: column }],
-      })),
+        children: url ? [{ type: 'link', url, children: [value] }] : [value],
+      };
     };
-    const rows = node.rows.map((row): M.TableRow => ({
+    const row = (cells: DatabaseCell[]): M.TableRow => ({
       type: 'tableRow',
-      children: node.columns.map((column) => {
-        const text: M.Text = {
-          type: 'text',
-          value: displayValue(row.properties[column] ?? null),
-        };
-        return {
-          type: 'tableCell',
-          children:
-            column === titleColumn
-              ? [{ type: 'link', url: row.url, children: [text] }]
-              : [text],
-        };
-      }),
-    }));
-    return [title, { type: 'table', children: [header, ...rows] }];
+      children: cells.map(cell),
+    });
+    const header = row(node.columns.map((column) => ({ text: column })));
+    return [
+      title,
+      { type: 'table', children: [header, ...databaseCells(node).map(row)] },
+    ];
   };
 
   return { blocks, serialize };

@@ -161,3 +161,14 @@ describe('fileCache', () => {
     expect(await store.get('page')).toBeUndefined();
   });
 });
+
+describe('downloadMedia review fixes', () => {
+  it('warns instead of failing on a URL it cannot read', async () => {
+    const ctx = context();
+    const broken = { ...asset('/x.png'), url: 'not a url' };
+    expect(
+      await downloadMedia({ dir }).resolveAsset?.(broken, ctx),
+    ).toBeUndefined();
+    expect(ctx.warnings[0]).toContain('Could not download');
+  });
+});

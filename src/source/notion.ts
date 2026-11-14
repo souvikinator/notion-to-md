@@ -1,11 +1,13 @@
 import type {
   BlockObjectResponse,
   Client,
+  DatabaseObjectResponse,
   DataSourceObjectResponse,
   GetDataSourceResponse,
   PageObjectResponse,
 } from '@notionhq/client';
 import { pageTitle } from '../normalize/properties';
+import { plainText } from '../normalize/rich-text';
 import { createLimiter } from '../utils/limit';
 import type {
   BlockExtras,
@@ -21,6 +23,11 @@ export interface NotionSourceOptions {
   /** Fetch the rows of databases placed inside a page. Default true. */
   databases?: boolean;
 }
+
+type LinkToPage = Extract<
+  BlockObjectResponse,
+  { type: 'link_to_page' }
+>['link_to_page'];
 
 interface Paginated<T> {
   results: T[];
@@ -80,9 +87,8 @@ export function notion(
           : block;
       case 'link_to_page': {
         const link = block.link_to_page;
-        if (link.type !== 'page_id') return block;
         return optional(block, async () => ({
-          title: await linkedTitle(link.page_id),
+          title: await linkedTitle(link),
         }));
       }
       case 'synced_block': {
@@ -101,49 +107,65 @@ export function notion(
       : block;
   };
 
-  const linkedTitle = async (pageId: string): Promise<string> => {
-    const page = await limit(() => client.pages.retrieve({ page_id: pageId }));
-    return isFullPage(page) ? pageTitle(page.properties) : '';
+  const linkedTitle = async (link: LinkToPage): Promise<string> => {
+    if (link.type === 'page_id') {
+      const page = await limit(() =>
+        client.pages.retrieve({ page_id: link.page_id }),
+      );
+      return isFullPage(page) ? pageTitle(page.properties) : '';
+    }
+    if (link.type === 'database_id') {
+      const database = await databaseObject(link.database_id);
+      return database ? plainText(database.title) : '';
+    }
+    return '';
   };
 
+  const databaseObject = async (
+    databaseId: string,
+  ): Promise<DatabaseObjectResponse | undefined> => {
+    const database = await limit(() =>
+      client.databases.retrieve({ database_id: databaseId }),
+    );
+    return 'data_sources' in database ? database : undefined;
+  };
+
+  const dataSourceIds = async (databaseId: string): Promise<string[]> =>
+    (await databaseObject(databaseId))?.data_sources.map(({ id }) => id) ?? [];
+
+  /** Rows from every data source of a database. Columns come from the first. */
   const database = async (
     databaseId: string,
   ): Promise<RawDatabase | undefined> => {
-    const [dataSourceId] = await dataSourceIds(databaseId);
-    if (!dataSourceId) return undefined;
+    const ids = await dataSourceIds(databaseId);
+    const [first] = ids;
+    if (!first) return undefined;
     const [dataSource, rows] = await Promise.all([
-      limit(() =>
-        client.dataSources.retrieve({ data_source_id: dataSourceId }),
-      ),
-      rowsOf(dataSourceId),
+      limit(() => client.dataSources.retrieve({ data_source_id: first })),
+      rowsOf(ids),
     ]);
     return isFullDataSource(dataSource) ? { dataSource, rows } : undefined;
   };
 
-  const dataSourceIds = async (databaseId: string): Promise<string[]> => {
-    const database = await limit(() =>
-      client.databases.retrieve({ database_id: databaseId }),
-    );
-    return 'data_sources' in database
-      ? database.data_sources.map((source) => source.id)
-      : [];
-  };
-
   const rowsOf = async (
-    dataSourceId: string,
+    dataSources: string[],
     query: DatabaseQuery = {},
   ): Promise<PageObjectResponse[]> => {
-    const results = await all((cursor) =>
-      limit(() =>
-        client.dataSources.query({
-          data_source_id: dataSourceId,
-          ...query,
-          start_cursor: cursor,
-          page_size: 100,
-        }),
+    const results = await Promise.all(
+      dataSources.map((dataSourceId) =>
+        all((cursor) =>
+          limit(() =>
+            client.dataSources.query({
+              data_source_id: dataSourceId,
+              ...query,
+              start_cursor: cursor,
+              page_size: 100,
+            }),
+          ),
+        ),
       ),
     );
-    return results.filter(isFullPage);
+    return results.flat().filter(isFullPage);
   };
 
   return {
@@ -157,9 +179,7 @@ export function notion(
     },
     blocks,
     async *query(databaseId, query) {
-      for (const dataSourceId of await dataSourceIds(databaseId)) {
-        yield* await rowsOf(dataSourceId, query);
-      }
+      yield* await rowsOf(await dataSourceIds(databaseId), query);
     },
   };
 }
