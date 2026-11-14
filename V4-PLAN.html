@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>notion-to-md v4 — rewrite plan</title>
+<style>
+  :root { --bg:#fff; --fg:#1c1e21; --mute:#667085; --line:#e4e7ec; --soft:#f6f7f9; --acc:#2563eb; --ok:#16794c; --warn:#b54708; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111317; --fg:#e6e8eb; --mute:#98a2b3; --line:#2a2e36; --soft:#1a1d23; --acc:#7aa7ff; --ok:#4ade80; --warn:#fbbf24; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 40px 0 10px; padding-top: 14px; border-top: 1px solid var(--line); }
+  h3 { font-size: 15px; margin: 20px 0 6px; }
+  p, ul, ol { margin: 6px 0 10px; }
+  ul, ol { padding-left: 22px; }
+  .sub { color: var(--mute); margin-bottom: 18px; }
+  nav { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:13px; margin: 14px 0 0; }
+  a { color: var(--acc); text-decoration: none; } a:hover { text-decoration: underline; }
+  code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--soft); padding: 1px 5px; border-radius: 4px; }
+  pre { font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--soft); border:1px solid var(--line); border-radius: 8px; padding: 14px; overflow-x: auto; margin: 10px 0 14px; }
+  pre code { background:none; padding:0; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0 14px; font-size: 14px; }
+  th, td { text-align:left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--mute); }
+  .tag { display:inline-block; font-size:11px; padding:1px 7px; border-radius: 99px; border:1px solid var(--line); color: var(--mute); white-space: nowrap; }
+  .tag.ok { color: var(--ok); border-color: var(--ok); } .tag.warn { color: var(--warn); border-color: var(--warn); }
+  .ms { border:1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 10px 0; }
+  .ms h3 { margin: 0 0 4px; } .ms .done { color: var(--mute); font-size: 13px; }
+  .ms ul { list-style: none; padding-left: 0; } .ms li { padding: 2px 0; }
+  .ms input { margin-right: 8px; }
+  .note { border-left: 3px solid var(--acc); background: var(--soft); padding: 8px 12px; border-radius: 0 6px 6px 0; margin: 10px 0; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>notion-to-md v4 — rewrite plan</h1>
+<div class="sub">Tracking doc. Status: <span class="tag warn">planning</span> · Created 2026-11-15 · Branch: <code>worktree-v4-rewrite</code> (from <code>v4-alpha-8</code>)</div>
+<nav>
+  <a href="#goal">Goal</a><a href="#why">Why rewrite</a><a href="#arch">Architecture</a><a href="#pieces">Pieces</a>
+  <a href="#api">Public API</a><a href="#decisions">Decisions</a><a href="#pkg">Package</a><a href="#tests">Testing</a>
+  <a href="#milestones">Milestones</a><a href="#issues">Issue map</a><a href="#release">Release</a><a href="#open">Open questions</a>
+</nav>
+
+<h2 id="goal">1. Goal</h2>
+<ul>
+  <li>Convert Notion content to Markdown, MDX, HTML, and any other format a renderer is written for.</li>
+  <li>Output is correct by default: v4 Markdown must be at least as good as v3.1.10.</li>
+  <li>Simple case is two lines. Everything else is opt-in through plugins and handlers.</li>
+  <li>Core never touches disk or the network on its own, so it runs on serverless and edge.</li>
+</ul>
+<h3>Not goals for 4.0</h3>
+<ul>
+  <li>Markdown → Notion, n8n node, database views/filters the API does not expose.</li>
+  <li>JSX and LaTeX renderers (possible later as community renderers).</li>
+</ul>
+
+<h2 id="why">2. Why rewrite, not patch</h2>
+<table>
+  <tr><th>Problem in the v4 alphas</th><th>Cause</th></tr>
+  <tr><td>Markdown output worse than v3 (11 bugs reproduced: lists, toggles, code, tables, frontmatter)</td><td>Each block transformer owns its own spacing, indentation and numbering; core joins with <code>\n</code></td></tr>
+  <tr><td>Converter unsafe to reuse across pages</td><td>Pipeline built once and cached with the first page's state</td></tr>
+  <tr><td>New format = copy a whole renderer (JSX copy is ~1,900 lines and dead)</td><td>No shared document model between formats</td></tr>
+  <tr><td>Writes <code>.notion-to-md/</code> to disk, needs <code>fs</code></td><td>Media and page links built on manifests</td></tr>
+  <tr><td>Page links need a URL property in Notion plus a separate builder run</td><td>Library converts one page at a time, never sees the whole site</td></tr>
+  <tr><td>Fetches every nested sub-page; slow rate limiter; no retry</td><td>Fetcher follows <code>has_children</code> blindly</td></tr>
+  <tr><td>Breaks on Notion SDK v5</td><td>Uses <code>databases.query</code></td></tr>
+</table>
+
+<h2 id="arch">3. Architecture</h2>
+<p>One reader, one tree, many writers (the Pandoc model).</p>
+<pre>
+   SOURCES                 TREE                 PLUGINS                RENDERERS
+ (where blocks          (one typed,           (tree in, tree        (tree in, string out)
+  come from)            plain-JSON doc)        out; named hooks)
+
+┌──────────────┐                           ┌──────────────────┐     ┌────────────┐
+│ notion()     │──┐                        │ media.*()        │  ┌─▶│ markdown() │
+├──────────────┤  │    ┌──────────────┐    │ pageLinks()      │  │  ├────────────┤
+│ cached()     │──┼───▶│  normalize   │───▶│ frontmatter()    │──┼─▶│ mdx()      │
+├──────────────┤  │    │  Notion →    │    │ footnotes()      │  │  ├────────────┤
+│ fromBlocks() │──┘    │  Document    │    │ user plugins     │  └─▶│ html()     │
+└──────────────┘       └──────────────┘    └──────────────────┘     └─────┬──────┘
+                                                                          ▼
+                                    { content, data, assets, links, tree, warnings }
+                                                                          │
+                                         helpers (outside core): writeFile · download · upload
+</pre>
+<h3>Flow of one <code>convert(id)</code></h3>
+<pre>
+1. source.page(id)        → raw Notion blocks + properties         (network, concurrent, retried)
+2. normalize(raw)         → Document tree                          (pure)
+3. plugins.transform      → Document tree                          (tree edits)
+4. plugins.resolveAsset   → url for every asset node               (download / upload / keep)
+   plugins.resolveLink    → url for every pageRef node
+5. renderer.render(tree)  → string                                 (pure; core owns layout)
+6. plugins.result         → final { content, data, assets, ... }
+</pre>
+<div class="note">State lives only inside one <code>convert()</code> call. The instance holds config. Steps 2 and 5 are pure functions, so they are snapshot-testable without Notion.</div>
+
+<h2 id="pieces">4. The pieces</h2>
+
+<h3>4.1 Source</h3>
+<pre><code>interface Source {
+  page(id): Promise&lt;RawPage&gt;          // blocks (nested) + properties
+  list?(databaseId, query?): AsyncIterable&lt;RawPageMeta&gt;
+}</code></pre>
+<ul>
+  <li><code>notion(client, { concurrency, childPages })</code> — SDK v5, concurrency limit, retry on 429 with Retry-After.</li>
+  <li><code>cached(source, store)</code> — wraps any source; key = page id + <code>last_edited_time</code>.</li>
+  <li><code>fromBlocks(json)</code> — offline conversion of saved blocks.</li>
+  <li>Child pages: not fetched by default. They become <code>pageRef</code> nodes.</li>
+</ul>
+
+<h3>4.2 Document tree</h3>
+<p>Our own tree, shaped like Notion. Plain JSON.</p>
+<pre>
+Document { id, data (properties), children: Block[] }
+
+Block nodes                                Inline nodes
+───────────                                ────────────
+paragraph   heading(level, toggle?)        text { value, marks[] }
+list(ordered) > listItem(checked?)         marks: bold italic strike underline code color
+quote       callout(icon, color)           link { url, children }
+toggle      code(lang, value)              mention { kind: page|user|date|…, ref }
+table > tableRow > tableCell               equation { value }
+columns > column                           pageRef { pageId, blockId?, children }
+image/video/file/pdf → asset { kind, source, caption }
+equation    divider    embed/bookmark { url, caption }
+database { schema, rows }    pageRef (child page, link to page)
+raw { notionType, block }   ← anything unknown, never dropped silently
+</pre>
+<ul>
+  <li>Lists are grouped into <code>list</code> containers at normalize time, so numbering and nesting are structural.</li>
+  <li>Every node keeps <code>id</code> and <code>notion</code> (original block) for escape hatches.</li>
+  <li><code>asset</code> and <code>pageRef</code> are explicit nodes, so plugins find them with one visit.</li>
+</ul>
+
+<h3>4.3 Plugins</h3>
+<pre><code>interface Plugin {
+  name: string
+  transform?(tree, ctx): Document | void
+  resolveAsset?(asset, ctx): string | undefined   // first plugin to return wins
+  resolveLink?(ref, ctx): string | undefined      // first plugin to return wins
+  result?(page, ctx): Page | void
+}</code></pre>
+<ul>
+  <li>Stage is fixed by the hook name. Array order only matters between plugins using the same hook.</li>
+  <li>Built-ins: <code>media.download(dir)</code>, <code>media.upload(fn)</code>, <code>media.inline()</code>, <code>pageLinks(fn)</code>, <code>frontmatter(opts)</code>, <code>footnotes()</code>.</li>
+  <li><code>ctx</code> gives: <code>visit(tree, type, fn)</code>, <code>warn()</code>, <code>site</code> (all pages, when run through <code>pages()</code>).</li>
+</ul>
+
+<h3>4.4 Renderers</h3>
+<pre><code>markdown({ handlers: {
+  callout: (node, ctx) =&gt; `:::note\n${ctx.children()}\n:::`,
+}})</code></pre>
+<ul>
+  <li>A renderer is a map of node type → <code>(node, ctx) =&gt; string</code>, plus the format's escape and join rules.</li>
+  <li>Core owns blank lines, indentation, numbering, escaping. Handlers cannot break layout.</li>
+  <li><code>markdown()</code>: tree → mdast → <code>mdast-util-to-markdown</code> (bundled). Custom handlers emit raw text nodes.</li>
+  <li><code>mdx()</code> = <code>markdown()</code> + overrides + import collection. <code>html()</code> is a second handler set.</li>
+  <li>Unknown node type → warning + fallback text, never a crash.</li>
+</ul>
+
+<h3>4.5 Result and helpers</h3>
+<pre><code>interface Page {
+  id, content: string, data: Record&lt;string, unknown&gt;,   // data = simplified properties
+  assets: Asset[], links: PageRef[], tree: Document, warnings: Warning[]
+}</code></pre>
+<ul>
+  <li>Helpers live under <code>notion-to-md/node</code>: <code>writeFile(page, path, { frontmatter })</code>. Only helpers and <code>media.download</code> use <code>fs</code>.</li>
+  <li>Errors: fetch errors throw. Per-node problems go to <code>warnings</code>; <code>strict: true</code> turns them into throws.</li>
+</ul>
+
+<h3>4.6 Many pages</h3>
+<pre><code>for await (const page of n2m.pages(databaseId, { filter, sorts })) { ... }</code></pre>
+<ul>
+  <li>Lists the pages first, so <code>resolveLink</code> knows every page (<code>ctx.site</code>). No builder pre-pass, no URL property in Notion.</li>
+  <li>Streams one page at a time; memory stays flat.</li>
+  <li>Child pages can be emitted as their own <code>Page</code> with a <code>parent</code> id (folder trees).</li>
+</ul>
+
+<h2 id="api">5. Public API</h2>
+<pre><code>import { notionToMd, notion } from 'notion-to-md'
+import { mdx } from 'notion-to-md/mdx'
+import { media, pageLinks, frontmatter } from 'notion-to-md/plugins'
+import { writeFile } from 'notion-to-md/node'
+
+// simplest
+const { content } = await notionToMd({ source: notion(client) }).convert(pageId)
+
+// blog
+const n2m = notionToMd({
+  source: notion(client),
+  plugins: [
+    media.download('./public/img', { publicPath: '/img' }),
+    pageLinks((p) =&gt; `/blog/${p.data.slug}`),
+    frontmatter({ include: ['title', 'date', 'tags'] }),
+  ],
+  renderer: mdx({ handlers: { callout } }),
+})
+for await (const page of n2m.pages(databaseId))
+  await writeFile(page, `content/${page.data.slug}.mdx`)</code></pre>
+
+<h2 id="decisions">6. Decisions</h2>
+<table>
+  <tr><th>#</th><th>Decision</th><th>Why</th><th>Rejected</th></tr>
+  <tr><td>D1</td><td>Rewrite on a new architecture</td><td>The alpha's problems come from its structure; patching keeps them</td><td>Fixing the alpha in place</td></tr>
+  <tr><td>D2</td><td>One document tree between fetch and render</td><td>Each new format is one handler set, not a renderer copy</td><td>Rendering straight from Notion blocks</td></tr>
+  <tr><td>D3</td><td>Own tree, shaped like Notion</td><td>mdast has no callout, toggle, columns, colour, mention, database</td><td>mdast as the main tree</td></tr>
+  <tr><td>D4</td><td><code>markdown()</code> uses <code>mdast-util-to-markdown</code> internally</td><td>Proven escaping, fences, list layout; we don't rewrite it</td><td>Hand-written Markdown serializer</td></tr>
+  <tr><td>D5</td><td>Plugins = named hooks at fixed stages</td><td>No hidden ordering rules (the concern raised in #112)</td><td>Ordered middleware array</td></tr>
+  <tr><td>D6</td><td>Handlers return strings only; tree edits happen in <code>transform</code></td><td>Keeps the v3 "return a string" feel; one job each</td><td>Handlers returning nodes</td></tr>
+  <tr><td>D7</td><td>Stateless <code>convert()</code></td><td>Safe to reuse and run in parallel</td><td>Cached pipeline</td></tr>
+  <tr><td>D8</td><td>Media and page links are plugins with resolver hooks; no manifests</td><td>No disk writes in core; works on serverless (#130)</td><td>Strategies + manifest managers + builder</td></tr>
+  <tr><td>D9</td><td>Caching is a source wrapper</td><td>No separate cache module or invalidation logic in core</td><td>Cache module in the pipeline</td></tr>
+  <tr><td>D10</td><td>Return a value; file writing is a helper</td><td>Asked for in #130; exporters were side effects</td><td>Exporter plugins</td></tr>
+  <tr><td>D11</td><td><code>n2m.pages()</code> for whole-site conversion</td><td>Links, child pages and databases need the full page list</td><td>Page-reference builder pre-pass</td></tr>
+  <tr><td>D12</td><td>Child pages not fetched by default</td><td>Saves most API calls (#88, #95)</td><td>Fetch everything (v3 and alpha behaviour)</td></tr>
+  <tr><td>D13</td><td>One package with subpath imports</td><td>One version, one release for a solo maintainer</td><td>Multi-package monorepo</td></tr>
+  <tr><td>D14</td><td>Ship <code>markdown</code>, <code>mdx</code>, <code>html</code> in 4.0</td><td>Covers the asks in #112; proves the tree with 3 formats</td><td>JSX/LaTeX in core</td></tr>
+  <tr><td>D15</td><td>Notion SDK v5 as the target</td><td>Current API (data sources); v2 calls are gone</td><td>Staying on v2</td></tr>
+  <tr><td>D16</td><td>Factory <code>notionToMd({...})</code> with one options object</td><td>One concept to learn; replaces 7 builder methods</td><td>Builder chain</td></tr>
+  <tr><td>D17</td><td>No logging by default; <code>onWarn</code> / <code>debug</code> option</td><td>#168</td><td><code>console.debug</code> everywhere</td></tr>
+</table>
+
+<h2 id="pkg">7. Package and layout</h2>
+<pre>
+exports                         src/
+───────                         ────
+notion-to-md            core    index.ts            notionToMd, types
+notion-to-md/markdown           source/             notion, cached, fromBlocks
+notion-to-md/mdx                tree/               node types, normalize, visit
+notion-to-md/html               plugins/            media, pageLinks, frontmatter, footnotes
+notion-to-md/plugins            render/core.ts      layout, context, fallback
+notion-to-md/node       fs      render/markdown/  render/mdx/  render/html/
+                                node/               writeFile
+                                tests/              fixtures/, snapshots, parser round-trips
+</pre>
+<ul>
+  <li>ESM + CJS builds with correct <code>exports</code> conditions (tsup). <code>mdast-util-to-markdown</code> bundled.</li>
+  <li>Runtime deps: none beyond what is bundled. Built-in <code>fetch</code>. Peer: <code>@notionhq/client</code>.</li>
+  <li>Old alpha code is removed from the branch, not kept alongside.</li>
+</ul>
+
+<h2 id="tests">8. Testing</h2>
+<ul>
+  <li><b>Fixtures:</b> recorded Notion JSON for every block type and nesting case.</li>
+  <li><b>Normalize:</b> fixture → tree snapshots.</li>
+  <li><b>Render:</b> tree → output snapshots, plus parse the Markdown with a real parser and compare text (catches broken layout).</li>
+  <li><b>Regression list:</b> every bug in the issue map below gets a named test.</li>
+  <li><b>v3 parity:</b> same fixtures through v3.1.10; diffs must be reviewed and intentional.</li>
+  <li><b>End to end:</b> mock source; one live test page behind an env token.</li>
+</ul>
+
+<h2 id="milestones">9. Milestones</h2>
+
+<div class="ms"><h3>M0 — Setup</h3>
+<ul>
+  <li><input type="checkbox" disabled>Clear old alpha source; keep tooling (vitest, tsup, eslint)</li>
+  <li><input type="checkbox" disabled>Fix package <code>exports</code>, engines, remove unused deps</li>
+  <li><input type="checkbox" disabled>Record fixture set from a real test workspace</li>
+</ul><div class="done">Done when: empty package builds and CI is green.</div></div>
+
+<div class="ms"><h3>M1 — Tree and normalizer</h3>
+<ul>
+  <li><input type="checkbox" disabled>Node types (block + inline)</li>
+  <li><input type="checkbox" disabled>Normalize: all block types, list grouping, rich text → marks</li>
+  <li><input type="checkbox" disabled><code>visit</code> helper; <code>raw</code> node for unknown blocks</li>
+</ul><div class="done">Done when: every fixture has a reviewed tree snapshot.</div></div>
+
+<div class="ms"><h3>M2 — Markdown renderer</h3>
+<ul>
+  <li><input type="checkbox" disabled>Render core: context, <code>children()</code>, fallback, warnings</li>
+  <li><input type="checkbox" disabled>Tree → mdast → Markdown; custom handlers</li>
+  <li><input type="checkbox" disabled>Regression tests for all listed bugs; v3 parity run</li>
+</ul><div class="done">Done when: output beats v3.1.10 on every fixture. <b>Go/no-go point for the design.</b></div></div>
+
+<div class="ms"><h3>M3 — Notion source</h3>
+<ul>
+  <li><input type="checkbox" disabled><code>notion()</code> on SDK v5: blocks, properties, databases/data sources</li>
+  <li><input type="checkbox" disabled>Concurrency limit, 429 retry, <code>childPages</code> option</li>
+  <li><input type="checkbox" disabled><code>fromBlocks()</code>, <code>cached()</code></li>
+  <li><input type="checkbox" disabled><code>notionToMd().convert()</code> end to end</li>
+</ul><div class="done">Done when: live test page converts; publish <code>4.0.0-beta.1</code>.</div></div>
+
+<div class="ms"><h3>M4 — Plugins</h3>
+<ul>
+  <li><input type="checkbox" disabled>Hook runner (<code>transform</code>, <code>resolveAsset</code>, <code>resolveLink</code>, <code>result</code>)</li>
+  <li><input type="checkbox" disabled><code>media.download / upload / inline</code>, including files in properties</li>
+  <li><input type="checkbox" disabled><code>pageLinks</code>, <code>frontmatter</code>, <code>footnotes</code></li>
+  <li><input type="checkbox" disabled><code>writeFile</code> helper</li>
+</ul><div class="done">Done when: the blog example in section 5 runs.</div></div>
+
+<div class="ms"><h3>M5 — Many pages and more formats</h3>
+<ul>
+  <li><input type="checkbox" disabled><code>n2m.pages()</code> with <code>ctx.site</code>; child pages as separate pages</li>
+  <li><input type="checkbox" disabled><code>mdx()</code>, <code>html()</code></li>
+  <li><input type="checkbox" disabled>Database block rendering (table)</li>
+</ul><div class="done">Done when: a full database converts with working internal links; publish <code>4.0.0-rc.1</code>.</div></div>
+
+<div class="ms"><h3>M6 — Docs and release</h3>
+<ul>
+  <li><input type="checkbox" disabled>Docs: getting started, plugins, handlers, writing a renderer</li>
+  <li><input type="checkbox" disabled>Migration guides: v3 → v4, alpha → v4</li>
+  <li><input type="checkbox" disabled>README on master points to v4; update #112; close mapped issues</li>
+  <li><input type="checkbox" disabled>Publish <code>4.0.0</code> as <code>latest</code></li>
+</ul><div class="done">Done when: 4.0.0 is on npm and v3 is marked maintenance-only.</div></div>
+
+<h2 id="issues">10. Issue map</h2>
+<table>
+  <tr><th>Issue</th><th>Ask</th><th>Solved by</th><th>Milestone</th></tr>
+  <tr><td>#140 #151 #162 #173 #127</td><td>Lists, indentation, toggles, callouts, line breaks</td><td>List containers + core layout</td><td>M1, M2</td></tr>
+  <tr><td>#164 #174 #176</td><td>Spaces around bold, emphasis edge cases, escaping</td><td>Marks + mdast serializer</td><td>M2</td></tr>
+  <tr><td>#172 #144</td><td>Tables: header row, newlines, pipes</td><td>Table handler</td><td>M2</td></tr>
+  <tr><td>#98 #51 #52</td><td>Custom transformers keep children; columns</td><td><code>ctx.children()</code></td><td>M2</td></tr>
+  <tr><td>#100 #145</td><td>Colour and highlight</td><td><code>color</code> mark in tree</td><td>M1</td></tr>
+  <tr><td>#63</td><td>Image captions</td><td><code>asset.caption</code> + handler</td><td>M2</td></tr>
+  <tr><td>#95 #107 #88</td><td>Speed; skip child pages</td><td><code>notion()</code> source</td><td>M3</td></tr>
+  <tr><td>#136 (disc.)</td><td>Convert saved blocks offline</td><td><code>fromBlocks()</code></td><td>M3</td></tr>
+  <tr><td>#168</td><td>No debug noise</td><td>D17</td><td>M3</td></tr>
+  <tr><td>#130 #133 #163</td><td>In-memory media, media in properties, all images downloaded</td><td><code>media.*</code> plugins</td><td>M4</td></tr>
+  <tr><td>#26 #132</td><td>Frontmatter from properties</td><td><code>page.data</code> + <code>frontmatter()</code></td><td>M4</td></tr>
+  <tr><td>#146 #148 #149 #156 #161 #72</td><td>Internal links, block anchors, custom link format</td><td><code>pageRef</code> + <code>resolveLink</code></td><td>M4, M5</td></tr>
+  <tr><td>#143</td><td>Comments as footnotes</td><td><code>footnotes()</code></td><td>M4</td></tr>
+  <tr><td>#22 #158</td><td>Databases</td><td><code>pages()</code> + database node</td><td>M5</td></tr>
+  <tr><td>#58 #71 #106</td><td>Child pages as separate files</td><td><code>pages()</code></td><td>M5</td></tr>
+  <tr><td>#142 #129</td><td>Outdated docs</td><td>Docs rewrite</td><td>M6</td></tr>
+</table>
+
+<h2 id="release">11. Release and migration</h2>
+<ul>
+  <li><b>Tags:</b> <code>4.0.0-beta.x</code> (npm tag <code>beta</code>) from M3 → <code>rc</code> at M5 → <code>4.0.0</code> as <code>latest</code> at M6.</li>
+  <li><b>Alpha users:</b> the alpha API is not kept. One migration page maps old calls to new ones.</li>
+  <li><b>v3 users:</b> v3 stays on <code>master</code> for urgent fixes only. Migration table:
+    <table>
+      <tr><th>v3</th><th>v4</th></tr>
+      <tr><td><code>new NotionToMarkdown({ notionClient })</code></td><td><code>notionToMd({ source: notion(client) })</code></td></tr>
+      <tr><td><code>pageToMarkdown</code> + <code>toMarkdownString</code></td><td><code>convert(id)</code> → <code>page.content</code></td></tr>
+      <tr><td><code>setCustomTransformer(type, fn)</code></td><td><code>markdown({ handlers: { type: fn } })</code></td></tr>
+      <tr><td><code>separateChildPage</code></td><td><code>pages()</code> / <code>childPages</code> option</td></tr>
+    </table>
+  </li>
+  <li><b>Branching:</b> rewrite lands on a <code>v4</code> branch through small PRs per milestone; merges to <code>master</code> at release.</li>
+</ul>
+
+<h2 id="open">12. Open questions</h2>
+<table>
+  <tr><th>#</th><th>Question</th><th>Leaning</th></tr>
+  <tr><td>Q1</td><td>Node floor: SDK v5 needs Node 22. Require 22, or support Node 20 with older SDKs through the same source?</td><td>Node 20 for the package; SDK v5 only</td></tr>
+  <tr><td>Q2</td><td>Default <code>markdown()</code> flavour: GFM (tables, task lists, strikethrough) on by default?</td><td>Yes</td></tr>
+  <tr><td>Q3</td><td>Toggles and underline in Markdown: HTML (<code>&lt;details&gt;</code>, <code>&lt;u&gt;</code>) as today, or plain text fallback option?</td><td>HTML default, option to turn off</td></tr>
+  <tr><td>Q4</td><td>Keep a thin v3-compatible class (<code>NotionToMarkdown</code>) for easy upgrades?</td><td>No; migration page only</td></tr>
+  <tr><td>Q5</td><td>Where do docs live after the domain change?</td><td>Decide at M6</td></tr>
+</table>
+
+<h2>Changelog</h2>
+<ul>
+  <li>2026-11-15 — Plan created. D1–D17 agreed.</li>
+</ul>
+
+</main>
+</body>
+</html>
