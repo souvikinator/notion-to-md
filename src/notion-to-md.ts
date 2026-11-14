@@ -143,7 +143,7 @@ export class NotionToMarkdown {
             nestingLevel,
           );
 
-          const formattedContent = (mdstr.parent ?? mdstr[pageIdentifier])
+          const formattedContent = (mdstr.parent ?? mdstr[pageIdentifier] ?? '')
             .split("\n")
             .map((line) => (line.trim() ? `> ${line}` : ">"))
             .join("\n")
@@ -449,7 +449,7 @@ export class NotionToMarkdown {
                 } as ListBlockChildrenResponseResult),
             );
 
-            const cellStringArr = await Promise.all(cellStringPromise);
+            const cellStringArr = (await Promise.all(cellStringPromise)).map((s) => s.replace(/\n/g, '<br>'));
             tableArr.push(cellStringArr);
           });
           await Promise.all(rowsPromise || []);
