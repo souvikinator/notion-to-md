@@ -40,11 +40,18 @@ export interface MarkdownOptions {
 /** What a Markdown dialect adds on top of GFM. MDX uses it to make the output valid JSX. */
 export interface Dialect {
   extensions: Extension[];
-  /** Escapes text that would break the output even when `escape` is off. Also applied to embedded HTML. */
-  escapeText: (value: string) => string;
+  /** Escapes Notion text that would break the output even when `escape` is off. */
+  escapeText: (text: string) => string;
+  /** Escapes HTML written into the output, such as toggle summaries. */
+  escapeHtml: (html: string) => string;
 }
 
-const GFM: Dialect = { extensions: [], escapeText: (value) => value };
+const unchanged = (value: string): string => value;
+const GFM: Dialect = {
+  extensions: [],
+  escapeText: unchanged,
+  escapeHtml: unchanged,
+};
 
 interface Flavor extends Required<MarkdownOptions> {
   dialect: Dialect;
@@ -258,7 +265,7 @@ function createConverter(flavor: Flavor) {
 
   const summaryHtml = (nodes: Inline[]): string => {
     const html = inlineToHtml(nodes);
-    return flavor.dialect.escapeText(html);
+    return flavor.dialect.escapeHtml(html);
   };
 
   const list = (node: List): M.List => ({

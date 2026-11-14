@@ -2,8 +2,12 @@ import type { Root } from 'mdast';
 import { fromMarkdown } from 'mdast-util-from-markdown';
 import { gfmFromMarkdown } from 'mdast-util-gfm';
 import { gfm } from 'micromark-extension-gfm';
-import { compile } from '@mdx-js/mdx';
+import { compile, evaluate } from '@mdx-js/mdx';
+import { renderToStaticMarkup } from 'react-dom/server';
+import * as runtime from 'react/jsx-runtime';
+import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
+import { createElement } from 'react';
 import {
   notionToMd,
   type Page,
@@ -63,9 +67,21 @@ export function parseMarkdown(value: string): Root {
   });
 }
 
-/** Throws if the MDX does not compile (with remark-math, as MDX sites with equations use). */
+/** MDX sites need these for GFM tables, task lists and equations, so tests use them too. */
+const remarkPlugins = [remarkGfm, remarkMath];
+
+/** Throws if the MDX does not compile. */
 export async function compileMdx(value: string): Promise<void> {
-  await compile(value, { remarkPlugins: [remarkMath] });
+  await compile(value, { remarkPlugins });
+}
+
+/** Runs MDX through React and returns the HTML a reader would see. */
+export async function renderMdx(value: string): Promise<string> {
+  const { default: Content } = await evaluate(value, {
+    ...runtime,
+    remarkPlugins,
+  });
+  return renderToStaticMarkup(createElement(Content));
 }
 
 /** Plain text of every node of `type`, in order. */

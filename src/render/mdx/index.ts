@@ -11,13 +11,15 @@ export type MdxOptions = MarkdownOptions;
 export function mdx(options: MdxOptions = {}): Renderer {
   return createMarkdownRenderer(options, {
     extensions: [mdxToMarkdown()],
-    escapeText: escapeJsxCharacters,
+    escapeText: (text) => escapeCharacters(text, /[{}<]/g),
+    // Embedded HTML already escapes `<` in text; braces would still start a JSX expression.
+    escapeHtml: (html) => escapeCharacters(html, /[{}]/g),
   });
 }
 
-function escapeJsxCharacters(value: string): string {
+function escapeCharacters(value: string, characters: RegExp): string {
   return value.replace(
-    /[{}<]/g,
+    characters,
     (character) => `&#${String(character.charCodeAt(0))};`,
   );
 }

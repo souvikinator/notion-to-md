@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { kitchenSink } from '../helpers/fixtures';
-import { compileMdx, toMdx } from '../helpers/convert';
+import { compileMdx, renderMdx, toMdx } from '../helpers/convert';
 import {
   bullet,
   equation,
@@ -40,6 +40,9 @@ describe('mdx', () => {
       heading(2, 'Toggle heading', [paragraph('hidden')]),
     ]);
     await expect(compileMdx(mdx)).resolves.toBeUndefined();
+    expect(mdx).toContain(
+      '<summary><strong>Title &#123;x&#125;</strong><br />second line</summary>',
+    );
   });
 
   it('keeps tables and equations compiling', async () => {
@@ -52,5 +55,22 @@ describe('mdx', () => {
       paragraph([text('inline '), inlineEquation('\\sqrt{2}')]),
     ]);
     await expect(compileMdx(mdx)).resolves.toBeUndefined();
+  });
+
+  it('renders escaped text back to exactly what was in Notion', async () => {
+    const html = await renderMdx(
+      await toMdx([
+        toggle([text('Title {x}', { bold: true })], [paragraph('a {b} <c>')]),
+      ]),
+    );
+    expect(html).toContain('<summary><strong>Title {x}</strong></summary>');
+    expect(html).toContain('<p>a {b} &lt;c&gt;</p>');
+  });
+
+  it('renders a full page', async () => {
+    const html = await renderMdx(await toMdx(kitchenSink()));
+    expect(html).toContain('<h1>Kitchen sink</h1>');
+    expect(html).toContain('<table>');
+    expect(html).toContain('<details>');
   });
 });
