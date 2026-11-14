@@ -30,6 +30,7 @@ export class NotionToMarkdown {
       separateChildPage: false,
       convertImagesToBase64: false,
       parseChildPages: true,
+      escapeMarkdown: false,
     };
     this.config = { ...defaultConfig, ...options.config };
     this.customTransformers = {};
@@ -601,6 +602,7 @@ export class NotionToMarkdown {
 
     if (text !== "") {
       if (annotations.code) text = md.inlineCode(text);
+      else if (this.config.escapeMarkdown) text = md.escapeMarkdown(text);
       if (annotations.bold) text = md.bold(text);
       if (annotations.italic) text = md.italic(text);
       if (annotations.strikethrough) text = md.strikethrough(text);

@@ -18,6 +18,7 @@ import {
   image,
   inlineEquation,
   equation,
+  escapeMarkdown,
 } from "./md";
 
 describe("Callout", () => {
@@ -150,6 +151,59 @@ describe("Toggle", () => {
   test("Displays toggle with <details> and <summary>", () => {
     expect(noSpaces(toggle("title", "content"))).toBe(
       "<details><summary>title</summary>content</details>"
+    );
+  });
+});
+
+describe("Code spans and fences (issue #176)", () => {
+  test("inline code containing a backtick uses a longer delimiter", () => {
+    expect(inlineCode("a`b")).toBe("``a`b``");
+  });
+  test("inline code containing a double backtick run", () => {
+    expect(inlineCode("a``b")).toBe("```a``b```");
+  });
+  test("inline code starting or ending with a backtick is padded", () => {
+    expect(inlineCode("`a")).toBe("`` `a ``");
+    expect(inlineCode("a`")).toBe("`` a` ``");
+  });
+  test("code block containing a ``` fence uses a longer fence", () => {
+    expect(codeBlock("```\ninner\n```", "markdown")).toBe(
+      "````markdown\n```\ninner\n```\n````"
+    );
+  });
+  test("code block preserves first-line indentation", () => {
+    expect(codeBlock("    indented()\nnext()", "python")).toBe(
+      "```python\n    indented()\nnext()\n```"
+    );
+  });
+  test("code block still drops leading blank lines and trailing whitespace", () => {
+    expect(codeBlock("\n\n  x = 1\n\n", "python")).toBe(
+      "```python\n  x = 1\n```"
+    );
+  });
+});
+
+describe("escapeMarkdown (issue #176)", () => {
+  test("escapes emphasis characters", () => {
+    expect(escapeMarkdown("2*3*4 = 24")).toBe("2\\*3\\*4 = 24");
+    expect(escapeMarkdown("snake_case_name")).toBe("snake\\_case\\_name");
+  });
+  test("escapes headings at line start", () => {
+    expect(escapeMarkdown("# not a heading")).toBe("\\# not a heading");
+  });
+  test("escapes ordered and unordered list markers at line start", () => {
+    expect(escapeMarkdown("1. not a list")).toBe("1\\. not a list");
+    expect(escapeMarkdown("- not a list")).toBe("\\- not a list");
+    expect(escapeMarkdown("a\n2) b")).toBe("a\n2\\) b");
+  });
+  test("escapes links, html, backslashes and pipes", () => {
+    expect(escapeMarkdown("[x](y) <b> a\\b | c")).toBe(
+      "\\[x\\](y) \\<b\\> a\\\\b \\| c"
+    );
+  });
+  test("leaves ordinary text alone", () => {
+    expect(escapeMarkdown("Hello, world. 3 - 2 = 1")).toBe(
+      "Hello, world. 3 - 2 = 1"
     );
   });
 });

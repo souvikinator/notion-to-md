@@ -3,8 +3,41 @@ import markdownTable from "markdown-table";
 
 import fetch from "node-fetch";
 
+/**
+ * Length of the longest run of consecutive backticks in `text`.
+ */
+const longestBacktickRun = (text: string): number => {
+  const runs = text.match(/`+/g);
+  return runs ? Math.max(...runs.map((run) => run.length)) : 0;
+};
+
+/**
+ * Escapes characters that would otherwise be interpreted as Markdown
+ * syntax, so the text renders literally (CommonMark backslash escapes).
+ */
+export const escapeMarkdown = (text: string): string => {
+  return (
+    text
+      // inline syntax: emphasis, code, links, html, strikethrough, tables
+      .replace(/([\\`*_[\]<>~|])/g, "\\$1")
+      // block syntax at the start of a line: headings, quotes, list markers
+      .replace(/(^|\n)([ \t]*)([#>+-])/g, "$1$2\\$3")
+      // ordered list markers at the start of a line, e.g. "1." or "1)"
+      .replace(/(^|\n)([ \t]*\d+)([.)])/g, "$1$2\\$3")
+  );
+};
+
 export const inlineCode = (text: string) => {
-  return `\`${text}\``;
+  // The delimiter must be a backtick run longer than any run inside the text.
+  const fence = "`".repeat(longestBacktickRun(text) + 1);
+  // Pad with a space when the content would otherwise merge with the
+  // delimiter, or would lose a meaningful leading/trailing space.
+  const needsPadding =
+    text.startsWith("`") ||
+    text.endsWith("`") ||
+    (text.startsWith(" ") && text.endsWith(" ") && text.trim() !== "");
+  const content = needsPadding ? ` ${text} ` : text;
+  return `${fence}${content}${fence}`;
 };
 
 export const inlineEquation = (text: string) => {
@@ -36,9 +69,14 @@ export const codeBlock = (text: string, language?: string) => {
   // Ensure a valid language, default to "plaintext" if missing
   const lang =
     language && language.trim() ? language.toLowerCase() : "plaintext";
-  return `\`\`\`${lang}
-${text.trim()}
-\`\`\``;
+  // The fence must be longer than any backtick run inside the code.
+  const fence = "`".repeat(Math.max(3, longestBacktickRun(text) + 1));
+  // Drop leading blank lines and trailing whitespace only, so indentation
+  // on the first line of code is preserved.
+  const code = text.replace(/^(?:[ \t]*\r?\n)+/, "").replace(/\s+$/, "");
+  return `${fence}${lang}
+${code}
+${fence}`;
 };
 
 export const equation = (text: string) => {
