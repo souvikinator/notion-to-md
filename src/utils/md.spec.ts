@@ -19,7 +19,7 @@ import {
   inlineEquation,
   equation,
   escapeMarkdown,
-  markdownEscapesToHtml,
+  escapeHtml,
 } from "./md";
 
 describe("Callout", () => {
@@ -220,9 +220,7 @@ describe("escapeMarkdown edge cases", () => {
     expect(escapeMarkdown("&amp;")).toBe("\\&amp;");
     expect(escapeMarkdown("Title\n===")).toBe("Title\n\\===");
   });
-  test("markdownEscapesToHtml turns escapes into HTML-safe text", () => {
-    expect(markdownEscapesToHtml(escapeMarkdown("2*3 <b> & a_b"))).toBe(
-      "2*3 &lt;b&gt; &amp; a_b"
-    );
+  test("escapeHtml makes text safe inside raw HTML", () => {
+    expect(escapeHtml("2*3 <b> & a_b")).toBe("2*3 &lt;b&gt; &amp; a_b");
   });
 });

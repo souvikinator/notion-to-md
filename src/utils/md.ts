@@ -25,9 +25,8 @@ const escapeMarkdownSyntax = (text: string): string => {
   );
 };
 
-export const markdownEscapesToHtml = (text: string): string => {
+export const escapeHtml = (text: string): string => {
   return text
-    .replace(/\\([!-/:-@[-`{-~])/g, "$1")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");

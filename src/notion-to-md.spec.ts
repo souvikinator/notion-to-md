@@ -143,24 +143,25 @@ describe("Markdown escaping in blockToMarkdown (issue #176)", () => {
 });
 
 describe("escapeMarkdown with toggles", () => {
-  test("toggle summary is HTML-safe instead of backslash-escaped", async () => {
-    const rt = (content: string) => ({
-      type: "text",
-      text: { content, link: null },
-      plain_text: content,
-      href: null,
-      annotations: {
-        bold: false, italic: false, strikethrough: false,
-        underline: false, code: false, color: "default",
-      },
-    });
+  const rt = (content: string, ann: Record<string, any> = {}) => ({
+    type: "text",
+    text: { content, link: null },
+    plain_text: content,
+    href: null,
+    annotations: {
+      bold: false, italic: false, strikethrough: false,
+      underline: false, code: false, color: "default",
+      ...ann,
+    },
+  });
+  const summaryOf = async (...pieces: any[]) => {
     const child = {
       object: "block", id: "c", type: "paragraph", has_children: false,
       paragraph: { rich_text: [rt("child")], color: "default" },
     };
     const toggle = {
       object: "block", id: "t", type: "toggle", has_children: true,
-      toggle: { rich_text: [rt("2*3 <b>")], color: "default" },
+      toggle: { rich_text: pieces, color: "default" },
     };
     const client = {
       blocks: {
@@ -180,7 +181,43 @@ describe("escapeMarkdown with toggles", () => {
     const out = n2m.toMarkdownString(
       await n2m.blocksToMarkdown([toggle as any])
     ).parent;
-    expect(out).toContain("<summary>2*3 &lt;b&gt;</summary>");
+    return out.match(/<summary>([\s\S]*?)<\/summary>/)![1];
+  };
+
+  test("toggle summary is HTML-safe instead of backslash-escaped", async () => {
+    expect(await summaryOf(rt("2*3 <b>"))).toBe("2*3 &lt;b&gt;");
+  });
+  test("underlined toggle summary keeps its <u> tags", async () => {
+    expect(await summaryOf(rt("Title", { underline: true }))).toBe(
+      "<u>Title</u>"
+    );
+  });
+  test("code toggle summary keeps its backslashes", async () => {
+    expect(await summaryOf(rt("a\\*b", { code: true }))).toBe("`a\\*b`");
+  });
+});
+
+describe("escapeMarkdown across rich text pieces", () => {
+  test("ordered list marker split across pieces is escaped", async () => {
+    const rt = (content: string) => ({
+      type: "text",
+      text: { content, link: null },
+      plain_text: content,
+      href: null,
+      annotations: {
+        bold: false, italic: false, strikethrough: false,
+        underline: false, code: false, color: "default",
+      },
+    });
+    const n2m = new NotionToMarkdown({
+      notionClient: {} as any,
+      config: { escapeMarkdown: true },
+    });
+    const para = {
+      object: "block", id: "p", type: "paragraph", has_children: false,
+      paragraph: { rich_text: [rt("1"), rt(". not a list")], color: "default" },
+    };
+    expect(await n2m.blockToMarkdown(para as any)).toBe("1\\. not a list");
   });
 });
 

@@ -132,12 +132,8 @@ export class NotionToMarkdown {
           );
 
           mdOutput[pageIdentifier] = mdOutput[pageIdentifier] || "";
-          const toggle_summary = this.config.escapeMarkdown
-            ? md.markdownEscapesToHtml(mdBlocks.parent)
-            : mdBlocks.parent;
-
           mdOutput[pageIdentifier] += md.toggle(
-            toggle_summary,
+            mdBlocks.parent,
             toggle_children_md_string["parent"],
           );
         } else if (mdBlocks.type === "quote") {
@@ -494,7 +490,20 @@ export class NotionToMarkdown {
           const annotations = content.annotations;
           let plain_text = content.plain_text;
 
-          plain_text = this.annotatePlainText(plain_text, annotations);
+          const escape = this.config.escapeMarkdown
+            ? type === "toggle"
+              ? md.escapeHtml
+              : md.escapeMarkdown
+            : undefined;
+
+          plain_text = this.annotatePlainText(plain_text, annotations, escape);
+
+          if (
+            escape === md.escapeMarkdown &&
+            /^[.)]/.test(plain_text) &&
+            /(^|\n)[ \t]*\d+$/.test(parsedData)
+          )
+            plain_text = "\\" + plain_text;
 
           if (content["href"])
             plain_text = md.link(plain_text, content["href"]);
@@ -597,7 +606,14 @@ export class NotionToMarkdown {
    * @param {Annotations} annotations - Annotation object of a notion block
    * @returns {string} - Annotated text
    */
-  annotatePlainText(text: string, annotations: Annotations): string {
+  annotatePlainText(
+    text: string,
+    annotations: Annotations,
+    escape: ((text: string) => string) | undefined = this.config
+      .escapeMarkdown
+      ? md.escapeMarkdown
+      : undefined,
+  ): string {
     // if text is all spaces, don't annotate
     if (text.match(/^\s*$/)) return text;
 
@@ -611,7 +627,7 @@ export class NotionToMarkdown {
 
     if (text !== "") {
       if (annotations.code) text = md.inlineCode(text);
-      else if (this.config.escapeMarkdown) text = md.escapeMarkdown(text);
+      else if (escape) text = escape(text);
       if (annotations.bold) text = md.bold(text);
       if (annotations.italic) text = md.italic(text);
       if (annotations.strikethrough) text = md.strikethrough(text);
