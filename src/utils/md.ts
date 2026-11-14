@@ -3,8 +3,43 @@ import markdownTable from "markdown-table";
 
 import fetch from "node-fetch";
 
+const longestBacktickRun = (text: string): number => {
+  const runs = text.match(/`+/g);
+  return runs ? Math.max(...runs.map((run) => run.length)) : 0;
+};
+
+export const escapeMarkdown = (text: string): string => {
+  const urlPattern = /(https?:\/\/[^\s<>]+|www\.[^\s<>]+)/;
+  return text
+    .split(urlPattern)
+    .map((part, i) => (i % 2 === 1 ? part : escapeMarkdownSyntax(part)))
+    .join("");
+};
+
+const escapeMarkdownSyntax = (text: string): string => {
+  return (
+    text
+      .replace(/([\\`*_[\]<>~|&])/g, "\\$1")
+      .replace(/(^|\n)([ \t]*)([#>+=-])/g, "$1$2\\$3")
+      .replace(/(^|\n)([ \t]*\d+)([.)])/g, "$1$2\\$3")
+  );
+};
+
+export const escapeHtml = (text: string): string => {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+};
+
 export const inlineCode = (text: string) => {
-  return `\`${text}\``;
+  const fence = "`".repeat(longestBacktickRun(text) + 1);
+  const needsPadding =
+    text.startsWith("`") ||
+    text.endsWith("`") ||
+    (text.startsWith(" ") && text.endsWith(" ") && text.trim() !== "");
+  const content = needsPadding ? ` ${text} ` : text;
+  return `${fence}${content}${fence}`;
 };
 
 export const inlineEquation = (text: string) => {
@@ -34,11 +69,14 @@ export const link = (text: string, href: string) => {
 export const codeBlock = (text: string, language?: string) => {
   if (!text) return "";
   // Ensure a valid language, default to "plaintext" if missing
-  const lang =
+  let lang =
     language && language.trim() ? language.toLowerCase() : "plaintext";
-  return `\`\`\`${lang}
-${text.trim()}
-\`\`\``;
+  if (lang === "plain text") lang = "text";
+  const fence = "`".repeat(Math.max(3, longestBacktickRun(text) + 1));
+  const code = text.replace(/^(?:[ \t]*\r?\n)+/, "").replace(/\s+$/, "");
+  return `${fence}${lang}
+${code}
+${fence}`;
 };
 
 export const equation = (text: string) => {

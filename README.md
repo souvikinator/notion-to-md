@@ -161,6 +161,23 @@ const n2m = new NotionToMarkdown({
 ...
 ```
 
+## Escape Markdown characters in plain text
+
+By default, plain text from Notion is written as-is, so text such as `2*3*4`, `# not a heading` or `1. not a list` is interpreted as Markdown formatting. Enable `escapeMarkdown` to backslash-escape Markdown syntax in non-code text so it renders literally:
+
+```javascript
+...
+
+const n2m = new NotionToMarkdown({ 
+  notionClient: notion,
+    config:{
+     escapeMarkdown:true, // default: false
+  }
+ });
+
+...
+```
+
 ## converting page to markdown object
 
 **Example notion page:**

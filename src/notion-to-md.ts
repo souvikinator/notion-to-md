@@ -14,7 +14,7 @@ import {
   BlockType,
 } from "./types";
 import * as md from "./utils/md";
-import { getBlockChildren } from "./utils/notion";
+import { getBlockChildren, modifyNumberedListObject } from "./utils/notion";
 
 /**
  * Converts a Notion page to Markdown.
@@ -30,6 +30,7 @@ export class NotionToMarkdown {
       separateChildPage: false,
       convertImagesToBase64: false,
       parseChildPages: true,
+      escapeMarkdown: false,
     };
     this.config = { ...defaultConfig, ...options.config };
     this.customTransformers = {};
@@ -221,6 +222,8 @@ export class NotionToMarkdown {
     }
 
     if (!blocks) return mdBlocks;
+
+    modifyNumberedListObject(blocks);
 
     for (let i = 0; i < blocks.length; i++) {
       let block: ListBlockChildrenResponseResult = blocks[i];
@@ -487,7 +490,20 @@ export class NotionToMarkdown {
           const annotations = content.annotations;
           let plain_text = content.plain_text;
 
-          plain_text = this.annotatePlainText(plain_text, annotations);
+          const escape = this.config.escapeMarkdown
+            ? type === "toggle"
+              ? md.escapeHtml
+              : md.escapeMarkdown
+            : undefined;
+
+          plain_text = this.annotatePlainText(plain_text, annotations, escape);
+
+          if (
+            escape === md.escapeMarkdown &&
+            /^[.)]/.test(plain_text) &&
+            /(^|\n)[ \t]*\d+$/.test(parsedData)
+          )
+            plain_text = "\\" + plain_text;
 
           if (content["href"])
             plain_text = md.link(plain_text, content["href"]);
@@ -500,7 +516,7 @@ export class NotionToMarkdown {
     switch (type) {
       case "code":
         {
-            const codeContent = block.code.rich_text.map((t: any) => t.plain_text).join("\n");
+            const codeContent = block.code.rich_text.map((t: any) => t.plain_text).join("");
             const language = block.code.language || "plaintext";
             parsedData = md.codeBlock(codeContent, language);
         }
@@ -567,7 +583,10 @@ export class NotionToMarkdown {
 
       case "numbered_list_item":
         {
-          parsedData = md.bullet(parsedData, block.numbered_list_item.number);
+          parsedData = md.bullet(
+            parsedData,
+            block.numbered_list_item.number ?? 1,
+          );
         }
         break;
 
@@ -587,7 +606,14 @@ export class NotionToMarkdown {
    * @param {Annotations} annotations - Annotation object of a notion block
    * @returns {string} - Annotated text
    */
-  annotatePlainText(text: string, annotations: Annotations): string {
+  annotatePlainText(
+    text: string,
+    annotations: Annotations,
+    escape: ((text: string) => string) | undefined = this.config
+      .escapeMarkdown
+      ? md.escapeMarkdown
+      : undefined,
+  ): string {
     // if text is all spaces, don't annotate
     if (text.match(/^\s*$/)) return text;
 
@@ -601,6 +627,7 @@ export class NotionToMarkdown {
 
     if (text !== "") {
       if (annotations.code) text = md.inlineCode(text);
+      else if (escape) text = escape(text);
       if (annotations.bold) text = md.bold(text);
       if (annotations.italic) text = md.italic(text);
       if (annotations.strikethrough) text = md.strikethrough(text);
