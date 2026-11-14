@@ -48,11 +48,12 @@
 
 <h2 id="status">0. Status</h2>
 <ul>
-  <li><b>Built:</b> tree + normalizer, <code>markdown()</code>, <code>mdx()</code>, <code>html()</code>, <code>notion()</code> and <code>fromBlocks()</code> sources, plugin hooks, <code>pageLinks</code>, <code>media</code>, <code>frontmatter</code>, <code>downloadMedia</code>, <code>writeFile</code>, <code>pages()</code>, database tables.</li>
-  <li><b>Checks passing:</b> <code>npm run check</code> = typecheck, strict lint, prettier, 123 tests, build, publint, are-the-types-wrong, tree-shake check.</li>
+  <li><b>Built:</b> tree + normalizer, <code>markdown()</code>, <code>mdx()</code>, <code>html()</code>, <code>notion()</code>, <code>fromBlocks()</code> and <code>cached()</code> sources, plugin hooks, <code>pageLinks</code>, <code>media</code>, <code>frontmatter</code>, <code>downloadMedia</code>, <code>fileCache</code>, <code>writeFile</code>, <code>pages()</code>, database tables.</li>
+  <li><b>Checks passing:</b> <code>npm run check</code> = typecheck, strict lint, prettier, 150 tests, build, publint, are-the-types-wrong, tree-shake check.</li>
+  <li><b>Independent review:</b> a separate reviewer read the code cold and reported 13 bugs and 12 quality issues. All bugs are fixed with tests; quality fixes are D47–D49 and the shared helpers in <code>render/shared.ts</code>.</li>
   <li><b>v3 parity:</b> same page through v3.1.10 and v4; every difference is a v4 fix (nesting indent, toggle-heading content, table pipes, child pages, heading 4).</li>
-  <li><b>Not done:</b> <code>cached()</code> source, <code>footnotes()</code>, child pages as separate pages in <code>pages()</code>, table of contents, docs, README, migration guide.</li>
-  <li><b>Needs your review:</b> implementation decisions D18–D46 (section 7). Each one is a call I made tonight.</li>
+  <li><b>Not done:</b> <code>footnotes()</code>, child pages as separate pages in <code>pages()</code>, table of contents, docs, README, migration guide.</li>
+  <li><b>Needs your review:</b> implementation decisions D18–D56 (section 7). Each one is a call I made tonight.</li>
 </ul>
 
 <h2 id="goal">1. Goal</h2>
@@ -92,13 +93,12 @@
 ├──────────────┤  │    │  normalize   │    │ media(fn)        │  │  ├────────────┤
 │ fromBlocks() │──┼───▶│  Notion →    │───▶│ pageLinks(fn)    │──┼─▶│ mdx()      │
 ├──────────────┤  │    │  Document    │    │ frontmatter()    │  │  ├────────────┤
-│ cached() *   │──┘    └──────────────┘    │ user plugins     │  └─▶│ html()     │
+│ cached()     │──┘    └──────────────┘    │ user plugins     │  └─▶│ html()     │
 └──────────────┘                           └──────────────────┘     └─────┬──────┘
                                                                           ▼
                               Page { content, properties, assets, links, tree, warnings }
                                                                           │
-                                        node helpers (outside core): writeFile · downloadMedia
-   * not built yet
+                             node helpers (outside core): writeFile · downloadMedia · fileCache
 </pre>
 <h3>Flow of one <code>convert(id)</code> (src/core/convert.ts)</h3>
 <pre>
@@ -115,13 +115,14 @@
 <h3>Folder layout (as built)</h3>
 <pre>
 src/
-├── index.ts               notionToMd, notion, fromBlocks, tree types, visit helpers
-├── core/                  convert.ts (pipeline), resolve.ts (assets + links), types.ts (Plugin, Page, Renderer)
-├── source/                notion.ts (API + pool), from-blocks.ts, types.ts
-├── tree/                  types.ts, normalize.ts, rich-text.ts, properties.ts, ids.ts, visit.ts
-├── render/                types.ts (handlers), html/, markdown/ (convert.ts, phrasing.ts), mdx/
+├── index.ts               notionToMd, notion, fromBlocks, cached, tree types, visit helpers
+├── core/                  convert.ts (pipeline), resolve.ts (files + links), types.ts (Plugin, Page, Renderer)
+├── source/                notion.ts (API + pool), from-blocks.ts, cached.ts, types.ts
+├── normalize/             Notion → tree: normalize.ts, rich-text.ts, properties.ts, ids.ts
+├── tree/                  the neutral model: types.ts, visit.ts, values.ts
+├── render/                types.ts (handlers), shared.ts (labels, database cells), html/, markdown/, mdx/
 ├── plugins/               frontmatter.ts, resolvers.ts (pageLinks, media)
-├── node/                  download-media.ts, write-file.ts   ← only place allowed to use node:*
+├── node/                  download-media.ts, file-cache.ts, write-file.ts, atomic-write.ts  ← only place for node:*
 └── utils/limit.ts         concurrency limiter shared by source and node
 </pre>
 
@@ -255,7 +256,7 @@ for await (const page of blog.pages(databaseId))
   <tr><td>D33</td><td>Equations as <code>$…$</code> and <code>$$…$$</code> in Markdown and MDX</td><td>The common convention. MDX with braces in TeX needs remark-math (tested with it); without it TeX is unreadable anyway.</td></tr>
   <tr><td>D34</td><td>Images use the caption as alt text; other files become links labelled with the caption, else the file name</td><td>Same as v3 for images. File name comes from Notion or the URL path, set once in the tree.</td></tr>
   <tr><td>D35</td><td>Content nested under a paragraph (Notion indent) is written after it, not indented</td><td>Indenting a paragraph in Markdown turns it into a code block. Nested content under list items, quotes, callouts and toggles stays inside them (#162).</td></tr>
-  <tr><td>D36</td><td>In Markdown, a <code>listItem</code> handler returns the item body (the list adds the marker); a <code>text</code> handler turns off mark merging and owns the marks</td><td>Lists must stay lists. A text handler that changes formatting needs full control of it.</td></tr>
+  <tr><td>D36</td><td>In Markdown, a <code>listItem</code> handler returns the item body (the list adds the marker). A <code>text</code> handler gets each text on its own (no merging with neighbours); its <code>fallback()</code> keeps the formatting. A <code>list</code> handler's <code>children()</code> is the items as one list.</td><td>Lists must stay lists. A text handler must be able to change words without losing bold/italic (bug found in review).</td></tr>
   <tr><td colspan="3"><b>Content handling</b></td></tr>
   <tr><td>D37</td><td>Child pages and "link to page" become link blocks; the source fetches a linked page's title (1 call per link)</td><td>#88/#106. Without the title, links read "Untitled".</td></tr>
   <tr><td>D38</td><td>Databases inside a page: rows fetched by default (first data source), rendered as a table whose title cell links to the row page (resolved by <code>pageLinks</code>)</td><td>#22. Multi-source databases only show the first source for now.</td></tr>
@@ -267,6 +268,17 @@ for await (const page of blog.pages(databaseId))
   <tr><td>D44</td><td><code>downloadMedia</code> names files by a hash of the Notion file path; skips files that exist; streams to a temp file then renames; a failed download warns and keeps the URL; external files untouched by default</td><td>Notion re-signs URLs on every request but the path is stable, so no manifest is needed (#163, #133). Trade-off: no automatic cleanup of removed files; <code>page.assets</code> lists what is used.</td></tr>
   <tr><td>D45</td><td><code>downloadMedia</code> and <code>writeFile</code> live in <code>notion-to-md/node</code>; <code>media(fn)</code> and <code>pageLinks(fn)</code> are generic plugins in <code>notion-to-md/plugins</code></td><td>Everything touching <code>fs</code> is in one entry, so the rest runs on edge runtimes.</td></tr>
   <tr><td>D46</td><td>Noted: SDK v5 has <code>pages.retrieveMarkdown</code> (Notion's own Markdown export)</td><td>Our value is formats, plugins, media, links and control of output. Worth a line in the README.</td></tr>
+  <tr><td colspan="3"><b>After the independent review</b></td></tr>
+  <tr><td>D47</td><td>The Notion → tree mapping lives in <code>src/normalize</code>; <code>src/tree</code> only holds the neutral model and helpers</td><td>Renderers and plugins no longer import Notion-specific code. Lint enforces the boundary.</td></tr>
+  <tr><td>D48</td><td>Ids are normalized once in core; <code>convert()</code> and <code>pages()</code> also accept a Notion link</td><td>Sources get one id format. Users can paste a page URL.</td></tr>
+  <tr><td>D49</td><td>Block, text, mention and property types newer than the installed client never crash: blocks become <code>unknown</code> + warning, text keeps its plain text, properties become <code>null</code></td><td>The peer range is <code>&gt;=5</code>, so the API can send types our build doesn't know.</td></tr>
+  <tr><td>D50</td><td><code>cached(source, store)</code> keeps one entry per page and reuses blocks while the page's <code>last_edited_time</code> is unchanged. <code>fileCache(dir)</code> (node) stores one JSON file per page</td><td>A hit costs one request instead of one per block with children. Trade-off: synced blocks, database rows and linked titles refresh only when the page itself is edited; in <code>pages()</code> a miss costs one extra request.</td></tr>
+  <tr><td>D51</td><td>Embedded databases read rows from every data source; columns come from the first</td><td>Rows were silently missing for multi-source databases.</td></tr>
+  <tr><td>D52</td><td>Code captions render under the code (paragraph in Markdown, <code>&lt;figcaption&gt;</code> in HTML)</td><td>They were dropped.</td></tr>
+  <tr><td>D53</td><td>Line breaks at the start or end of a block's text are dropped</td><td>Shift+Enter at the end of a line left a stray <code>\</code>.</td></tr>
+  <tr><td>D54</td><td>MDX output assumes the site uses <code>remark-gfm</code> (tables, task lists, strikethrough) and <code>remark-math</code> (equations)</td><td>Same as any MDX site with these features. Tests compile and render MDX with both.</td></tr>
+  <tr><td>D55</td><td><code>fromBlocks</code> throws when it cannot find a page id</td><td>An empty id leaked into asset ids and <code>page.id</code>.</td></tr>
+  <tr><td>D56</td><td>Open: a page's own URL is Notion's slug URL, while links to pages use the id form (<code>notion.so/&lt;id&gt;</code>)</td><td>We only know a page's slug URL when we fetched that page. Plugins should compare by <code>pageId</code>, not URL. Revisit if it confuses users.</td></tr>
 </table>
 
 <h2 id="pkg">8. Package</h2>
@@ -288,12 +300,12 @@ notion-to-md/node           downloadMedia, writeFile                    yes
 <table>
   <tr><th>File</th><th>What</th></tr>
   <tr><td>tests/tree/*.test.ts</td><td>Ids and Notion URLs, normalizer (lists, rich text, mentions, properties, every block type)</td></tr>
-  <tr><td>tests/render/markdown.test.ts</td><td>Exact output per block, plus parsing the output back with CommonMark + GFM to check what it means</td></tr>
-  <tr><td>tests/render/mdx.test.ts</td><td>Every MDX output is compiled with <code>@mdx-js/mdx</code> (+ remark-math)</td></tr>
+  <tr><td>tests/render/markdown.test.ts</td><td>Exact output per block, parsing the output back with CommonMark + GFM, and rendering it to HTML the way GitHub does</td></tr>
+  <tr><td>tests/render/mdx.test.ts</td><td>MDX output is compiled with <code>@mdx-js/mdx</code> (+ remark-gfm, remark-math) and rendered through React to check what readers see</td></tr>
   <tr><td>tests/render/html.test.ts</td><td>Escaping, marks, lists, toggles, tables, figures</td></tr>
-  <tr><td>tests/source/notion.test.ts</td><td>Mock Notion client: deep nesting, pagination, concurrency cap, synced blocks, databases, denied access</td></tr>
+  <tr><td>tests/source/notion.test.ts, cached.test.ts</td><td>Mock Notion client: deep nesting, pagination, concurrency cap, synced blocks, multi-source databases, linked titles, denied access; cache hits and invalidation</td></tr>
   <tr><td>tests/core/convert.test.ts</td><td>Plugin stages, URL resolution, warnings/strict, no console output, parallel converts, <code>pages()</code> with site links, frontmatter</td></tr>
-  <tr><td>tests/node/node.test.ts</td><td>Real local HTTP server: downloads, cache by path, failures, external files, <code>writeFile</code></td></tr>
+  <tr><td>tests/node/node.test.ts</td><td>Real local HTTP server: downloads, cache by path, failures, invalid URLs, external files; <code>fileCache</code>, <code>writeFile</code></td></tr>
   <tr><td>tests/regressions.test.ts</td><td>One test per reported issue, from the issue's own example</td></tr>
 </table>
 <p>Tests run once and exit (<code>watch: false</code>, 2 workers). Not yet: a live test against a real Notion workspace (needs a token).</p>
@@ -324,7 +336,7 @@ notion-to-md/node           downloadMedia, writeFile                    yes
   <li><input type="checkbox" disabled checked><code>notion()</code> on SDK v5: blocks, properties, data sources, linked titles, synced blocks</li>
   <li><input type="checkbox" disabled checked>Concurrency pool; 429 retry via SDK client</li>
   <li><input type="checkbox" disabled checked><code>fromBlocks()</code></li>
-  <li><input type="checkbox" disabled><code>cached()</code></li>
+  <li><input type="checkbox" disabled checked><code>cached()</code> + <code>fileCache()</code></li>
   <li><input type="checkbox" disabled>Live test against a real workspace</li>
 </ul></div>
 
@@ -409,10 +421,11 @@ npm ci
 npm run check          # everything CI runs
 npm test               # tests only (runs once, exits)
 npm run build && node scripts/check-treeshake.js</code></pre>
-<p>Start with <code>src/tree/types.ts</code> (the model), then <code>src/core/convert.ts</code> (the whole pipeline in ~80 lines), then <code>src/render/markdown/convert.ts</code>.</p>
+<p>Start with <code>src/tree/types.ts</code> (the model), then <code>src/core/convert.ts</code> (the whole pipeline in ~90 lines), then <code>src/normalize/normalize.ts</code> and <code>src/render/markdown/convert.ts</code>.</p>
 
 <h2 id="log">15. Changelog</h2>
 <ul>
+  <li>2026-11-15 (night, later) — Added <code>cached()</code>/<code>fileCache()</code>. Independent code review: fixed 13 bugs (crash on new Notion types, lost captions, text handler formatting, list handler children, stray line breaks, pipes in table equations, multi-source databases, linked database titles, invalid file URLs, …) and restructured <code>src/normalize</code> vs <code>src/tree</code>. Fixed an MDX bug where toggle summaries lost their formatting; MDX tests now render through React. D47–D56 added.</li>
   <li>2026-11-15 (night) — Built M0–M4 and most of M5. Added implementation decisions D18–D46, issue → test map, review guide. Fetch pool decision recorded (D18).</li>
   <li>2026-11-15 — Plan created. D1–D17 agreed.</li>
 </ul>
