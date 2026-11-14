@@ -507,7 +507,7 @@ export class NotionToMarkdown {
     switch (type) {
       case "code":
         {
-            const codeContent = block.code.rich_text.map((t: any) => t.plain_text).join("\n");
+            const codeContent = block.code.rich_text.map((t: any) => t.plain_text).join("");
             const language = block.code.language || "plaintext";
             parsedData = md.codeBlock(codeContent, language);
         }

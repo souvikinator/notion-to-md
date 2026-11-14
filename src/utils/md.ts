@@ -91,8 +91,10 @@ export const link = (text: string, href: string) => {
 export const codeBlock = (text: string, language?: string) => {
   if (!text) return "";
   // Ensure a valid language, default to "plaintext" if missing
-  const lang =
+  let lang =
     language && language.trim() ? language.toLowerCase() : "plaintext";
+  // Notion's "plain text" is not a valid fence language (see #47).
+  if (lang === "plain text") lang = "text";
   // The fence must be longer than any backtick run inside the code.
   const fence = "`".repeat(Math.max(3, longestBacktickRun(text) + 1));
   // Drop leading blank lines and trailing whitespace only, so indentation

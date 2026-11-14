@@ -183,3 +183,33 @@ describe("escapeMarkdown with toggles", () => {
     expect(out).toContain("<summary>2*3 &lt;b&gt;</summary>");
   });
 });
+
+describe("code block regressions from PR #125", () => {
+  const piece = (content: string) => ({
+    type: "text",
+    text: { content, link: null },
+    plain_text: content,
+    href: null,
+    annotations: {
+      bold: false, italic: false, strikethrough: false,
+      underline: false, code: false, color: "default",
+    },
+  });
+  const code = (pieces: string[], language: string) =>
+    ({
+      object: "block", id: "x", type: "code", has_children: false,
+      code: { rich_text: pieces.map(piece), language, caption: [] },
+    } as any);
+  const n2m = new NotionToMarkdown({ notionClient: {} as any });
+
+  test("rich text pieces are joined without adding newlines", async () => {
+    expect(
+      await n2m.blockToMarkdown(code(["const x = ", "42", ";"], "javascript"))
+    ).toBe("```javascript\nconst x = 42;\n```");
+  });
+  test('"plain text" language maps to "text" (#47)', async () => {
+    expect(await n2m.blockToMarkdown(code(["hello"], "plain text"))).toBe(
+      "```text\nhello\n```"
+    );
+  });
+});
