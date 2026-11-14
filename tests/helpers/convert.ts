@@ -1,7 +1,8 @@
 import type { Root } from 'mdast';
 import { fromMarkdown } from 'mdast-util-from-markdown';
 import { gfmFromMarkdown } from 'mdast-util-gfm';
-import { gfm } from 'micromark-extension-gfm';
+import { micromark } from 'micromark';
+import { gfm, gfmHtml } from 'micromark-extension-gfm';
 import { compile, evaluate } from '@mdx-js/mdx';
 import { renderToStaticMarkup } from 'react-dom/server';
 import * as runtime from 'react/jsx-runtime';
@@ -64,6 +65,15 @@ export function parseMarkdown(value: string): Root {
   return fromMarkdown(value, {
     extensions: [gfm()],
     mdastExtensions: [gfmFromMarkdown()],
+  });
+}
+
+/** Renders Markdown to HTML the way GitHub does: CommonMark + GFM, with raw HTML allowed. */
+export function renderMarkdown(value: string): string {
+  return micromark(value, {
+    allowDangerousHtml: true,
+    extensions: [gfm()],
+    htmlExtensions: [gfmHtml()],
   });
 }
 

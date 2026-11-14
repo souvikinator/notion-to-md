@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { kitchenSink } from '../helpers/fixtures';
-import { parseMarkdown, textsOf, toMd } from '../helpers/convert';
+import {
+  parseMarkdown,
+  renderMarkdown,
+  textsOf,
+  toMd,
+} from '../helpers/convert';
 import {
   bookmark,
   bullet,
@@ -278,6 +283,22 @@ describe('a full page', () => {
     expect(textsOf(tree, 'inlineCode')).toEqual(['a`b']);
     expect(tree.children.filter((node) => node.type === 'table')).toHaveLength(
       1,
+    );
+  });
+
+  // Code inside list items is checked by parsing instead: micromark's HTML output drops
+  // line endings there, while commonmark.js and markdown-it render it correctly.
+  it('renders on GitHub the way it looks in Notion', async () => {
+    const html = renderMarkdown(await toMd(kitchenSink()));
+    expect(html).toContain(
+      '<p>Hello <strong>bold</strong> world and <code>a`b</code></p>',
+    );
+    expect(html).toContain(
+      '<details>\n<summary>Toggle title</summary>\n<p>first paragraph</p>\n<p>second paragraph</p>\n</details>',
+    );
+    expect(html).toContain('<td>a|b</td>\n<td>line 1<br />line 2</td>');
+    expect(html).toContain(
+      '<li><input type="checkbox" disabled="" checked="" /> done</li>',
     );
   });
 });
