@@ -446,7 +446,7 @@ export class NotionToMarkdown {
                 } as ListBlockChildrenResponseResult),
             );
 
-            const cellStringArr = await Promise.all(cellStringPromise);
+            const cellStringArr = (await Promise.all(cellStringPromise)).map((s) => s.replace(/\n/g, '<br>'));
             tableArr.push(cellStringArr);
           });
           await Promise.all(rowsPromise || []);
