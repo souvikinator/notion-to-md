@@ -14,7 +14,7 @@ import {
   BlockType,
 } from "./types";
 import * as md from "./utils/md";
-import { getBlockChildren } from "./utils/notion";
+import { getBlockChildren, modifyNumberedListObject } from "./utils/notion";
 
 /**
  * Converts a Notion page to Markdown.
@@ -228,6 +228,10 @@ export class NotionToMarkdown {
     }
 
     if (!blocks) return mdBlocks;
+
+    // Blocks fetched by the caller (not via getBlockChildren) have no list
+    // numbers yet, which made numbered lists render as bullets (#166).
+    modifyNumberedListObject(blocks);
 
     for (let i = 0; i < blocks.length; i++) {
       let block: ListBlockChildrenResponseResult = blocks[i];
@@ -574,7 +578,11 @@ export class NotionToMarkdown {
 
       case "numbered_list_item":
         {
-          parsedData = md.bullet(parsedData, block.numbered_list_item.number);
+          // A single block converted on its own has no list position.
+          parsedData = md.bullet(
+            parsedData,
+            block.numbered_list_item.number ?? 1,
+          );
         }
         break;
 

@@ -213,3 +213,33 @@ describe("code block regressions from PR #125", () => {
     );
   });
 });
+
+describe("numbered lists from caller-fetched blocks (#166)", () => {
+  const item = (id: string, content: string) =>
+    ({
+      object: "block", id, type: "numbered_list_item", has_children: false,
+      numbered_list_item: {
+        rich_text: [{
+          type: "text", text: { content, link: null }, plain_text: content,
+          href: null,
+          annotations: {
+            bold: false, italic: false, strikethrough: false,
+            underline: false, code: false, color: "default",
+          },
+        }],
+        color: "default",
+      },
+    } as any);
+  const n2m = new NotionToMarkdown({ notionClient: {} as any });
+
+  test("blocksToMarkdown numbers items that have no number yet", async () => {
+    const out = n2m.toMarkdownString(
+      await n2m.blocksToMarkdown([item("a", "Buy milk"), item("b", "Call mom")])
+    ).parent;
+    expect(out).toContain("1. Buy milk");
+    expect(out).toContain("2. Call mom");
+  });
+  test("a single block without a number falls back to 1.", async () => {
+    expect(await n2m.blockToMarkdown(item("c", "Solo"))).toBe("1. Solo");
+  });
+});
