@@ -1,19 +1,32 @@
-import { defineConfig } from 'tsup';
+import { defineConfig, type Options } from 'tsup';
 
-export default defineConfig({
-  entry: [
-    'src/index.ts',
-    'src/core/index.ts',
-    'src/plugins/renderer/index.ts',
-    'src/plugins/exporter/index.ts',
-    'src/utils/index.ts',
-    'src/types/index.ts',
-  ],
-  format: ['cjs', 'esm'],
-  splitting: true,
-  clean: true,
-  dts: true,
-  shims: true,
-  treeshake: true,
+const entry = {
+  index: 'src/index.ts',
+  markdown: 'src/render/markdown/index.ts',
+  mdx: 'src/render/mdx/index.ts',
+  html: 'src/render/html/index.ts',
+  plugins: 'src/plugins/index.ts',
+  node: 'src/node/index.ts',
+};
+
+const shared: Options = {
+  entry,
   outDir: 'build',
-});
+  target: 'node22',
+  platform: 'neutral',
+  dts: true,
+  sourcemap: true,
+  treeshake: true,
+  splitting: true,
+};
+
+export default defineConfig([
+  // ESM keeps dependencies external so bundlers can share and tree-shake them.
+  { ...shared, format: 'esm', clean: true },
+  // The mdast libraries are ESM-only, so CommonJS consumers get them bundled in.
+  {
+    ...shared,
+    format: 'cjs',
+    noExternal: [/^mdast-/, /^micromark/, /^unist-/],
+  },
+]);

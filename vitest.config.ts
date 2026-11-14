@@ -1,17 +1,15 @@
-/// <reference types="vitest" />
 import { defineConfig } from 'vitest/config';
-import path from 'path';
 
 export default defineConfig({
   test: {
+    include: ['tests/**/*.test.ts'],
+    pool: 'threads',
+    maxWorkers: 2,
+    watch: false,
     coverage: {
-      reporter: ['text'],
+      provider: 'v8',
       include: ['src/**/*.ts'],
-    },
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
+      reporter: ['text-summary', 'text'],
     },
   },
 });
