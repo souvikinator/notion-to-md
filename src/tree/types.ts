@@ -242,6 +242,8 @@ export interface Document extends Base {
   title: string;
   url: string;
   icon?: string;
+  /** The page cover image. Notion-hosted covers expire like other files. */
+  cover?: FileValue;
   properties: Properties;
   /** Comments on the page itself, when the source fetched them. */
   comments?: Comment[];

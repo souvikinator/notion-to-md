@@ -64,6 +64,21 @@ function assetTargets(document: Document): UrlTarget<Asset>[] {
     document.properties,
     'page_property',
   );
+  if (document.cover) {
+    const { url, name, hosted } = document.cover;
+    targets.push({
+      info: {
+        id: `${document.id}/cover`,
+        kind: 'image',
+        url,
+        name,
+        hosted,
+        source: 'page_cover',
+        pageId: document.id,
+      },
+      holder: document.cover,
+    });
+  }
   visit(document, (node) => {
     if (node.type === 'media') {
       const { id, kind, url, hosted, name } = node;

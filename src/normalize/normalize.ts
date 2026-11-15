@@ -12,6 +12,7 @@ import type {
   Comment,
   Database,
   Document,
+  FileValue,
   Heading,
   Inline,
   List,
@@ -47,11 +48,13 @@ export function normalize(
 /** The page fields of the tree, without its content. */
 export function pageInfo(page: RawPage): Omit<Document, 'type' | 'children'> {
   const icon = iconText(page.icon);
+  const cover = coverFile(page.cover);
   return {
     id: normalizeId(page.id),
     title: pageTitle(page.properties),
     url: page.url,
     ...(icon && { icon }),
+    ...(cover && { cover }),
     properties: properties(page.properties),
   };
 }
@@ -183,7 +186,7 @@ function normalizeBlock(block: RawBlock, warn: Warn): Block[] {
           type: 'code',
           id,
           language: codeLanguage(block.code.language),
-          value: plainText(block.code.rich_text),
+          value: codeText(plainText(block.code.rich_text)),
           caption: richText(block.code.caption),
         },
       ];
@@ -414,7 +417,30 @@ function fileNameFromUrl(url: string): string {
   }
 }
 
+/** Blank lines before the code and whitespace after it show nothing in Notion; indentation is kept. */
+function codeText(value: string): string {
+  return value.replace(/^(?:[ \t]*\r?\n)+/, '').trimEnd();
+}
+
 /** Notion's "plain text" is not a language name, and fence info strings cannot contain spaces. */
 function codeLanguage(language: string): string {
   return language === 'plain text' ? 'text' : language.replaceAll(' ', '-');
+}
+
+function coverFile(cover: RawPage['cover']): FileValue | undefined {
+  if (cover?.type === 'external') {
+    return {
+      name: fileNameFromUrl(cover.external.url),
+      url: cover.external.url,
+      hosted: false,
+    };
+  }
+  if (cover?.type === 'file') {
+    return {
+      name: fileNameFromUrl(cover.file.url),
+      url: cover.file.url,
+      hosted: true,
+    };
+  }
+  return undefined;
 }

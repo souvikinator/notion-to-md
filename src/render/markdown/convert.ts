@@ -386,9 +386,28 @@ function createConverter(flavor: Flavor) {
  */
 function textHandler(flavor: Flavor): Handle {
   return (node: M.Text, _, state, info) => {
-    if (flavor.escape) return state.safe(node.value, info);
+    if (flavor.escape) return escapeOutsideUrls(node.value, state, info);
     let value = node.value;
     if (state.stack.includes('tableCell')) value = value.replaceAll('|', '\\|');
     return flavor.dialect.escapeText(value);
   };
+}
+
+const BARE_URL = /(https?:\/\/[^\s<>]+|www\.[^\s<>]+)/;
+
+/** Escapes text except bare URLs: a backslash inside a URL would stop GitHub from linking it. */
+function escapeOutsideUrls(
+  value: string,
+  state: Parameters<Handle>[2],
+  info: Parameters<Handle>[3],
+): string {
+  const parts = value.split(BARE_URL);
+  return parts
+    .map((part, index) => {
+      if (index % 2 === 1) return part;
+      const before = parts[index - 1]?.at(-1) ?? info.before;
+      const after = parts[index + 1]?.[0] ?? info.after;
+      return state.safe(part, { ...info, before, after });
+    })
+    .join('');
 }

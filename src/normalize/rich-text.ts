@@ -1,6 +1,6 @@
 import type { RichTextItemResponse } from '@notionhq/client';
 import { normalizeId, notionUrl, parseNotionUrl } from './ids';
-import type { Inline, Marks } from '../tree/types';
+import type { Inline, Marks, Text } from '../tree/types';
 
 type Annotations = RichTextItemResponse['annotations'];
 type Mention = Extract<RichTextItemResponse, { type: 'mention' }>['mention'];
@@ -11,16 +11,35 @@ export function richText(items: RichTextItemResponse[]): Inline[] {
   for (const item of items) {
     for (const node of itemToInline(item)) appendMerged(nodes, node);
   }
-  return trimBreaks(nodes);
+  return trimEdges(nodes);
 }
 
-/** A line break at the start or end of a block shows nothing in Notion, but would in the output. */
-function trimBreaks(nodes: Inline[]): Inline[] {
-  let start = 0;
-  let end = nodes.length;
-  while (start < end && nodes[start]?.type === 'break') start++;
-  while (end > start && nodes[end - 1]?.type === 'break') end--;
-  return nodes.slice(start, end);
+/** Line breaks and spaces at the start or end of a block show nothing in Notion, but would in the output. */
+function trimEdges(nodes: Inline[]): Inline[] {
+  const result = [...nodes];
+  while (result[0] && isBlank(result[0])) result.shift();
+  while (result.length > 0 && isBlank(result[result.length - 1])) result.pop();
+
+  const first = result[0];
+  if (first && isPlainText(first)) {
+    result[0] = { ...first, value: first.value.trimStart() };
+  }
+  const lastIndex = result.length - 1;
+  const last = result[lastIndex];
+  if (last && isPlainText(last)) {
+    result[lastIndex] = { ...last, value: last.value.trimEnd() };
+  }
+  return result;
+}
+
+function isBlank(node: Inline | undefined): boolean {
+  if (node?.type === 'break') return true;
+  return node !== undefined && isPlainText(node) && node.value.trim() === '';
+}
+
+/** Text whose spaces are not meaningful; spaces inside inline code are kept. */
+function isPlainText(node: Inline): node is Text {
+  return node.type === 'text' && !node.marks.code;
 }
 
 export function plainText(items: RichTextItemResponse[]): string {
@@ -33,7 +52,10 @@ function itemToInline(item: RichTextItemResponse): Inline[] {
   const label = item.plain_text;
   switch (item.type) {
     case 'equation':
-      return [{ type: 'inlineEquation', value: item.equation.expression }];
+      // `$ x $` does not render in KaTeX or remark-math, so stray spaces are dropped.
+      return [
+        { type: 'inlineEquation', value: item.equation.expression.trim() },
+      ];
     case 'mention':
       return mentionToInline(item.mention, label, marks);
     case 'text':
@@ -104,7 +126,12 @@ function marksOf(annotations: Annotations): Marks {
   if (annotations.strikethrough) marks.strikethrough = true;
   if (annotations.underline) marks.underline = true;
   if (annotations.code) marks.code = true;
-  if (annotations.color !== 'default') marks.color = annotations.color;
+  if (
+    annotations.color !== 'default' &&
+    annotations.color !== 'default_background'
+  ) {
+    marks.color = annotations.color;
+  }
   return marks;
 }
 

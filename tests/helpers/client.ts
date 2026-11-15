@@ -31,6 +31,8 @@ export interface Workspace {
 export interface MockClient {
   client: Client;
   calls: string[];
+  /** Filter and sorts sent with each data source query. */
+  queries: { filter?: unknown; sorts?: unknown }[];
   maxInFlight: () => number;
 }
 
@@ -44,6 +46,7 @@ class Restricted extends Error {
 
 export function mockClient(workspace: Workspace): MockClient {
   const calls: string[] = [];
+  const queries: MockClient['queries'] = [];
   const pageSize = workspace.pageSize ?? 100;
   let inFlight = 0;
   let maxInFlight = 0;
@@ -181,16 +184,26 @@ export function mockClient(workspace: Workspace): MockClient {
           );
           return { object: 'data_source', id: args.data_source_id, properties };
         }),
-      query: (args: { data_source_id: string; start_cursor?: string }) =>
-        call('dataSources.query', args.data_source_id, () =>
-          paginate(dataSource(args.data_source_id).rows, args.start_cursor),
-        ),
+      query: (args: {
+        data_source_id: string;
+        start_cursor?: string;
+        filter?: unknown;
+        sorts?: unknown;
+      }) =>
+        call('dataSources.query', args.data_source_id, () => {
+          queries.push({ filter: args.filter, sorts: args.sorts });
+          return paginate(
+            dataSource(args.data_source_id).rows,
+            args.start_cursor,
+          );
+        }),
     },
   };
 
   return {
     client: client as unknown as Client,
     calls,
+    queries,
     maxInFlight: () => maxInFlight,
   };
 }

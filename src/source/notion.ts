@@ -6,6 +6,7 @@ import type {
   GetDataSourceResponse,
   PageObjectResponse,
 } from '@notionhq/client';
+import { normalizeId } from '../normalize/ids';
 import { pageTitle } from '../normalize/properties';
 import { plainText } from '../normalize/rich-text';
 import { createLimiter } from '../utils/limit';
@@ -24,6 +25,8 @@ export interface NotionSourceOptions {
   databases?: boolean;
   /** Fetch comments on the page and its blocks (one extra request per block). Default false. */
   comments?: boolean;
+  /** Filter and sort the rows of databases inside pages, by database id. */
+  databaseQueries?: Record<string, DatabaseQuery>;
 }
 
 type LinkToPage = Extract<
@@ -57,6 +60,12 @@ export function notion(
   const limit = createLimiter(options.concurrency ?? 3);
   const fetchDatabases = options.databases ?? true;
   const fetchComments = options.comments ?? false;
+  const queries = new Map(
+    Object.entries(options.databaseQueries ?? {}).map(([id, query]) => [
+      normalizeId(id),
+      query,
+    ]),
+  );
 
   const all = async <T>(
     fetchPage: (cursor: string | undefined) => Promise<Paginated<T>>,
@@ -164,7 +173,7 @@ export function notion(
     if (!first) return undefined;
     const [dataSource, rows] = await Promise.all([
       limit(() => client.dataSources.retrieve({ data_source_id: first })),
-      rowsOf(ids),
+      rowsOf(ids, queries.get(normalizeId(databaseId))),
     ]);
     return isFullDataSource(dataSource) ? { dataSource, rows } : undefined;
   };

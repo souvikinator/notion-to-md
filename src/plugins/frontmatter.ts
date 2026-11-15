@@ -24,7 +24,7 @@ const YAML_KEYWORDS = /^(true|false|yes|no|on|off|null|y|n)$/i;
 export function frontmatter(options: FrontmatterOptions = {}): Plugin {
   return {
     name: 'frontmatter',
-    result(page) {
+    result(page, context) {
       const fields: Record<string, unknown> = {};
       for (const [name, value] of Object.entries(page.properties)) {
         if (options.include && !options.include.includes(name)) continue;
@@ -37,7 +37,13 @@ export function frontmatter(options: FrontmatterOptions = {}): Plugin {
       for (const [field, transform] of Object.entries(
         options.transform ?? {},
       )) {
-        fields[field] = transform(fields[field], page);
+        try {
+          fields[field] = transform(fields[field], page);
+        } catch (error) {
+          context.warn(
+            `Frontmatter transform for "${field}" failed, kept its value: ${String(error)}`,
+          );
+        }
       }
       for (const [field, value] of Object.entries(options.defaults ?? {})) {
         if (isEmpty(fields[field])) fields[field] = value;

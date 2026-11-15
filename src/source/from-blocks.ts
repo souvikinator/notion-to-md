@@ -27,6 +27,7 @@ function emptyPage(blocks: RawBlock[]): RawPage {
     id: parent.page_id,
     url: '',
     icon: null,
+    cover: null,
     properties: {},
     last_edited_time: '',
   };
