@@ -22,6 +22,8 @@ export interface NotionSourceOptions {
   concurrency?: number;
   /** Fetch the rows of databases placed inside a page. Default true. */
   databases?: boolean;
+  /** Fetch comments on the page and its blocks (one extra request per block). Default false. */
+  comments?: boolean;
 }
 
 type LinkToPage = Extract<
@@ -34,6 +36,8 @@ interface Paginated<T> {
   has_more: boolean;
   next_cursor: string | null;
 }
+
+const NO_EXTRAS: BlockExtras = {};
 
 /** Notion errors that mean "this extra content is not available", not "the conversion failed". */
 const UNAVAILABLE = new Set([
@@ -52,6 +56,7 @@ export function notion(
 ): Source {
   const limit = createLimiter(options.concurrency ?? 3);
   const fetchDatabases = options.databases ?? true;
+  const fetchComments = options.comments ?? false;
 
   const all = async <T>(
     fetchPage: (cursor: string | undefined) => Promise<Paginated<T>>,
@@ -74,38 +79,55 @@ export function notion(
     return Promise.all(results.filter(isFullBlock).map(expand));
   };
 
-  /** Adds what a block needs beyond its own data: children, database rows, a linked page's title. */
   const expand = async (block: BlockObjectResponse): Promise<RawBlock> => {
+    const [content, comments] = await Promise.all([
+      contentOf(block),
+      fetchComments ? commentsOf(block.id) : NO_EXTRAS,
+    ]);
+    const error = [content.error, comments.error].filter(Boolean).join('; ');
+    return { ...block, ...content, ...comments, ...(error ? { error } : {}) };
+  };
+
+  /** What a block shows beyond its own data: children, database rows, a linked page's title. */
+  const contentOf = async (
+    block: BlockObjectResponse,
+  ): Promise<BlockExtras> => {
     switch (block.type) {
       case 'child_page':
-        return block;
+        return {};
       case 'child_database':
         return fetchDatabases
-          ? optional(block, async () => ({
-              database: await database(block.id),
-            }))
-          : block;
+          ? optional(async () => ({ database: await database(block.id) }))
+          : {};
       case 'link_to_page': {
         const link = block.link_to_page;
-        return optional(block, async () => ({
-          title: await linkedTitle(link),
-        }));
+        return optional(async () => ({ title: await linkedTitle(link) }));
       }
       case 'synced_block': {
         // A synced copy holds no content of its own; it shows the original block's children.
         const original = block.synced_block.synced_from?.block_id;
         if (!original) break;
-        return optional(block, async () => ({
-          children: await blocks(original),
-        }));
+        return optional(async () => ({ children: await blocks(original) }));
       }
       default:
         break;
     }
-    return block.has_children
-      ? { ...block, children: await blocks(block.id) }
-      : block;
+    return block.has_children ? { children: await blocks(block.id) } : {};
   };
+
+  /** Comments on a page or block. Needs the integration's "read comments" capability. */
+  const commentsOf = (id: string): Promise<BlockExtras> =>
+    optional(async () => ({
+      comments: await all((cursor) =>
+        limit(() =>
+          client.comments.list({
+            block_id: id,
+            start_cursor: cursor,
+            page_size: 100,
+          }),
+        ),
+      ),
+    }));
 
   const linkedTitle = async (link: LinkToPage): Promise<string> => {
     if (link.type === 'page_id') {
@@ -170,12 +192,16 @@ export function notion(
 
   return {
     async page(id) {
-      const page = await limit(() => client.pages.retrieve({ page_id: id }));
-      if (!isFullPage(page))
+      const [page, comments] = await Promise.all([
+        limit(() => client.pages.retrieve({ page_id: id })),
+        fetchComments ? commentsOf(id) : NO_EXTRAS,
+      ]);
+      if (!isFullPage(page)) {
         throw new Error(
           `Notion returned a partial page for ${id}; check the integration's access.`,
         );
-      return page;
+      }
+      return { ...page, ...comments };
     },
     blocks,
     async *query(databaseId, query) {
@@ -197,16 +223,15 @@ async function* paginate<T>(
   } while (cursor);
 }
 
-/** Runs a fetch for extra block data. If Notion says the data is unavailable, keeps the block and records why. */
+/** Runs a fetch for extra data. If Notion says it is unavailable, records why instead of failing. */
 async function optional(
-  block: BlockObjectResponse,
   fetchExtra: () => Promise<BlockExtras>,
-): Promise<RawBlock> {
+): Promise<BlockExtras> {
   try {
-    return { ...block, ...(await fetchExtra()) };
+    return await fetchExtra();
   } catch (error) {
     if (!isUnavailable(error)) throw error;
-    return { ...block, error: error.message };
+    return { error: error.message };
   }
 }
 

@@ -327,7 +327,7 @@ describe('frontmatter', () => {
       plugins: [
         frontmatter({
           rename: { Name: 'title' },
-          extra: () => ({ draft: true }),
+          defaults: { draft: true },
         }),
       ],
     });

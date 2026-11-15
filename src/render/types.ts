@@ -15,20 +15,27 @@ export interface HandlerHelpers {
   fallback: () => string;
 }
 
-export type Handler<T extends NodeType> = (
-  node: NodeOf<T>,
-  helpers: HandlerHelpers,
-) => string;
+export type Handler<
+  T extends NodeType,
+  H extends HandlerHelpers = HandlerHelpers,
+> = (node: NodeOf<T>, helpers: H) => string;
 
 /** Custom output per node type. A handler replaces the built-in output for that node everywhere it appears. */
-export type Handlers = { [T in NodeType]?: Handler<T> };
+export type Handlers<H extends HandlerHelpers = HandlerHelpers> = {
+  [T in NodeType]?: Handler<T, H>;
+};
 
-type AnyHandler = (node: ContentNode, helpers: HandlerHelpers) => string;
+/** MDX handlers can also add an import line, e.g. for a component they output. */
+export interface MdxHandlerHelpers extends HandlerHelpers {
+  addImport: (statement: string) => void;
+}
 
-export function handlerFor(
-  handlers: Handlers,
+type AnyHandler<H> = (node: ContentNode, helpers: H) => string;
+
+export function handlerFor<H extends HandlerHelpers>(
+  handlers: Handlers<H>,
   node: ContentNode,
-): AnyHandler | undefined {
+): AnyHandler<H> | undefined {
   // Handlers are keyed by node type, so the handler found always accepts this node.
-  return handlers[node.type] as AnyHandler | undefined;
+  return handlers[node.type] as AnyHandler<H> | undefined;
 }

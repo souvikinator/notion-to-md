@@ -19,6 +19,8 @@ export interface Asset {
   name: string;
   /** True when the file is stored by Notion, whose URLs expire after an hour. */
   hosted: boolean;
+  /** Where the file appears: a block, a page property, or a property of a database row. */
+  source: 'block' | 'page_property' | 'database_property';
   pageId: string;
 }
 

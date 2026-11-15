@@ -1,4 +1,7 @@
-import type { RichTextItemResponse } from '@notionhq/client';
+import type {
+  CommentObjectResponse,
+  RichTextItemResponse,
+} from '@notionhq/client';
 import type { RawBlock, RawDatabase, RawPage } from '../source/types';
 import { normalizeId, notionUrl } from './ids';
 import { pageTitle, properties } from './properties';
@@ -6,6 +9,7 @@ import { plainText, richText } from './rich-text';
 import type {
   Block,
   Color,
+  Comment,
   Database,
   Document,
   Heading,
@@ -28,11 +32,16 @@ export function normalize(
   blocks: RawBlock[],
   warn: Warn,
 ): Document {
-  return {
+  if (page.error) {
+    warn(`Some content of the page could not be fetched: ${page.error}`);
+  }
+  const document: Document = {
     type: 'root',
     ...pageInfo(page),
     children: normalizeBlocks(blocks, warn),
   };
+  if (page.comments?.length) document.comments = comments(page.comments);
+  return document;
 }
 
 /** The page fields of the tree, without its content. */
@@ -50,12 +59,25 @@ export function pageInfo(page: RawPage): Omit<Document, 'type' | 'children'> {
 export function normalizeBlocks(blocks: RawBlock[], warn: Warn): Block[] {
   const result: Block[] = [];
   for (const block of blocks) {
-    for (const node of normalizeBlock(block, warn)) {
+    const nodes = normalizeBlock(block, warn);
+    const [first] = nodes;
+    if (first && block.comments?.length)
+      first.comments = comments(block.comments);
+    for (const node of nodes) {
       if (node.type === 'listItem') addListItem(result, node, block);
       else result.push(node);
     }
   }
   return result;
+}
+
+function comments(raw: CommentObjectResponse[]): Comment[] {
+  return raw.map((comment) => ({
+    id: comment.id,
+    author: comment.display_name.resolved_name ?? comment.created_by.id,
+    createdTime: comment.created_time,
+    content: richText(comment.rich_text),
+  }));
 }
 
 /** Notion has no list block, only list items; consecutive items of the same kind form one list. */

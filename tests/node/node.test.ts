@@ -77,6 +77,7 @@ const asset = (path: string, query = '?sig=1', hosted = true): Asset => ({
   url: `${base}${path}${query}`,
   name: 'pic.png',
   hosted,
+  source: 'block',
   pageId: 'page',
 });
 

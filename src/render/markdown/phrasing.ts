@@ -66,6 +66,7 @@ function hasMark(node: Inline, mark: Mark): boolean {
       );
     case 'inlineEquation':
     case 'break':
+    case 'footnoteReference':
       return false;
   }
 }

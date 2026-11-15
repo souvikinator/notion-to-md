@@ -2,6 +2,7 @@ import { blockChildren, inlineContent, toPlainText } from '../../tree/visit';
 import type {
   Block,
   Database,
+  Footnote,
   Inline,
   List,
   Marks,
@@ -19,8 +20,15 @@ export interface HtmlOptions {
 /** Renders the document as an HTML fragment. */
 export function html(options: HtmlOptions = {}): Renderer {
   return {
-    render: (document) =>
-      createHtml(options.handlers ?? {}).blocks(document.children),
+    render: (document) => {
+      const html = createHtml(options.handlers ?? {});
+      return [
+        html.blocks(document.children),
+        html.footnotes(document.footnotes ?? []),
+      ]
+        .filter(Boolean)
+        .join('\n');
+    },
   };
 }
 
@@ -35,7 +43,7 @@ function createHtml(handlers: Handlers) {
     const fallback = (): string => builtIn(current);
     if (!custom) return fallback();
     return custom(current, {
-      content: () => inline(inlineContent(current)),
+      content: () => inline(inlineContent(current) ?? []),
       children: () => blocks(blockChildren(current)),
       fallback,
     });
@@ -46,7 +54,7 @@ function createHtml(handlers: Handlers) {
 
   /** A block's own text followed by its nested blocks. */
   const body = (current: Block, tag: string): string => {
-    const text = inline(inlineContent(current));
+    const text = inline(inlineContent(current) ?? []);
     const nested = blocks(blockChildren(current));
     return [text && `<${tag}>${text}</${tag}>`, nested]
       .filter(Boolean)
@@ -66,6 +74,8 @@ function createHtml(handlers: Handlers) {
         return `<span class="math math-inline">${escapeHtml(current.value)}</span>`;
       case 'break':
         return '<br />';
+      case 'footnoteReference':
+        return `<sup><a href="#fn-${escapeAttribute(current.label)}" id="fnref-${escapeAttribute(current.label)}">${escapeHtml(current.label)}</a></sup>`;
       case 'paragraph':
         return body(current, 'p');
       case 'heading': {
@@ -127,7 +137,16 @@ function createHtml(handlers: Handlers) {
     }
   };
 
-  return { blocks, inline };
+  const footnotes = (notes: Footnote[]): string => {
+    if (notes.length === 0) return '';
+    const items = notes.map(
+      ({ label, content }) =>
+        `<li id="fn-${escapeAttribute(label)}">${inline(content)} <a href="#fnref-${escapeAttribute(label)}">↩</a></li>`,
+    );
+    return `<section class="footnotes">\n<ol>\n${items.join('\n')}\n</ol>\n</section>`;
+  };
+
+  return { blocks, footnotes, inline };
 }
 
 function details(summary: string, content: string): string {

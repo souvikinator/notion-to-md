@@ -2,8 +2,8 @@ import type { Block, Inline, Node } from './types';
 
 type NodeOfType<T extends Node['type']> = Extract<Node, { type: T }>;
 
-/** Inline nodes held by `node`: a block's text, a link's label, or a caption. */
-export function inlineContent(node: Node): Inline[] {
+/** Inline nodes held by `node`: a block's text, a link's label, or a caption. `undefined` when the node holds no text. */
+export function inlineContent(node: Node): Inline[] | undefined {
   switch (node.type) {
     case 'paragraph':
     case 'heading':
@@ -20,7 +20,7 @@ export function inlineContent(node: Node): Inline[] {
     case 'embed':
       return node.caption;
     default:
-      return [];
+      return undefined;
   }
 }
 
@@ -45,9 +45,17 @@ export function blockChildren(node: Node): Block[] {
 
 /** Every node directly inside `node`, in document order. */
 export function childNodes(node: Node): Node[] {
-  if (node.type === 'table')
-    return node.rows.flatMap((row) => row.cells.flat());
-  return [...inlineContent(node), ...blockChildren(node)];
+  switch (node.type) {
+    case 'table':
+      return node.rows.flatMap((row) => row.cells.flat());
+    case 'root':
+      return [
+        ...node.children,
+        ...(node.footnotes?.flatMap((footnote) => footnote.content) ?? []),
+      ];
+    default:
+      return [...(inlineContent(node) ?? []), ...blockChildren(node)];
+  }
 }
 
 /** Calls `fn` for `node` and every node below it, depth first. */
@@ -86,6 +94,8 @@ export function toPlainText(nodes: Inline[]): string {
           return node.value;
         case 'break':
           return ' ';
+        case 'footnoteReference':
+          return '';
         case 'link':
         case 'pageLink':
           return toPlainText(node.children);

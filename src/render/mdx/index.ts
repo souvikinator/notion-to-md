@@ -3,9 +3,10 @@ import {
   createMarkdownRenderer,
   type MarkdownOptions,
 } from '../markdown/convert';
-import type { Renderer } from '../types';
+import type { MdxHandlerHelpers, Renderer } from '../types';
 
-export type MdxOptions = MarkdownOptions;
+/** Handlers here can also call `addImport()`; imports are written at the top of the output. */
+export type MdxOptions = MarkdownOptions<MdxHandlerHelpers>;
 
 /** Renders the document as MDX. Characters MDX reads as JSX (`{`, `}`, `<`) are always escaped in text. */
 export function mdx(options: MdxOptions = {}): Renderer {

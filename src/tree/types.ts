@@ -10,20 +10,39 @@ export interface Marks {
   color?: Color;
 }
 
-export interface Text {
+/** Every node can carry `data`: free space for plugins to pass information to handlers. */
+interface Base {
+  data?: Record<string, unknown>;
+}
+
+interface BlockBase extends Base {
+  /** The Notion block id. Notion has no list block, so a list uses its first item's id plus `:list`. */
+  id: string;
+  /** Comments on this block, when the source fetched them. */
+  comments?: Comment[];
+}
+
+export interface Comment {
+  id: string;
+  author: string;
+  createdTime: string;
+  content: Inline[];
+}
+
+export interface Text extends Base {
   type: 'text';
   value: string;
   marks: Marks;
 }
 
-export interface Link {
+export interface Link extends Base {
   type: 'link';
   url: string;
   children: Inline[];
 }
 
 /** A link to another Notion page. `url` starts as the Notion URL and can be rewritten by plugins. */
-export interface PageLink {
+export interface PageLink extends Base {
   type: 'pageLink';
   pageId: string;
   blockId?: string;
@@ -31,19 +50,25 @@ export interface PageLink {
   children: Inline[];
 }
 
-export interface InlineEquation {
+export interface InlineEquation extends Base {
   type: 'inlineEquation';
   value: string;
 }
 
-export interface Break {
+export interface Break extends Base {
   type: 'break';
 }
 
-export type Inline = Text | Link | PageLink | InlineEquation | Break;
+/** A reference to one of the document's `footnotes`. */
+export interface FootnoteReference extends Base {
+  type: 'footnoteReference';
+  label: string;
+}
 
-interface TextBlock {
-  id: string;
+export type Inline =
+  Text | Link | PageLink | InlineEquation | Break | FootnoteReference;
+
+interface TextBlock extends BlockBase {
   content: Inline[];
   children: Block[];
   color?: Color;
@@ -59,10 +84,8 @@ export interface Heading extends TextBlock {
   toggleable: boolean;
 }
 
-export interface List {
+export interface List extends BlockBase {
   type: 'list';
-  /** The first item's id with a `:list` suffix; Notion has no list block of its own. */
-  id: string;
   kind: 'bulleted' | 'numbered' | 'todo';
   start: number;
   style?: 'numbers' | 'letters' | 'roman';
@@ -89,23 +112,20 @@ export interface Toggle extends TextBlock {
   type: 'toggle';
 }
 
-export interface Code {
+export interface Code extends BlockBase {
   type: 'code';
-  id: string;
   language: string;
   value: string;
   caption: Inline[];
 }
 
-export interface Equation {
+export interface Equation extends BlockBase {
   type: 'equation';
-  id: string;
   value: string;
 }
 
-export interface Divider {
+export interface Divider extends BlockBase {
   type: 'divider';
-  id: string;
 }
 
 export interface TableRow {
@@ -113,32 +133,28 @@ export interface TableRow {
   cells: Inline[][];
 }
 
-export interface Table {
+export interface Table extends BlockBase {
   type: 'table';
-  id: string;
   columnHeader: boolean;
   rowHeader: boolean;
   rows: TableRow[];
 }
 
-export interface Column {
+export interface Column extends BlockBase {
   type: 'column';
-  id: string;
   children: Block[];
 }
 
-export interface Columns {
+export interface Columns extends BlockBase {
   type: 'columns';
-  id: string;
   children: Column[];
 }
 
 export type MediaKind = 'image' | 'video' | 'audio' | 'file' | 'pdf';
 
 /** A file shown in the page. Notion-hosted URLs expire, so plugins can replace `url`. */
-export interface Media {
+export interface Media extends BlockBase {
   type: 'media';
-  id: string;
   kind: MediaKind;
   url: string;
   hosted: boolean;
@@ -147,18 +163,16 @@ export interface Media {
   caption: Inline[];
 }
 
-export interface Embed {
+export interface Embed extends BlockBase {
   type: 'embed';
-  id: string;
   kind: 'bookmark' | 'embed' | 'link_preview';
   url: string;
   caption: Inline[];
 }
 
 /** A child page or a "link to page" block. */
-export interface PageRef {
+export interface PageRef extends BlockBase {
   type: 'pageRef';
-  id: string;
   pageId: string;
   title: string;
   url: string;
@@ -170,9 +184,8 @@ export interface DatabaseRow {
   properties: Properties;
 }
 
-export interface Database {
+export interface Database extends BlockBase {
   type: 'database';
-  id: string;
   title: string;
   url: string;
   /** Property names in display order, title first. Empty when rows were not fetched. */
@@ -180,15 +193,13 @@ export interface Database {
   rows: DatabaseRow[];
 }
 
-export interface TableOfContents {
+export interface TableOfContents extends BlockBase {
   type: 'tableOfContents';
-  id: string;
 }
 
 /** A block type this library does not convert. Kept so nothing disappears silently. */
-export interface Unknown {
+export interface Unknown extends BlockBase {
   type: 'unknown';
-  id: string;
   notionType: string;
 }
 
@@ -225,14 +236,23 @@ export type PropertyValue =
 
 export type Properties = Record<string, PropertyValue>;
 
-export interface Document {
+export interface Document extends Base {
   type: 'root';
   id: string;
   title: string;
   url: string;
   icon?: string;
   properties: Properties;
+  /** Comments on the page itself, when the source fetched them. */
+  comments?: Comment[];
   children: Block[];
+  /** Notes rendered at the end of the document, referenced by `footnoteReference` nodes. */
+  footnotes?: Footnote[];
+}
+
+export interface Footnote {
+  label: string;
+  content: Inline[];
 }
 
 export type Node = Document | Block | Inline;

@@ -1,5 +1,6 @@
 import type {
   BlockObjectResponse,
+  CommentObjectResponse,
   DataSourceObjectResponse,
   PageObjectResponse,
   QueryDataSourceParameters,
@@ -9,7 +10,12 @@ import type {
 export type RawPage = Pick<
   PageObjectResponse,
   'id' | 'url' | 'icon' | 'properties' | 'last_edited_time'
->;
+> & {
+  /** Comments on the page itself, when fetched. */
+  comments?: CommentObjectResponse[];
+  /** Why extra data for this page could not be fetched. */
+  error?: string;
+};
 
 export interface RawDatabase {
   /** Data source schema, used for column order. */
@@ -24,6 +30,8 @@ export interface BlockExtras {
   database?: RawDatabase;
   /** Title of the page a `link_to_page` block points at. */
   title?: string;
+  /** Comments on the block, when fetched. */
+  comments?: CommentObjectResponse[];
   /** Why extra data for this block could not be fetched (for example, no access). */
   error?: string;
 }

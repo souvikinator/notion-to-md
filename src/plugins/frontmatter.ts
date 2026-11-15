@@ -5,10 +5,15 @@ export interface FrontmatterOptions {
   /** Only these properties. Default: all. */
   include?: string[];
   exclude?: string[];
-  /** Property name → frontmatter key, e.g. `{ Name: 'title' }`. */
+  /** Property name → frontmatter field, e.g. `{ Name: 'title' }`. */
   rename?: Record<string, string>;
-  /** Extra or overriding fields computed from the page. */
-  extra?: (page: Page) => Record<string, unknown>;
+  /**
+   * Change or add fields. The key is the frontmatter field (after renaming); the function
+   * gets that field's current value (`undefined` for a new field) and the page.
+   */
+  transform?: Record<string, (value: unknown, page: Page) => unknown>;
+  /** Values for fields that are missing or empty. */
+  defaults?: Record<string, unknown>;
 }
 
 const PLAIN_KEY = /^[A-Za-z_][A-Za-z0-9_ -]*(?<! )$/;
@@ -29,11 +34,27 @@ export function frontmatter(options: FrontmatterOptions = {}): Plugin {
           (file) => file.url,
         );
       }
-      Object.assign(fields, options.extra?.(page));
+      for (const [field, transform] of Object.entries(
+        options.transform ?? {},
+      )) {
+        fields[field] = transform(fields[field], page);
+      }
+      for (const [field, value] of Object.entries(options.defaults ?? {})) {
+        if (isEmpty(fields[field])) fields[field] = value;
+      }
       if (Object.keys(fields).length === 0) return page;
       return { ...page, content: `${toYaml(fields)}\n${page.content}` };
     },
   };
+}
+
+function isEmpty(value: unknown): boolean {
+  return (
+    value === undefined ||
+    value === null ||
+    value === '' ||
+    (Array.isArray(value) && value.length === 0)
+  );
 }
 
 /** YAML via JSON values: JSON strings, numbers, arrays and objects are valid YAML flow scalars and collections. */

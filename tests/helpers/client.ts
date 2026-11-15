@@ -4,6 +4,7 @@
  */
 import type { Client, PageObjectResponse } from '@notionhq/client';
 import type { RawBlock } from '../../src/source/types';
+import { text } from './notion';
 
 export interface MockDatabase {
   title: string;
@@ -21,6 +22,10 @@ export interface Workspace {
   pageSize?: number;
   /** Ids that answer with `object_not_found`, as Notion does without access. */
   forbidden?: string[];
+  /** Comment texts by page or block id. */
+  comments?: Record<string, string[]>;
+  /** Comments answer with `restricted_resource`, as without the "read comments" capability. */
+  commentsRestricted?: boolean;
 }
 
 export interface MockClient {
@@ -31,6 +36,10 @@ export interface MockClient {
 
 class NotFound extends Error {
   code = 'object_not_found';
+}
+
+class Restricted extends Error {
+  code = 'restricted_resource';
 }
 
 export function mockClient(workspace: Workspace): MockClient {
@@ -115,6 +124,26 @@ export function mockClient(workspace: Workspace): MockClient {
             ),
           ),
       },
+    },
+    comments: {
+      list: (args: { block_id: string; start_cursor?: string }) =>
+        call('comments.list', args.block_id, () => {
+          if (workspace.commentsRestricted) {
+            throw new Restricted('Insufficient permissions for this endpoint.');
+          }
+          const texts = workspace.comments?.[args.block_id] ?? [];
+          return paginate(
+            texts.map((content, index) => ({
+              object: 'comment',
+              id: `${args.block_id}-comment-${String(index)}`,
+              created_time: '2026-01-01T00:00:00.000Z',
+              created_by: { object: 'user', id: 'user-1' },
+              display_name: { type: 'user', resolved_name: 'Ada' },
+              rich_text: [text(content)],
+            })),
+            args.start_cursor,
+          );
+        }),
     },
     pages: {
       retrieve: (args: { page_id: string }) =>

@@ -17,6 +17,7 @@ export type {
   Handler,
   HandlerHelpers,
   Handlers,
+  MdxHandlerHelpers,
   NodeOf,
   NodeType,
 } from './render/types';

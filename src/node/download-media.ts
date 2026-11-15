@@ -11,8 +11,13 @@ import { writeAtomic } from './atomic-write';
 export interface DownloadMediaOptions {
   /** Folder to save files in. */
   dir: string;
-  /** URL prefix used in the output instead of the file path, e.g. `/images`. */
-  publicPath?: string;
+  /**
+   * What to write in the output instead of the file path: a URL prefix such as `/images`,
+   * or a function from the saved file's path to its URL.
+   */
+  publicPath?: string | ((path: string, asset: Asset) => string);
+  /** Which files to download, by where they appear. Default: all. */
+  include?: Asset['source'][];
   /** Also download files hosted outside Notion. Default false: their URLs do not expire. */
   external?: boolean;
   /** Downloads in flight at once. Default 4. */
@@ -30,13 +35,14 @@ export function downloadMedia(options: DownloadMediaOptions): Plugin {
     name: 'download-media',
     async resolveAsset(asset, context) {
       if (!asset.hosted && !options.external) return undefined;
+      if (options.include && !options.include.includes(asset.source)) {
+        return undefined;
+      }
       try {
         const fileName = fileNameFor(asset);
         const path = join(options.dir, fileName);
         if (!(await exists(path))) await limit(() => download(asset.url, path));
-        return options.publicPath === undefined
-          ? path
-          : `${options.publicPath.replace(/\/+$/, '')}/${fileName}`;
+        return publicUrl(options.publicPath, path, fileName, asset);
       } catch (error) {
         context.warn(
           `Could not download ${asset.kind} ${asset.id}: ${String(error)}`,
@@ -76,4 +82,15 @@ async function download(url: string, path: string): Promise<void> {
   await writeAtomic(path, (temporary) =>
     pipeline(Readable.fromWeb(body), createWriteStream(temporary)),
   );
+}
+
+function publicUrl(
+  publicPath: DownloadMediaOptions['publicPath'],
+  path: string,
+  fileName: string,
+  asset: Asset,
+): string {
+  if (publicPath === undefined) return path;
+  if (typeof publicPath === 'function') return publicPath(path, asset);
+  return `${publicPath.replace(/\/+$/, '')}/${fileName}`;
 }

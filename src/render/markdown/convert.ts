@@ -11,6 +11,7 @@ import type {
   Block,
   Database,
   Embed,
+  Footnote,
   Inline,
   List,
   ListItem,
@@ -23,15 +24,17 @@ import { inlineToHtml } from '../html/convert';
 import {
   handlerFor,
   type ContentNode,
+  type HandlerHelpers,
   type Handlers,
+  type MdxHandlerHelpers,
   type Renderer,
 } from '../types';
 import { databaseCells, linkLabel, type DatabaseCell } from '../shared';
 import { phrasing, type Leaf } from './phrasing';
 
-export interface MarkdownOptions {
+export interface MarkdownOptions<H extends HandlerHelpers = HandlerHelpers> {
   /** Custom output per node type. */
-  handlers?: Handlers;
+  handlers?: Handlers<H>;
   /**
    * Escape characters in Notion text that Markdown would read as formatting, so `2*3*4`
    * stays literal. Off by default: text typed as Markdown in Notion is kept as Markdown.
@@ -55,27 +58,31 @@ const GFM: Dialect = {
   escapeHtml: unchanged,
 };
 
-interface Flavor extends Required<MarkdownOptions> {
+interface Flavor extends Required<MarkdownOptions<MdxHandlerHelpers>> {
   dialect: Dialect;
 }
 
 export function createMarkdownRenderer(
-  options: MarkdownOptions,
+  options: MarkdownOptions<MdxHandlerHelpers>,
   dialect: Dialect = GFM,
 ): Renderer {
-  const converter = createConverter({
-    handlers: {},
-    escape: false,
-    ...options,
-    dialect,
-  });
+  const flavor: Flavor = { handlers: {}, escape: false, ...options, dialect };
   return {
-    render: (document) =>
-      converter.serialize(converter.blocks(document.children)),
+    render: (document) => {
+      // A converter per render keeps imports from one page out of the next.
+      const converter = createConverter(flavor);
+      const body = converter.serialize([
+        ...converter.blocks(document.children),
+        ...converter.footnotes(document.footnotes ?? []),
+      ]);
+      const imports = converter.imports();
+      return imports.length > 0 ? `${imports.join('\n')}\n\n${body}` : body;
+    },
   };
 }
 
 function createConverter(flavor: Flavor) {
+  const imports = new Set<string>();
   const settings: ToMarkdownOptions = {
     extensions: [
       gfmToMarkdown({ tablePipeAlign: false }),
@@ -101,7 +108,8 @@ function createConverter(flavor: Flavor) {
   ): string | undefined => {
     const handler = handlerFor(flavor.handlers, node);
     return handler?.(node, {
-      content: () => serializeInline(inline(inlineContent(node))),
+      addImport: (statement) => imports.add(statement),
+      content: () => serializeInline(inline(inlineContent(node) ?? [])),
       children: () => serialize(childBlocks(node)).trimEnd(),
       fallback: () => serialize(fallback()).trimEnd(),
     });
@@ -150,7 +158,7 @@ function createConverter(flavor: Flavor) {
 
   /** A block's own text followed by its nested blocks. */
   const body = (node: Block): M.BlockContent[] => [
-    ...paragraph(inlineContent(node)),
+    ...paragraph(inlineContent(node) ?? []),
     ...blocks(blockChildren(node)),
   ];
 
@@ -259,6 +267,14 @@ function createConverter(flavor: Flavor) {
         return [
           inTable ? { type: 'html', value: '<br />' } : { type: 'break' },
         ];
+      case 'footnoteReference':
+        return [
+          {
+            type: 'footnoteReference',
+            identifier: node.label,
+            label: node.label,
+          },
+        ];
     }
   };
 
@@ -353,7 +369,15 @@ function createConverter(flavor: Flavor) {
     ];
   };
 
-  return { blocks, serialize };
+  const footnotes = (notes: Footnote[]): M.FootnoteDefinition[] =>
+    notes.map(({ label, content }) => ({
+      type: 'footnoteDefinition',
+      identifier: label,
+      label,
+      children: [{ type: 'paragraph', children: inline(content) }],
+    }));
+
+  return { blocks, footnotes, serialize, imports: () => [...imports] };
 }
 
 /**

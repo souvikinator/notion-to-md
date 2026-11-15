@@ -59,18 +59,37 @@ async function resolve<T extends { url: string }>(
 }
 
 function assetTargets(document: Document): UrlTarget<Asset>[] {
-  const targets = propertyFileTargets(document.id, document.properties);
+  const targets = propertyFileTargets(
+    document.id,
+    document.properties,
+    'page_property',
+  );
   visit(document, (node) => {
     if (node.type === 'media') {
       const { id, kind, url, hosted, name } = node;
       targets.push({
-        info: { id, kind, url, hosted, name, pageId: document.id },
+        info: {
+          id,
+          kind,
+          url,
+          hosted,
+          name,
+          source: 'block',
+          pageId: document.id,
+        },
         holder: node,
       });
     }
     if (node.type === 'database') {
-      for (const row of node.rows)
-        targets.push(...propertyFileTargets(row.pageId, row.properties));
+      for (const row of node.rows) {
+        targets.push(
+          ...propertyFileTargets(
+            row.pageId,
+            row.properties,
+            'database_property',
+          ),
+        );
+      }
     }
   });
   return targets;
@@ -79,6 +98,7 @@ function assetTargets(document: Document): UrlTarget<Asset>[] {
 function propertyFileTargets(
   pageId: string,
   properties: Properties,
+  source: Asset['source'],
 ): UrlTarget<Asset>[] {
   return Object.entries(properties).flatMap(([property, value]) => {
     if (!Array.isArray(value)) return [];
@@ -89,6 +109,7 @@ function propertyFileTargets(
         url: file.url,
         name: file.name,
         hosted: file.hosted,
+        source,
         pageId,
       },
       holder: file,
