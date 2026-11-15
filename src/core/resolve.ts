@@ -1,5 +1,5 @@
-import { isFileValue } from '../tree/values';
-import type { Document, Properties } from '../tree/types';
+import { files } from '../tree/files';
+import type { Document } from '../tree/types';
 import { visit } from '../tree/visit';
 import type { Asset, PageLinkTarget, Plugin, PluginContext } from './types';
 
@@ -58,66 +58,11 @@ async function resolve<T extends { url: string }>(
   return targets.map(({ info, holder }) => ({ ...info, url: holder.url }));
 }
 
-/** Anything in the tree that is a file: a media block, the cover, a file in a property. */
-interface FileHolder {
-  url: string;
-  name: string;
-  hosted: boolean;
-}
-
 function assetTargets(document: Document): UrlTarget<Asset>[] {
-  const pageId = document.id;
-  const target = (
-    holder: FileHolder,
-    rest: Pick<Asset, 'id' | 'kind' | 'source' | 'pageId'>,
-  ): UrlTarget<Asset> => {
-    const { url, name, hosted } = holder;
-    return { info: { ...rest, url, name, hosted }, holder };
-  };
-  const propertyFiles = (
-    owner: string,
-    properties: Properties,
-    source: Asset['source'],
-  ): UrlTarget<Asset>[] =>
-    Object.entries(properties).flatMap(([property, value]) =>
-      (Array.isArray(value) ? value : [])
-        .filter(isFileValue)
-        .map((file, index) =>
-          target(file, {
-            id: `${owner}/${property}/${String(index)}`,
-            kind: 'file',
-            source,
-            pageId: owner,
-          }),
-        ),
-    );
-
-  const targets = propertyFiles(pageId, document.properties, 'page_property');
-  if (document.cover) {
-    targets.push(
-      target(document.cover, {
-        id: `${pageId}/cover`,
-        kind: 'image',
-        source: 'page_cover',
-        pageId,
-      }),
-    );
-  }
-  visit(document, (node) => {
-    if (node.type === 'media') {
-      targets.push(
-        target(node, { id: node.id, kind: node.kind, source: 'block', pageId }),
-      );
-    }
-    if (node.type === 'database') {
-      for (const row of node.rows) {
-        targets.push(
-          ...propertyFiles(row.pageId, row.properties, 'database_property'),
-        );
-      }
-    }
-  });
-  return targets;
+  return files(document).map(({ file, ...ref }) => ({
+    info: { ...ref, url: file.url, name: file.name, hosted: file.hosted },
+    holder: file,
+  }));
 }
 
 function linkTargets(document: Document): UrlTarget<PageLinkTarget>[] {

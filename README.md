@@ -103,8 +103,9 @@ for await (const post of blog.pages(databaseId)) {
 | `pageLinks((link, context) => url)`         | `notion-to-md/plugins`  | Rewrites links to Notion pages, including block anchors  |
 | `media((asset, context) => url)`            | `notion-to-md/plugins`  | Sets the URL of every file, e.g. after uploading it      |
 | `frontmatter({ include, exclude, rename })` | `notion-to-md/plugins`  | Adds properties as YAML frontmatter                      |
-| `downloadMedia({ dir, publicPath })`        | `notion-to-md/node`     | Saves files to disk; unchanged files are not downloaded again |
+| `downloadMedia({ dir, publicPath })`        | `notion-to-md/node`     | Saves files to disk; unchanged files are not downloaded again; a failed download stops the conversion |
 | `footnotes()`                               | `notion-to-md/plugins`  | Turns Notion comments into footnotes (`notion(client, { comments: true })`) |
+| `bufferMedia({ maxSize })` | `notion-to-md/plugins` | Fetches files into memory (`data.buffer`) for handlers to embed or parse |
 
 Write your own with any of these hooks:
 

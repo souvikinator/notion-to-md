@@ -1,3 +1,4 @@
+import type { FileSource } from '../tree/files';
 import type { Document, MediaKind, Properties } from '../tree/types';
 
 /** What plugins know about every page in a `pages()` run. */
@@ -19,8 +20,8 @@ export interface Asset {
   name: string;
   /** True when the file is stored by Notion, whose URLs expire after an hour. */
   hosted: boolean;
-  /** Where the file appears: a block, a page property, or a property of a database row. */
-  source: 'block' | 'page_cover' | 'page_property' | 'database_property';
+  /** Where the file appears: a block, the cover, a page property, or a property of a database row. */
+  source: FileSource;
   pageId: string;
 }
 

@@ -128,12 +128,15 @@ describe('downloadMedia', () => {
     ).toMatch(/\.png$/);
   });
 
-  it('warns and keeps the original URL when a download fails', async () => {
-    const ctx = context();
-    expect(
-      await downloadMedia({ dir }).resolveAsset?.(asset('/missing.png'), ctx),
-    ).toBeUndefined();
-    expect(ctx.warnings[0]).toContain('HTTP 404');
+  it('stops the conversion when a download fails', async () => {
+    await expect(
+      downloadMedia({ dir }).resolveAsset?.(asset('/missing.png'), context()),
+    ).rejects.toThrow(/Could not download image block/);
+    await expect(
+      convertBlocks([media('image', `${base}/missing.png?sig=1`)], {
+        plugins: [downloadMedia({ dir })],
+      }),
+    ).rejects.toMatchObject({ cause: { message: 'HTTP 404' } });
     expect(await readdir(dir)).toEqual([]);
   });
 });
@@ -164,12 +167,10 @@ describe('fileCache', () => {
 });
 
 describe('downloadMedia review fixes', () => {
-  it('warns instead of failing on a URL it cannot read', async () => {
-    const ctx = context();
+  it('stops the conversion on a URL it cannot read', async () => {
     const broken = { ...asset('/x.png'), url: 'not a url' };
-    expect(
-      await downloadMedia({ dir }).resolveAsset?.(broken, ctx),
-    ).toBeUndefined();
-    expect(ctx.warnings[0]).toContain('Could not download');
+    await expect(
+      downloadMedia({ dir }).resolveAsset?.(broken, context()),
+    ).rejects.toThrow(/Could not download/);
   });
 });

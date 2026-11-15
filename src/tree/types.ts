@@ -228,6 +228,8 @@ export interface FileValue {
   name: string;
   url: string;
   hosted: boolean;
+  /** Free space for plugins, as on nodes. */
+  data?: Record<string, unknown>;
 }
 
 /** A page property simplified to plain data. */

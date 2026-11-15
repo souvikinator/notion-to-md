@@ -33,7 +33,7 @@ export function downloadMedia(options: DownloadMediaOptions): Plugin {
 
   return {
     name: 'download-media',
-    async resolveAsset(asset, context) {
+    async resolveAsset(asset) {
       if (!asset.hosted && !options.external) return undefined;
       if (options.include && !options.include.includes(asset.source)) {
         return undefined;
@@ -44,10 +44,12 @@ export function downloadMedia(options: DownloadMediaOptions): Plugin {
         if (!(await exists(path))) await limit(() => download(asset.url, path));
         return publicUrl(options.publicPath, path, fileName, asset);
       } catch (error) {
-        context.warn(
-          `Could not download ${asset.kind} ${asset.id}: ${String(error)}`,
+        throw new Error(
+          `Could not download ${asset.kind} ${asset.id} (${asset.url})`,
+          {
+            cause: error,
+          },
         );
-        return undefined;
       }
     },
   };

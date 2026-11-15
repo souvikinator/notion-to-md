@@ -32,6 +32,7 @@ export type {
   Source,
 } from './source/types';
 export { normalizeId, notionUrl, parseNotionUrl } from './normalize/ids';
+export { files, type FileRef, type FileSource } from './tree/files';
 export type * from './tree/types';
 export {
   blockChildren,
