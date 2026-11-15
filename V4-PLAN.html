@@ -49,10 +49,11 @@
 <h2 id="status">0. Status</h2>
 <ul>
   <li><b>Built:</b> tree + normalizer, <code>markdown()</code>, <code>mdx()</code>, <code>html()</code>, <code>notion()</code>, <code>fromBlocks()</code> and <code>cached()</code> sources, plugin hooks, <code>pageLinks</code>, <code>media</code>, <code>frontmatter</code>, <code>downloadMedia</code>, <code>fileCache</code>, <code>writeFile</code>, <code>pages()</code>, database tables.</li>
-  <li><b>Checks passing:</b> <code>npm run check</code> = typecheck, strict lint, prettier, 154 tests, build, publint, are-the-types-wrong, tree-shake check.</li>
+  <li><b>Checks passing:</b> <code>npm run check</code> = typecheck, strict lint, prettier, 205 tests, build, publint, are-the-types-wrong, tree-shake check.</li>
   <li><b>Independent review:</b> a separate reviewer read the code cold and reported 13 bugs and 12 quality issues. All bugs are fixed with tests; quality fixes are D47–D49 and the shared helpers in <code>render/shared.ts</code>.</li>
   <li><b>v3 parity:</b> same page through v3.1.10 and v4; every difference is a v4 fix (nesting indent, toggle-heading content, table pipes, child pages, heading 4).</li>
-  <li><b>Not done:</b> <code>footnotes()</code>, child pages as separate pages in <code>pages()</code>, table of contents block, full docs site, alpha → v4 migration page.</li>
+  <li><b>Use cases checked:</b> every use case in the four v4 blog posts (<code>tests/use-cases.test.ts</code>) and every scenario from closed issues, PRs and alpha release notes since 2025-01 (<code>tests/issues.test.ts</code>, named by issue number). Gaps found were built: comments + <code>footnotes()</code>, MDX imports, frontmatter <code>transform</code>/<code>defaults</code>, page cover as a file, filtered databases inside pages, and more (D57–D69).</li>
+  <li><b>Not done:</b> child pages as separate pages in <code>pages()</code>, table of contents block, full docs site, alpha → v4 migration page.</li>
   <li><b>README:</b> rewritten for v4 on this branch; every example in it runs as a test (<code>tests/readme.test.ts</code>).</li>
   <li><b>Needs your review:</b> implementation decisions D18–D56 (section 7). Each one is a call I made tonight.</li>
 </ul>
@@ -279,6 +280,20 @@ for await (const page of blog.pages(databaseId))
   <tr><td>D53</td><td>Line breaks at the start or end of a block's text are dropped</td><td>Shift+Enter at the end of a line left a stray <code>\</code>.</td></tr>
   <tr><td>D54</td><td>MDX output assumes the site uses <code>remark-gfm</code> (tables, task lists, strikethrough) and <code>remark-math</code> (equations)</td><td>Same as any MDX site with these features. Tests compile and render MDX with both.</td></tr>
   <tr><td>D55</td><td><code>fromBlocks</code> throws when it cannot find a page id</td><td>An empty id leaked into asset ids and <code>page.id</code>.</td></tr>
+  <tr><td colspan="3"><b>From the blog posts and closed issues</b></td></tr>
+  <tr><td>D57</td><td><code>notion(client, { comments: true })</code> fetches page and block comments (off by default: one request per block). <code>footnotes()</code> turns block comments into GFM footnotes; page comments stay on <code>tree.comments</code></td><td>Blog "comments as footnotes", #143. A missing "read comments" capability is a warning.</td></tr>
+  <tr><td>D58</td><td>Every node has <code>data</code>. Async work (fetch a PDF, parse it) happens in a plugin's <code>transform</code> and is stored on <code>node.data</code>; handlers stay synchronous and read it</td><td>Blog "documents". Same pattern as unified/mdast. Keeps rendering simple and fast.</td></tr>
+  <tr><td>D59</td><td>MDX handlers get <code>addImport()</code>; imports are collected per render and written at the top (after frontmatter)</td><td>Blog <code>PDFViewer</code> and alpha.5 <code>StatusBadge</code> examples.</td></tr>
+  <tr><td>D60</td><td>Frontmatter <code>transform</code> is keyed by the output field (after rename), gets the value and the page, and can add new fields; <code>defaults</code> fill missing or empty fields; a failing transform warns and keeps the value</td><td>Alpha keyed transforms by property and couldn't add fields; the blog's <code>slug</code> example needed that.</td></tr>
+  <tr><td>D61</td><td><code>downloadMedia({ publicPath })</code> also takes a function; <code>include</code> picks files by where they appear (<code>block</code>, <code>page_cover</code>, <code>page_property</code>, <code>database_property</code>)</td><td>Alpha's <code>transformPath</code> and <code>enableFor</code> (#133).</td></tr>
+  <tr><td>D62</td><td>The page cover is part of the tree and handled like any other file</td><td>#133 asked for covers to be downloaded.</td></tr>
+  <tr><td>D63</td><td><code>notion(client, { databaseQueries })</code> filters and sorts databases inside pages, by database id</td><td>Alpha.5 <code>configureDatabase</code>.</td></tr>
+  <tr><td>D64</td><td>Spaces and line breaks at the start or end of a block's text are dropped (not inside inline code)</td><td>Notion never shows them; they leaked into summaries and headings.</td></tr>
+  <tr><td>D65</td><td>With <code>escape: true</code>, bare URLs are never escaped</td><td>Same as v3.1.10 (#176): a backslash inside a URL stops GitHub from linking it.</td></tr>
+  <tr><td>D66</td><td>Inline equations are trimmed (<code>$ x $</code> → <code>$x$</code>); code drops leading blank lines and trailing whitespace</td><td>Alpha.7 #160 and v3.1.10 #177.</td></tr>
+  <tr><td>D67</td><td><code>default_background</code> colour means no colour</td><td>It was being written as a highlight.</td></tr>
+  <tr><td>D68</td><td>Nested lists indent by the marker width (2 spaces for <code>-</code>, 3 for <code>1.</code>), the CommonMark and Prettier style</td><td>Alpha used 4 spaces (#127). Both render the same; this is what <code>mdast-util-to-markdown</code> writes. Change with <code>listItemIndent</code> if you prefer 4.</td></tr>
+  <tr><td>D69</td><td>Links on <code>*.notion.site</code> and workspace subdomains are treated as links to Notion pages</td><td>Alpha excluded them; they are public Notion pages, so they should resolve too.</td></tr>
   <tr><td>D56</td><td>Open: a page's own URL is Notion's slug URL, while links to pages use the id form (<code>notion.so/&lt;id&gt;</code>)</td><td>We only know a page's slug URL when we fetched that page. Plugins should compare by <code>pageId</code>, not URL. Revisit if it confuses users.</td></tr>
 </table>
 
@@ -307,7 +322,10 @@ notion-to-md/node           downloadMedia, writeFile                    yes
   <tr><td>tests/source/notion.test.ts, cached.test.ts</td><td>Mock Notion client: deep nesting, pagination, concurrency cap, synced blocks, multi-source databases, linked titles, denied access; cache hits and invalidation</td></tr>
   <tr><td>tests/core/convert.test.ts</td><td>Plugin stages, URL resolution, warnings/strict, no console output, parallel converts, <code>pages()</code> with site links, frontmatter</td></tr>
   <tr><td>tests/node/node.test.ts</td><td>Real local HTTP server: downloads, cache by path, failures, invalid URLs, external files; <code>fileCache</code>, <code>writeFile</code></td></tr>
-  <tr><td>tests/regressions.test.ts</td><td>One test per reported issue, from the issue's own example</td></tr>
+  <tr><td>tests/regressions.test.ts</td><td>One test per open issue, from the issue's own example</td></tr>
+  <tr><td>tests/issues.test.ts</td><td>Closed issues, merged PRs and alpha release notes since 2025-01, by issue number (34 scenarios)</td></tr>
+  <tr><td>tests/use-cases.test.ts</td><td>Every use case in the four v4 blog posts, end to end (17 scenarios)</td></tr>
+  <tr><td>tests/readme.test.ts</td><td>Every README example</td></tr>
 </table>
 <p>Tests run once and exit (<code>watch: false</code>, 2 workers). Not yet: a live test against a real Notion workspace (needs a token).</p>
 
@@ -346,7 +364,7 @@ notion-to-md/node           downloadMedia, writeFile                    yes
   <li><input type="checkbox" disabled checked>Hook runner (<code>transform</code>, <code>resolveAsset</code>, <code>resolveLink</code>, <code>result</code>)</li>
   <li><input type="checkbox" disabled checked><code>downloadMedia</code>, <code>media(fn)</code> incl. files in properties</li>
   <li><input type="checkbox" disabled checked><code>pageLinks</code>, <code>frontmatter</code>, <code>writeFile</code></li>
-  <li><input type="checkbox" disabled><code>footnotes()</code> (comments as footnotes, #143)</li>
+  <li><input type="checkbox" disabled checked><code>footnotes()</code> + comments in the source (#143)</li>
 </ul></div>
 
 <div class="ms"><h3>M5 — Many pages and more formats <span class="tag warn">partly</span></h3>
@@ -416,7 +434,8 @@ notion-to-md/node           downloadMedia, writeFile                    yes
   <tr><td>Q7</td><td>Child pages in <code>pages()</code>: separate pages with a <code>parent</code> id, or inline content?</td><td>Open (M5)</td></tr>
   <tr><td>Q8</td><td>Old Hugo docs in <code>docs/</code> describe the alpha API. Delete, or rewrite in place?</td><td>Open (M6)</td></tr>
   <tr><td>Q9</td><td>Table of contents block: render links to headings? Anchors differ per site (GitHub, Docusaurus, Hugo slug rules)</td><td>Open; for now it renders nothing and users can add a handler</td></tr>
-  <tr><td>Q10</td><td>Comments as footnotes (#143): fetch comments in the source (one request per block) behind an option?</td><td>Open (M4)</td></tr>
+  <tr><td>Q10</td><td>Comments as footnotes (#143)</td><td><span class="tag ok">decided</span> D57</td></tr>
+  <tr><td>Q11</td><td>Alpha behaviours I changed on purpose: tables without a header get an empty header (not <code>Column 1</code>), date ranges are <code>start/end</code> (not <code>start to end</code>), an empty number is <code>null</code> (not <code>0</code>), a child database is a link + table (not <code>## Title</code> + table), list indent is 2/3 spaces (not 4). Keep?</td><td>Open — your call</td></tr>
 </table>
 
 <h2 id="review">14. How to review</h2>
@@ -429,6 +448,7 @@ npm run build && node scripts/check-treeshake.js</code></pre>
 
 <h2 id="log">15. Changelog</h2>
 <ul>
+  <li>2026-11-15 (morning) — Checked every blog post use case and every closed issue/PR scenario since 2025-01; built comments + footnotes, <code>node.data</code>, MDX imports, frontmatter transform/defaults, cover as file, filtered child databases; fixed URL escaping, edge spaces, equation spaces, code blank lines, default_background. D57–D69, Q11. 205 tests.</li>
   <li>2026-11-15 (night, later) — Added <code>cached()</code>/<code>fileCache()</code>. Independent code review: fixed 13 bugs (crash on new Notion types, lost captions, text handler formatting, list handler children, stray line breaks, pipes in table equations, multi-source databases, linked database titles, invalid file URLs, …) and restructured <code>src/normalize</code> vs <code>src/tree</code>. Fixed an MDX bug where toggle summaries lost their formatting; MDX tests now render through React. D47–D56 added.</li>
   <li>2026-11-15 (night) — Built M0–M4 and most of M5. Added implementation decisions D18–D46, issue → test map, review guide. Fetch pool decision recorded (D18).</li>
   <li>2026-11-15 — Plan created. D1–D17 agreed.</li>

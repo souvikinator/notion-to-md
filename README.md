@@ -104,6 +104,7 @@ for await (const post of blog.pages(databaseId)) {
 | `media((asset, context) => url)`            | `notion-to-md/plugins`  | Sets the URL of every file, e.g. after uploading it      |
 | `frontmatter({ include, exclude, rename })` | `notion-to-md/plugins`  | Adds properties as YAML frontmatter                      |
 | `downloadMedia({ dir, publicPath })`        | `notion-to-md/node`     | Saves files to disk; unchanged files are not downloaded again |
+| `footnotes()`                               | `notion-to-md/plugins`  | Turns Notion comments into footnotes (`notion(client, { comments: true })`) |
 
 Write your own with any of these hooks:
 
