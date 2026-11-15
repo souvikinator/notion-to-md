@@ -1,6 +1,7 @@
 import type { RichTextItemResponse } from '@notionhq/client';
 import { normalizeId, notionUrl, parseNotionUrl } from './ids';
-import type { Inline, Marks, Text } from '../tree/types';
+import type { Inline, Marks } from '../tree/types';
+import { splitEdgeWhitespace } from '../tree/whitespace';
 
 type Annotations = RichTextItemResponse['annotations'];
 type Mention = Extract<RichTextItemResponse, { type: 'mention' }>['mention'];
@@ -11,35 +12,8 @@ export function richText(items: RichTextItemResponse[]): Inline[] {
   for (const item of items) {
     for (const node of itemToInline(item)) appendMerged(nodes, node);
   }
-  return trimEdges(nodes);
-}
-
-/** Line breaks and spaces at the start or end of a block show nothing in Notion, but would in the output. */
-function trimEdges(nodes: Inline[]): Inline[] {
-  const result = [...nodes];
-  while (result[0] && isBlank(result[0])) result.shift();
-  while (result.length > 0 && isBlank(result[result.length - 1])) result.pop();
-
-  const first = result[0];
-  if (first && isPlainText(first)) {
-    result[0] = { ...first, value: first.value.trimStart() };
-  }
-  const lastIndex = result.length - 1;
-  const last = result[lastIndex];
-  if (last && isPlainText(last)) {
-    result[lastIndex] = { ...last, value: last.value.trimEnd() };
-  }
-  return result;
-}
-
-function isBlank(node: Inline | undefined): boolean {
-  if (node?.type === 'break') return true;
-  return node !== undefined && isPlainText(node) && node.value.trim() === '';
-}
-
-/** Text whose spaces are not meaningful; spaces inside inline code are kept. */
-function isPlainText(node: Inline): node is Text {
-  return node.type === 'text' && !node.marks.code;
+  // Spaces and line breaks at the edges of a block show nothing in Notion, but would in the output.
+  return splitEdgeWhitespace(nodes, true).inner;
 }
 
 export function plainText(items: RichTextItemResponse[]): string {

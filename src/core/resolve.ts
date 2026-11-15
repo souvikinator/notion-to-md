@@ -58,78 +58,66 @@ async function resolve<T extends { url: string }>(
   return targets.map(({ info, holder }) => ({ ...info, url: holder.url }));
 }
 
+/** Anything in the tree that is a file: a media block, the cover, a file in a property. */
+interface FileHolder {
+  url: string;
+  name: string;
+  hosted: boolean;
+}
+
 function assetTargets(document: Document): UrlTarget<Asset>[] {
-  const targets = propertyFileTargets(
-    document.id,
-    document.properties,
-    'page_property',
-  );
+  const pageId = document.id;
+  const target = (
+    holder: FileHolder,
+    rest: Pick<Asset, 'id' | 'kind' | 'source' | 'pageId'>,
+  ): UrlTarget<Asset> => {
+    const { url, name, hosted } = holder;
+    return { info: { ...rest, url, name, hosted }, holder };
+  };
+  const propertyFiles = (
+    owner: string,
+    properties: Properties,
+    source: Asset['source'],
+  ): UrlTarget<Asset>[] =>
+    Object.entries(properties).flatMap(([property, value]) =>
+      (Array.isArray(value) ? value : [])
+        .filter(isFileValue)
+        .map((file, index) =>
+          target(file, {
+            id: `${owner}/${property}/${String(index)}`,
+            kind: 'file',
+            source,
+            pageId: owner,
+          }),
+        ),
+    );
+
+  const targets = propertyFiles(pageId, document.properties, 'page_property');
   if (document.cover) {
-    const { url, name, hosted } = document.cover;
-    targets.push({
-      info: {
-        id: `${document.id}/cover`,
+    targets.push(
+      target(document.cover, {
+        id: `${pageId}/cover`,
         kind: 'image',
-        url,
-        name,
-        hosted,
         source: 'page_cover',
-        pageId: document.id,
-      },
-      holder: document.cover,
-    });
+        pageId,
+      }),
+    );
   }
   visit(document, (node) => {
     if (node.type === 'media') {
-      const { id, kind, url, hosted, name } = node;
-      targets.push({
-        info: {
-          id,
-          kind,
-          url,
-          hosted,
-          name,
-          source: 'block',
-          pageId: document.id,
-        },
-        holder: node,
-      });
+      targets.push(
+        target(node, { id: node.id, kind: node.kind, source: 'block', pageId }),
+      );
     }
     if (node.type === 'database') {
       for (const row of node.rows) {
         targets.push(
-          ...propertyFileTargets(
-            row.pageId,
-            row.properties,
-            'database_property',
-          ),
+          ...propertyFiles(row.pageId, row.properties, 'database_property'),
         );
       }
     }
   });
   return targets;
-}
-
-function propertyFileTargets(
-  pageId: string,
-  properties: Properties,
-  source: Asset['source'],
-): UrlTarget<Asset>[] {
-  return Object.entries(properties).flatMap(([property, value]) => {
-    if (!Array.isArray(value)) return [];
-    return value.filter(isFileValue).map((file, index) => ({
-      info: {
-        id: `${pageId}/${property}/${String(index)}`,
-        kind: 'file' as const,
-        url: file.url,
-        name: file.name,
-        hosted: file.hosted,
-        source,
-        pageId,
-      },
-      holder: file,
-    }));
-  });
 }
 
 function linkTargets(document: Document): UrlTarget<PageLinkTarget>[] {

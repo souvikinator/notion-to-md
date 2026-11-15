@@ -137,4 +137,16 @@ describe('html review fixes', () => {
       /<p><a href="https:\/\/www\.notion\.so\/[0-9a-f]{32}">Sub<\/a><\/p>/,
     );
   });
+
+  it('lets a text handler change the words while formatting stays', async () => {
+    const result = await convertBlocks(
+      [paragraph([text('shout', { bold: true })])],
+      {
+        renderer: html({
+          handlers: { text: (node) => node.value.toUpperCase() },
+        }),
+      },
+    );
+    expect(result.content).toBe('<p><strong>SHOUT</strong></p>');
+  });
 });

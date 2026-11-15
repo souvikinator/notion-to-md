@@ -32,21 +32,25 @@ export function html(options: HtmlOptions = {}): Renderer {
   };
 }
 
+const builtInHtml = createHtml({});
+
 /** Inline nodes as HTML with built-in output only. Used for HTML embedded in other formats. */
 export function inlineToHtml(nodes: Inline[]): string {
-  return createHtml({}).inline(nodes);
+  return builtInHtml.inline(nodes);
 }
 
 function createHtml(handlers: Handlers) {
   const node = (current: Block | Inline): string => {
     const custom = handlerFor(handlers, current);
     const fallback = (): string => builtIn(current);
-    if (!custom) return fallback();
-    return custom(current, {
-      content: () => inline(inlineContent(current) ?? []),
-      children: () => blocks(blockChildren(current)),
-      fallback,
-    });
+    const output = custom
+      ? custom(current, {
+          content: () => inline(inlineContent(current) ?? []),
+          children: () => blocks(blockChildren(current)),
+          fallback,
+        })
+      : fallback();
+    return current.type === 'text' ? withMarks(current, output) : output;
   };
   const blocks = (nodes: Block[]): string =>
     nodes.map(node).filter(Boolean).join('\n');
@@ -66,7 +70,7 @@ function createHtml(handlers: Handlers) {
   const builtIn = (current: Block | Inline): string => {
     switch (current.type) {
       case 'text':
-        return text(current);
+        return escapeHtml(current.value);
       case 'link':
       case 'pageLink':
         return anchor(current.url, inline(current.children));
@@ -242,8 +246,8 @@ const MARK_TAGS: [keyof Marks, string][] = [
   ['bold', 'strong'],
 ];
 
-function text(node: Text): string {
-  let html = escapeHtml(node.value);
+function withMarks(node: Text, content: string): string {
+  let html = content;
   for (const [mark, tag] of MARK_TAGS) {
     if (node.marks[mark]) html = `<${tag}>${html}</${tag}>`;
   }

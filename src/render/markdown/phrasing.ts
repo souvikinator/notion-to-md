@@ -1,5 +1,6 @@
 import type * as M from 'mdast';
-import type { Inline, Text } from '../../tree/types';
+import type { Inline } from '../../tree/types';
+import { splitEdgeWhitespace } from '../../tree/whitespace';
 
 /** `highlight` is a Notion background color, written as `<mark>`. */
 type Mark = 'bold' | 'italic' | 'strikethrough' | 'underline' | 'highlight';
@@ -39,6 +40,7 @@ export function phrasing(nodes: Inline[], leaf: Leaf): M.PhrasingContent[] {
 
     return runs(current, (node) => hasMark(node, mark)).flatMap((run) => {
       if (!run.marked) return convert(run.nodes, outer, depth + 1);
+      // `**bold **` is not bold in Markdown, so spaces at the edges of a run move outside it.
       const { before, inner, after } = splitEdgeWhitespace(run.nodes);
       if (inner.length === 0) return convert(run.nodes, outer, depth + 1);
       const children = convert(inner, new Set([...outer, mark]), depth + 1);
@@ -83,52 +85,6 @@ function runs(
     else result.push({ marked, nodes: [node] });
   }
   return result;
-}
-
-/**
- * Moves spaces at the edges of a formatted run outside of it. Notion often includes the
- * trailing space in bold text, and `**bold **` is not bold in Markdown.
- */
-function splitEdgeWhitespace(nodes: Inline[]): {
-  before: string;
-  inner: Inline[];
-  after: string;
-} {
-  const inner = [...nodes];
-  let before = '';
-  let after = '';
-
-  for (let first = inner[0]; first && isPlainText(first); first = inner[0]) {
-    const trimmed = first.value.trimStart();
-    if (trimmed === first.value) break;
-    before += first.value.slice(0, first.value.length - trimmed.length);
-    if (trimmed) {
-      inner[0] = { ...first, value: trimmed };
-      break;
-    }
-    inner.shift();
-  }
-
-  for (
-    let last = inner.at(-1);
-    last && isPlainText(last);
-    last = inner.at(-1)
-  ) {
-    const trimmed = last.value.trimEnd();
-    if (trimmed === last.value) break;
-    after = last.value.slice(trimmed.length) + after;
-    if (trimmed) {
-      inner[inner.length - 1] = { ...last, value: trimmed };
-      break;
-    }
-    inner.pop();
-  }
-
-  return { before, inner, after };
-}
-
-function isPlainText(node: Inline): node is Text {
-  return node.type === 'text' && !node.marks.code;
 }
 
 function whitespace(value: string): M.PhrasingContent[] {

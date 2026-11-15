@@ -30,7 +30,7 @@ import {
   type Renderer,
 } from '../types';
 import { databaseCells, linkLabel, type DatabaseCell } from '../shared';
-import { phrasing, type Leaf } from './phrasing';
+import { phrasing } from './phrasing';
 
 export interface MarkdownOptions<H extends HandlerHelpers = HandlerHelpers> {
   /** Custom output per node type. */
@@ -128,29 +128,25 @@ function createConverter(flavor: Flavor) {
       : [{ type: 'html', value: output }];
   };
 
-  const inline = (nodes: Inline[], inTable = false): M.PhrasingContent[] => {
-    const builtIn: Leaf = (node, convert) =>
-      builtInInline(node, inTable, convert);
-    const withHandler: Leaf = (node, convert) =>
-      inlineLeaf(node, () => builtIn(node, convert));
-    if (!flavor.handlers.text) return phrasing(nodes, withHandler);
-
-    // A text handler owns a text's formatting, so texts are not merged with their neighbours.
-    return nodes.flatMap((node) =>
-      node.type === 'text'
-        ? inlineLeaf(node, () => phrasing([node], builtIn))
-        : withHandler(node, (children) => inline(children, inTable)),
+  const inline = (nodes: Inline[], inTable = false): M.PhrasingContent[] =>
+    phrasing(nodes, (node, convert) =>
+      inlineLeaf(node, () => builtInInline(node, inTable, convert)),
     );
-  };
 
   const inlineLeaf = (
     node: Inline,
     builtIn: () => M.PhrasingContent[],
   ): M.PhrasingContent[] => {
+    // Inline code is formatting too: its handler gets and returns the words inside the backticks.
+    const isCode = node.type === 'text' && node.marks.code === true;
     const output = custom(node, () => [
-      { type: 'paragraph', children: builtIn() },
+      {
+        type: 'paragraph',
+        children: isCode ? [{ type: 'html', value: node.value }] : builtIn(),
+      },
     ]);
-    return output === undefined ? builtIn() : [{ type: 'html', value: output }];
+    if (output === undefined) return builtIn();
+    return [{ type: isCode ? 'inlineCode' : 'html', value: output }];
   };
 
   const paragraph = (nodes: Inline[]): M.BlockContent[] =>

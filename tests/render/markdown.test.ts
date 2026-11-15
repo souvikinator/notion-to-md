@@ -319,11 +319,18 @@ describe('review fixes', () => {
     expect(md).toBe('**bold** plain\n');
   });
 
-  it('lets a text handler change only the words', async () => {
-    const md = await toMd([paragraph([text('shout', { italic: true })])], {
-      handlers: { text: (node) => node.value.toUpperCase() },
-    });
-    expect(md).toBe('SHOUT\n');
+  it('lets a text handler change the words while formatting stays', async () => {
+    const md = await toMd(
+      [
+        paragraph([
+          text('shout', { italic: true }),
+          text(' and '),
+          text('code', { code: true }),
+        ]),
+      ],
+      { handlers: { text: (node) => node.value.toUpperCase() } },
+    );
+    expect(md).toBe('*SHOUT* AND `CODE`\n');
   });
 
   it("renders a list handler's children as one list", async () => {

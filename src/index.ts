@@ -9,7 +9,6 @@ export type {
   PageLinkTarget,
   Plugin,
   PluginContext,
-  RenderContext,
   Renderer,
   SitePage,
 } from './core/types';

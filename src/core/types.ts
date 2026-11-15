@@ -44,13 +44,9 @@ export interface Page {
   warnings: string[];
 }
 
-export interface RenderContext {
-  warn: (message: string) => void;
-}
-
 /** Turns the document tree into output text. `markdown()`, `mdx()` and `html()` are renderers. */
 export interface Renderer {
-  render(document: Document, context: RenderContext): string;
+  render(document: Document): string;
 }
 
 type MaybePromise<T> = T | Promise<T>;

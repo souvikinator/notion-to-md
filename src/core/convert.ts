@@ -46,7 +46,7 @@ export function notionToMd(options: NotionToMdOptions): NotionToMd {
       title: tree.title,
       url: tree.url,
       properties: tree.properties,
-      content: renderer.render(tree, context),
+      content: renderer.render(tree),
       tree,
       assets,
       links,

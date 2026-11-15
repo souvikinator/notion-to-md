@@ -1,6 +1,6 @@
 import type { Block, Inline } from '../tree/types';
 
-export type { RenderContext, Renderer } from '../core/types';
+export type { Renderer } from '../core/types';
 
 export type ContentNode = Block | Inline;
 export type NodeType = ContentNode['type'];
@@ -20,7 +20,11 @@ export type Handler<
   H extends HandlerHelpers = HandlerHelpers,
 > = (node: NodeOf<T>, helpers: H) => string;
 
-/** Custom output per node type. A handler replaces the built-in output for that node everywhere it appears. */
+/**
+ * Custom output per node type. A handler replaces the built-in output for that node
+ * everywhere it appears. A `text` handler changes the words only: bold, italic and other
+ * formatting is still applied around what it returns.
+ */
 export type Handlers<H extends HandlerHelpers = HandlerHelpers> = {
   [T in NodeType]?: Handler<T, H>;
 };

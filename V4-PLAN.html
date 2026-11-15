@@ -49,7 +49,7 @@
 <h2 id="status">0. Status</h2>
 <ul>
   <li><b>Built:</b> tree + normalizer, <code>markdown()</code>, <code>mdx()</code>, <code>html()</code>, <code>notion()</code>, <code>fromBlocks()</code> and <code>cached()</code> sources, plugin hooks, <code>pageLinks</code>, <code>media</code>, <code>frontmatter</code>, <code>downloadMedia</code>, <code>fileCache</code>, <code>writeFile</code>, <code>pages()</code>, database tables.</li>
-  <li><b>Checks passing:</b> <code>npm run check</code> = typecheck, strict lint, prettier, 205 tests, build, publint, are-the-types-wrong, tree-shake check.</li>
+  <li><b>Checks passing:</b> <code>npm run check</code> = typecheck, strict lint, prettier, 206 tests, build, publint, are-the-types-wrong, tree-shake check.</li>
   <li><b>Independent review:</b> a separate reviewer read the code cold and reported 13 bugs and 12 quality issues. All bugs are fixed with tests; quality fixes are D47–D49 and the shared helpers in <code>render/shared.ts</code>.</li>
   <li><b>v3 parity:</b> same page through v3.1.10 and v4; every difference is a v4 fix (nesting indent, toggle-heading content, table pipes, child pages, heading 4).</li>
   <li><b>Use cases checked:</b> every use case in the four v4 blog posts (<code>tests/use-cases.test.ts</code>) and every scenario from closed issues, PRs and alpha release notes since 2025-01 (<code>tests/issues.test.ts</code>, named by issue number). Gaps found were built: comments + <code>footnotes()</code>, MDX imports, frontmatter <code>transform</code>/<code>defaults</code>, page cover as a file, filtered databases inside pages, and more (D57–D69).</li>
@@ -294,6 +294,11 @@ for await (const page of blog.pages(databaseId))
   <tr><td>D67</td><td><code>default_background</code> colour means no colour</td><td>It was being written as a highlight.</td></tr>
   <tr><td>D68</td><td>Nested lists indent by the marker width (2 spaces for <code>-</code>, 3 for <code>1.</code>), the CommonMark and Prettier style</td><td>Alpha used 4 spaces (#127). Both render the same; this is what <code>mdast-util-to-markdown</code> writes. Change with <code>listItemIndent</code> if you prefer 4.</td></tr>
   <tr><td>D69</td><td>Links on <code>*.notion.site</code> and workspace subdomains are treated as links to Notion pages</td><td>Alpha excluded them; they are public Notion pages, so they should resolve too.</td></tr>
+  <tr><td colspan="3"><b>Simplification review</b></td></tr>
+  <tr><td>D70</td><td>A <code>text</code> handler changes the words only, in every renderer; bold, italic, code and the rest are applied around what it returns. Replaces the second half of D36</td><td>Removed a second code path in the Markdown renderer and made Markdown and HTML behave the same.</td></tr>
+  <tr><td>D71</td><td>Renderers get only the document (<code>render(document)</code>); the unused render context is gone</td><td>No built-in renderer used it. Adding an argument later is not a breaking change.</td></tr>
+  <tr><td>D72</td><td>One edge-whitespace function (<code>tree/whitespace.ts</code>) used by the normalizer and the Markdown renderer; one way to describe a file in <code>core/resolve.ts</code></td><td>The same trimming logic existed twice; file info was built three times.</td></tr>
+  <tr><td>D73</td><td>Kept on purpose: our own pagination and "is full object" checks in <code>notion()</code>, although the SDK has helpers</td><td>The SDK is CommonJS. Importing code (not just types) from it would pull the whole client into every bundle, including for <code>fromBlocks()</code>-only users.</td></tr>
   <tr><td>D56</td><td>Open: a page's own URL is Notion's slug URL, while links to pages use the id form (<code>notion.so/&lt;id&gt;</code>)</td><td>We only know a page's slug URL when we fetched that page. Plugins should compare by <code>pageId</code>, not URL. Revisit if it confuses users.</td></tr>
 </table>
 
@@ -435,6 +440,8 @@ notion-to-md/node           downloadMedia, writeFile                    yes
   <tr><td>Q8</td><td>Old Hugo docs in <code>docs/</code> describe the alpha API. Delete, or rewrite in place?</td><td>Open (M6)</td></tr>
   <tr><td>Q9</td><td>Table of contents block: render links to headings? Anchors differ per site (GitHub, Docusaurus, Hugo slug rules)</td><td>Open; for now it renders nothing and users can add a handler</td></tr>
   <tr><td>Q10</td><td>Comments as footnotes (#143)</td><td><span class="tag ok">decided</span> D57</td></tr>
+  <tr><td>Q12</td><td>Cache as a source wrapper (now) or a <code>cache</code> option in core? The wrapper has to share one page request between <code>page()</code> and <code>blocks()</code>, costs one extra request per page in <code>pages()</code>, and comments don't refresh until the page is edited. In core it is ~10 lines with none of those</td><td>Open — leaning core option</td></tr>
+  <tr><td>Q13</td><td><code>pages()</code> converts one page at a time. For many small pages the request pool sits mostly idle; converting a few pages ahead (output order kept) would be about 3× faster</td><td>Open — leaning yes, ~15 lines</td></tr>
   <tr><td>Q11</td><td>Alpha behaviours I changed on purpose: tables without a header get an empty header (not <code>Column 1</code>), date ranges are <code>start/end</code> (not <code>start to end</code>), an empty number is <code>null</code> (not <code>0</code>), a child database is a link + table (not <code>## Title</code> + table), list indent is 2/3 spaces (not 4). Keep?</td><td>Open — your call</td></tr>
 </table>
 
@@ -448,6 +455,7 @@ npm run build && node scripts/check-treeshake.js</code></pre>
 
 <h2 id="log">15. Changelog</h2>
 <ul>
+  <li>2026-11-15 (simplification review) — Re-read all of <code>src/</code>. Simplified text handlers (D70), removed unused render context (D71), shared whitespace and file helpers (D72). Kept own pagination (D73). Two proposals left open: Q12, Q13.</li>
   <li>2026-11-15 (morning) — Checked every blog post use case and every closed issue/PR scenario since 2025-01; built comments + footnotes, <code>node.data</code>, MDX imports, frontmatter transform/defaults, cover as file, filtered child databases; fixed URL escaping, edge spaces, equation spaces, code blank lines, default_background. D57–D69, Q11. 205 tests.</li>
   <li>2026-11-15 (night, later) — Added <code>cached()</code>/<code>fileCache()</code>. Independent code review: fixed 13 bugs (crash on new Notion types, lost captions, text handler formatting, list handler children, stray line breaks, pipes in table equations, multi-source databases, linked database titles, invalid file URLs, …) and restructured <code>src/normalize</code> vs <code>src/tree</code>. Fixed an MDX bug where toggle summaries lost their formatting; MDX tests now render through React. D47–D56 added.</li>
   <li>2026-11-15 (night) — Built M0–M4 and most of M5. Added implementation decisions D18–D46, issue → test map, review guide. Fetch pool decision recorded (D18).</li>
